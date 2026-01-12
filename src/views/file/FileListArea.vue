@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useConversionStore } from '@/stores/conversionStore'
 import { formatSize } from '@/utils'
 import { Upload, Trash2, FileImage, CheckCircle2, Loader2 } from 'lucide-vue-next'
@@ -9,9 +10,32 @@ import { open as openShell } from '@tauri-apps/plugin-shell'
 import { downloadDir } from '@tauri-apps/api/path'
 
 const convertionStore = useConversionStore()
+const isFileDragging = ref(false)
+
+const handleDrop = (e: DragEvent) => {
+  e.preventDefault()
+  isFileDragging.value = false
+  const files = e.dataTransfer?.files
+  if (files && files.length > 0) {
+    convertionStore.addFiles(files)
+  }
+}
+
+const handleDragEnter = (e: DragEvent) => {
+  e.preventDefault()
+  isFileDragging.value = true
+}
+
+const handleDragLeave = (e: DragEvent) => {
+  e.preventDefault()
+  isFileDragging.value = false
+}
+
+const handleDragOver = (e: DragEvent) => {
+  e.preventDefault()
+}
 
 const handleInputFiles = (e: Event) => {
-  console.log("[Input] input 触发了 change 事件")
   const target = e.target as HTMLInputElement
   if (target.files && target.files.length > 0) {
     convertionStore.addFiles(target.files)
@@ -33,19 +57,31 @@ const openOutputFolder = async () => {
 </script>
 
 <template>
+
   <section class="flex-1 flex flex-col border-r min-w-0 bg-muted/10 h-full relative z-0">
+
     <div class="h-12 px-4 flex items-center justify-between border-b shrink-0">
       <h3 class="text-sm font-medium text-muted-foreground">文件队列 ({{ convertionStore.stats.total }})</h3>
       <Button v-if="convertionStore.stats.total > 0" variant="ghost" size="sm" class="h-8 text-xs" @click="convertionStore.clearFiles">清空列表</Button>
     </div>
-    <div class="flex-1 w-full overflow-y-auto p-2 space-y-1">
+
+    <div class="flex-1 w-full overflow-y-auto p-2 space-y-1"
+      @dragenter="handleDragEnter"
+      @dragover="handleDragOver"
+      @dragleave="handleDragLeave"
+      @drop="handleDrop"
+      :class="{
+        'bg-primary/10': isFileDragging,       // 【背景】明显变蓝
+      }"
+    >
       <div v-if="convertionStore.stats.total === 0" class="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground/50 pointer-events-none">
         <div class="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4 border-2 border-dashed">
-          <Upload :size="32" />
+          <Upload />
         </div>
-        <p class="font-medium">拖拽 HEIC 文件到此处</p>
-        <p class="text-xs mt-1 opacity-70">支持 .heic, .heif 格式</p>
+        <p class="font-medium" :class="isFileDragging ? 'text-primary' : ''">拖拽 HEIC 文件到此处</p>
+        <p class="text-sm mt-1 opacity-70" :class="isFileDragging ? 'font-medium text-primary' : ''">支持 .heic, .heif 格式</p>
       </div>
+
       <!-- TODO: 待增加快捷打开目录的按钮 -->
       <Card v-for="file in convertionStore.files" :key="file.id" class="group overflow-hidden transition-colors hover:border-primary/50">
         <CardContent class="p-1 flex items-center justify-between gap-2">
@@ -75,8 +111,10 @@ const openOutputFolder = async () => {
           </div>
         </CardContent>
       </Card>
+
     </div>
-    <div class="p-2 border-t bg-card shrink-0 relative z-10">
+
+    <div class="p-2 border-t bg-card shrink-0 relative z-10" >
       <div class="relative w-full">
         <input type="file" multiple accept=".heic,.heif" class="hidden" id="fileInput" ref="fileInput" @change="handleInputFiles">
         <label for="fileInput" class="cursor-pointer flex items-center justify-center w-full h-10 rounded-md border border-input bg-background px-8 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground">
@@ -84,5 +122,6 @@ const openOutputFolder = async () => {
         </label>
       </div>
     </div>
+
   </section>
 </template>
