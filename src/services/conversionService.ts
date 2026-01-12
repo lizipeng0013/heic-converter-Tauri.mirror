@@ -64,7 +64,6 @@ export class ConversionService {
       file.status = 'converting'
       file.progress = 0
       try {
-        file.outputPath = targetDir
         // --- A. 单文件调用 heic2any ---
         // 传入单个 file.fileObject
         // multiple: true (确保多帧图片返回 Blob 数组，单帧返回长度为 1 的数组)
@@ -87,6 +86,7 @@ export class ConversionService {
           const fileName = result.length > 1 ? `${baseName}_${i}.${ext}` : `${baseName}.${ext}`
           // 构造路径
           const targetPath = `${targetDir}/${fileName}`
+          file.convertedFilePath = targetPath
           // 写入
           await writeFile(targetPath, uint8Array)
           file.progress = 20 + 60/result.length*(i+1)

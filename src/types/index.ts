@@ -9,9 +9,12 @@ export interface FileItem {
   status: FileStatus
   progress: number
   fileObject?: File
-  // 为了模块化，虽然现在不用 path，但结构里保留
-  // sourcePath?: string 
-  outputPath?: string
+  // 预留源文件路径，未使用
+  sourceFilePath: string
+  /**
+   * 转换完成的文件路径
+   */
+  convertedFilePath: string
 }
 
 // --- 转换设置接口 ---

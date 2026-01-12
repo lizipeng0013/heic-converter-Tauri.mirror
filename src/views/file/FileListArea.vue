@@ -6,8 +6,7 @@ import { Upload, Trash2, FileImage, CheckCircle2, Loader2, FolderOpen } from 'lu
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { openPath } from '@tauri-apps/plugin-opener'
-import { downloadDir } from '@tauri-apps/api/path'
+import { revealItemInDir } from '@tauri-apps/plugin-opener'
 import { FileItem } from '@/types/index'
 
 const convertionStore = useConversionStore()
@@ -45,14 +44,9 @@ const handleInputFiles = (e: Event) => {
 
 const handleOpenFileDir = async (file: FileItem) => {
   try {
-    console.log('start try')
-    let targetPath = file.outputPath
-    console.log('targetPath: {}', targetPath)
-    if (targetPath) {
-      await openPath(targetPath)
-    }
+    await revealItemInDir(file.convertedFilePath)
   } catch (error) {
-    console.error('打开目录失败：', error)
+    console.error('打开目录并定位文件失败：', error)
   }
 }
 
@@ -107,12 +101,10 @@ const handleOpenFileDir = async (file: FileItem) => {
             </div>
           </div>
           <div class="flex items-center gap-1 shrink-0">
-            <!-- 【新增】打开文件输出目录按钮 -->
-            <!-- 只有转换完成后才显示？或者一直显示？建议一直显示 -->
             <Button 
-              v-if="file.outputPath"
+              v-if="file.convertedFilePath"
               variant="ghost" size="icon" class="h-7 w-7 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-primary dark:hover:text-primary transition-colors" 
-              title="打开此文件所在的输出目录"
+              title="打开转换成功的文件所在目录"
               @click="handleOpenFileDir(file)"
             >
               <FolderOpen :size="14" />
