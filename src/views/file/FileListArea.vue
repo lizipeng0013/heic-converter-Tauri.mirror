@@ -8,6 +8,12 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { revealItemInDir } from '@tauri-apps/plugin-opener'
 import { FileItem } from '@/types/index'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@/components/ui/tooltip/'
 
 const convertionStore = useConversionStore()
 const isFileDragging = ref(false)
@@ -101,21 +107,37 @@ const handleOpenFileDir = async (file: FileItem) => {
             </div>
           </div>
           <div class="flex items-center gap-1 shrink-0">
-            <Button 
-              v-if="file.convertedFilePath"
-              variant="ghost" size="icon" class="h-7 w-7 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-primary dark:hover:text-primary transition-colors" 
-              title="打开转换成功的文件所在目录"
-              @click="handleOpenFileDir(file)"
-            >
-              <FolderOpen :size="14" />
-            </Button>
-            <Button 
-              variant="ghost" size="icon" class="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive" 
-              title="从文件队列中移除"
-              @click="convertionStore.removeFile(file.id)"
-            >
-              <Trash2 :size="14" />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Button 
+                    v-if="file.convertedFilePath"
+                    variant="ghost" size="icon" class="h-7 w-7 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-primary dark:hover:text-primary transition-colors" 
+                    @click="handleOpenFileDir(file)"
+                  >
+                    <FolderOpen :size="14" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>打开转换成功的文件所在目录</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Button 
+                    variant="ghost" size="icon" class="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive" 
+                    @click="convertionStore.removeFile(file.id)"
+                  >
+                    <Trash2 :size="14" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>从文件队列中移除</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </CardContent>
       </Card>

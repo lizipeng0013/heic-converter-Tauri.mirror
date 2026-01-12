@@ -17,6 +17,12 @@ import {
 } from '@/components/ui/context-menu'
 
 import { useDark, useToggle } from '@vueuse/core'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@/components/ui/tooltip/'
 
 const isDark = useDark({
   selector: 'html',
@@ -106,11 +112,20 @@ const onDoubleClick = () => {
     <!-- 标题栏控制按钮区域 -->
     <div class="flex items-center gap-1 pointer-events-auto">
       <div class="w-[1px] h-6 bg-slate-200 dark:bg-slate-700 mr-2"></div>
-      <Button variant="ghost" size="icon" class="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-yellow-400 dark:hover:text-yellow-400" title="切换主题" @click="toggleDark()">
-        <Sun v-if="isDark" class="h-[1.2rem] w-[1.2rem]" />
-        <Moon v-else class="h-[1.2rem] w-[1.2rem]" />
-        <span class="sr-only">切换主题</span>
-      </Button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger>
+            <Button variant="ghost" size="icon" class="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-yellow-400 dark:hover:text-yellow-400" @click="toggleDark()">
+              <Sun v-if="isDark" class="h-[1.2rem] w-[1.2rem]" />
+              <Moon v-else class="h-[1.2rem] w-[1.2rem]" />
+              <span class="sr-only">切换主题</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>切换主题</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" @click="minWindow"><Minus :size="16" /></Button>
       <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" @click="maxWindow"><Maximize2 :size="16" /></Button>
       <Button variant="ghost" size="icon" class="h-8 w-8 text-slate-500 hover:bg-red-500 hover:text-white transition-colors" @click="closeWindow"><X :size="16" /></Button>
