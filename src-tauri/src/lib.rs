@@ -15,13 +15,16 @@ fn minimize_window(window: Window) {
 // --- 最大化/还原窗口 (已修复) ---
 #[tauri::command]
 fn toggle_maximize_window(window: Window) {
-    window.is_maximized().map(|is_maximized| {
-        if is_maximized {
-            let _ = window.unmaximize();
-        } else {
-            let _ = window.maximize();
-        }
-    }).ok();
+    window
+        .is_maximized()
+        .map(|is_maximized| {
+            if is_maximized {
+                let _ = window.unmaximize();
+            } else {
+                let _ = window.maximize();
+            }
+        })
+        .ok();
 }
 
 // --- 关闭窗口 ---
@@ -39,7 +42,9 @@ static IS_TOP: AtomicBool = AtomicBool::new(false);
 async fn toggle_always_on_top(window: Window) -> Result<(), String> {
     // 获取或初始化状态（初始为 false）
     let new_state = !IS_TOP.load(Ordering::SeqCst);
-    window.set_always_on_top(new_state).map_err(|e| e.to_string())?;
+    window
+        .set_always_on_top(new_state)
+        .map_err(|e| e.to_string())?;
     IS_TOP.store(new_state, Ordering::SeqCst);
     Ok(())
 }
@@ -51,7 +56,6 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
-
         .invoke_handler(tauri::generate_handler![
             greet,
             minimize_window,
