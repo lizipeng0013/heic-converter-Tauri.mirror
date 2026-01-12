@@ -64,6 +64,7 @@ export class ConversionService {
       file.status = 'converting'
       file.progress = 0
       try {
+        file.outputPath = targetDir
         // --- A. 单文件调用 heic2any ---
         // 传入单个 file.fileObject
         // multiple: true (确保多帧图片返回 Blob 数组，单帧返回长度为 1 的数组)

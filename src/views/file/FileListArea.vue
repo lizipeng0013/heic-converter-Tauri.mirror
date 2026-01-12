@@ -2,12 +2,13 @@
 import { ref } from 'vue'
 import { useConversionStore } from '@/stores/conversionStore'
 import { formatSize } from '@/utils'
-import { Upload, Trash2, FileImage, CheckCircle2, Loader2 } from 'lucide-vue-next'
+import { Upload, Trash2, FileImage, CheckCircle2, Loader2, FolderOpen } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { open as openShell } from '@tauri-apps/plugin-shell'
+import { openPath } from '@tauri-apps/plugin-opener'
 import { downloadDir } from '@tauri-apps/api/path'
+import { FileItem } from '@/types/index'
 
 const convertionStore = useConversionStore()
 const isFileDragging = ref(false)
@@ -42,15 +43,16 @@ const handleInputFiles = (e: Event) => {
   }
 }
 
-// TODO: 支持快捷打开每个文件的输出目录（分批次可能有不同的输出目录）
-const openOutputFolder = async () => {
+const handleOpenFileDir = async (file: FileItem) => {
   try {
-    const folderPath = convertionStore.outputFolder || await downloadDir()
-    await openShell(folderPath)
+    console.log('start try')
+    let targetPath = file.outputPath
+    console.log('targetPath: {}', targetPath)
+    if (targetPath) {
+      await openPath(targetPath)
+    }
   } catch (error) {
     console.error('打开目录失败：', error)
-    const folderPath = convertionStore.outputFolder || await downloadDir().catch(() => '下载目录')
-    alert(`目录路径：${folderPath}\n请手动在文件管理器中打开此目录`)
   }
 }
 
@@ -105,7 +107,21 @@ const openOutputFolder = async () => {
             </div>
           </div>
           <div class="flex items-center gap-1 shrink-0">
-            <Button variant="ghost" size="icon" class="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive" @click="convertionStore.removeFile(file.id)">
+            <!-- 【新增】打开文件输出目录按钮 -->
+            <!-- 只有转换完成后才显示？或者一直显示？建议一直显示 -->
+            <Button 
+              v-if="file.outputPath"
+              variant="ghost" size="icon" class="h-7 w-7 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-primary dark:hover:text-primary transition-colors" 
+              title="打开此文件所在的输出目录"
+              @click="handleOpenFileDir(file)"
+            >
+              <FolderOpen :size="14" />
+            </Button>
+            <Button 
+              variant="ghost" size="icon" class="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive" 
+              title="从文件队列中移除"
+              @click="convertionStore.removeFile(file.id)"
+            >
               <Trash2 :size="14" />
             </Button>
           </div>

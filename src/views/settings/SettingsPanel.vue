@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { Separator } from '@/components/ui/separator'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
-import { open as openShell } from '@tauri-apps/plugin-shell'
+import { openPath } from '@tauri-apps/plugin-opener'
 import { downloadDir } from '@tauri-apps/api/path'
 
 const store = useConversionStore()
@@ -26,7 +26,7 @@ const selectOutputFolder = async () => {
 const openOutputFolder = async () => {
   try {
     const folderPath = store.outputFolder || await downloadDir()
-    await openShell(folderPath)
+    await openPath(folderPath)
   } catch (error) {
     console.error('打开目录失败：', error)
     const folderPath = store.outputFolder || await downloadDir().catch(() => '下载目录')

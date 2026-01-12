@@ -11,6 +11,7 @@ export interface FileItem {
   fileObject?: File
   // 为了模块化，虽然现在不用 path，但结构里保留
   // sourcePath?: string 
+  outputPath?: string
 }
 
 // --- 转换设置接口 ---
