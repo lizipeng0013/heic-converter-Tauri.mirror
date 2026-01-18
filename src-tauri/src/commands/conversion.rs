@@ -1,6 +1,7 @@
 use tauri::{AppHandle, Emitter};
 use crate::services::conversion::batch_convert;
-use tauri_plugin_log::log::info;
+use tauri_plugin_log::log::{info, debug};
+use tracing::instrument;
 
 /// 批量转换图片命令
 /// 
@@ -10,13 +11,16 @@ use tauri_plugin_log::log::info;
 /// - `target_type`: 目标格式（"jpg", "png"）
 /// - `output_folder`: 输出文件夹
 #[tauri::command]
+#[instrument(skip(app), fields(
+    file_count = paths.len(),
+    format = %target_type
+))]
 pub async fn convert_images(
     app: AppHandle,
     paths: Vec<String>,
     target_type: String,
     output_folder: String,
 ) -> Result<(), String> {
-    info!("开始转换，共 {} 个文件", paths.len());
     let start_time = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
@@ -28,13 +32,15 @@ pub async fn convert_images(
 
     // 开启后台任务，不阻塞主响应
     tauri::async_runtime::spawn(async move {
+        info!("开始后台转换任务");
+        
         let mut file_pairs: Vec<(String, String)> = Vec::new();
         for path in paths_clone {
-            info!("当前处理: {}", path);
+            debug!("构建输出路径: {}", path);
             let target_path = crate::utils::build_target_path(&path, &format_clone, &output_folder);
             file_pairs.push((path, target_path));
         }
-        info!("构造了输入输出");
+        
         let _ = batch_convert(&app_clone, file_pairs, format_clone)
             .await
             .expect("批量转换出现严重错误");
@@ -44,6 +50,8 @@ pub async fn convert_images(
             .unwrap()
             .as_millis();
         let spend_time = end_time - start_time;
+        
+        info!("批量转换完成，耗时 {}ms", spend_time);
         
         let _ = app_clone.emit("conversion-batch-finished", serde_json::json!({
             "spend_time": spend_time

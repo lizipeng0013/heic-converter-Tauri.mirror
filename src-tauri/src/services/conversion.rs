@@ -2,7 +2,7 @@ use serde_json::json;
 use tauri::{AppHandle, Emitter};
 use crate::converters::common::OutputFormat;
 use crate::converters::dispatcher::convert_image_auto;
-use tauri_plugin_log::log::{error, info};
+use tauri_plugin_log::log::{error, info, debug};
 
 /// 批量转换多个文件（支持混合格式）
 /// 
@@ -18,17 +18,17 @@ pub async fn batch_convert(
     files: Vec<(String, String)>,
     format: String,
 ) -> Result<(), String> {
-    info!("检查输出格式是否符合要求");
+    debug!("验证输出格式: {}", format);
 
     let output_format = match OutputFormat::from_str(&format) {
         Ok(fmt) => fmt,
         Err(e) => {
-            error!("不支持该输出格式：{} {}", &format, e);
+            error!("不支持的输出格式: {} - {}", format, e);
             return Err(e.to_string());
         }
     };
 
-    info!("开始调用批量转换格式 converters::dispatcher::convert_image_auto");
+    info!("开始批量转换，共 {} 个文件，目标格式: {:?}", files.len(), output_format);
     batch_convert_images(app, files, output_format)
 }
 
@@ -38,35 +38,53 @@ fn batch_convert_images(
     files: Vec<(String, String)>,
     format: OutputFormat,
 ) -> Result<(), String> {
-    info!("遍历数组，进行转换...");
+    let total = files.len();
+    debug!("开始处理 {} 个文件", total);
 
-    files.into_iter().for_each(|(input, output)| {
+    let mut success_count = 0;
+    let mut error_count = 0;
+
+    files.into_iter().enumerate().for_each(|(index, (input, output))| {
+        let current = index + 1;
+        debug!("处理文件 {}/{}: {}", current, total, input);
+
         let _ = app.emit("conversion-update", json!({
             "path": input,
             "status": "converting",
-            "progress": 0
+            "progress": 0,
+            "current": current,
+            "total": total
         }));
         
         let result = convert_image_auto(app, &input, &output, format);
         
         match result {
             Ok(_) => {
+                success_count += 1;
+                info!("✓ 转换成功 {}/{}: {} -> {}", current, total, input, output);
                 let _ = app.emit("conversion-update", json!({
                     "path": input,
                     "status": "done",
                     "progress": 100,
-                    "output_path": output
+                    "output_path": output,
+                    "current": current,
+                    "total": total
                 }));
             },
             Err(e) => {
+                error_count += 1;
+                error!("✗ 转换失败 {}/{}: {} - {}", current, total, input, e);
                 let _ = app.emit("conversion-update", json!({
                     "path": input,
                     "status": "error",
-                    "error": e.to_string()
+                    "error": e.to_string(),
+                    "current": current,
+                    "total": total
                 }));
             }
         }
     });
 
+    info!("批量转换完成 - 成功: {}, 失败: {}, 总计: {}", success_count, error_count, total);
     Ok(())
 }

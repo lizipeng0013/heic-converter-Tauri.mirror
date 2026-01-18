@@ -4,6 +4,7 @@ use image::{ImageBuffer, RgbImage};
 use serde_json::json;
 use tauri::{AppHandle, Emitter};
 use tauri_plugin_log::log::{info, warn};
+use tracing::debug;
 
 /// 检测是否为 HEIC/HEIF 文件
 pub fn is_heic_format(input_path: &str) -> bool {
@@ -36,7 +37,7 @@ pub fn convert_heic_image(
     let ctx = HeifContext::read_from_file(input_path)?;
     let handle = ctx.primary_image_handle()?;
     
-    info!("HEIC图像信息: {}x{}", handle.width(), handle.height());
+    debug!("HEIC图像信息: {}x{}", handle.width(), handle.height());
     // let _ = app.emit("conversion-update", json!({
     //         "path": input_path,
     //         "status": "converting",
@@ -44,13 +45,13 @@ pub fn convert_heic_image(
     //     }));
     // 尝试多种解码策略
     let image = if let Ok(img) = libheif.decode(&handle, ColorSpace::Rgb(RgbChroma::Rgb), None) {
-        info!("使用交错RGB格式解码");
+        debug!("使用交错RGB格式解码");
         img
     } else if let Ok(img) = libheif.decode(&handle, ColorSpace::YCbCr(Chroma::C420), None) {
-        info!("使用YUV 420格式解码");
+        debug!("使用YUV 420格式解码");
         img
     } else if let Ok(img) = libheif.decode(&handle, ColorSpace::YCbCr(Chroma::C444), None) {
-        info!("使用YUV 444格式解码");
+        debug!("使用YUV 444格式解码");
         img
     } else {
         warn!("所有解码尝试失败，尝试默认解码");
