@@ -10,10 +10,11 @@ import StatusBar from "@/views/status/StatusBar.vue";
     class="h-screen w-screen flex flex-col overflow-hidden bg-background text-foreground relative"
   >
     <TitleBar />
-    <main class="flex-1 flex overflow-hidden pointer-events-auto">
+     <main class="flex-1 flex overflow-hidden pointer-events-auto">
       <FileListArea />
       <SettingsPanel />
     </main>
     <StatusBar />
+<!--    <InputFile />-->
   </div>
 </template>

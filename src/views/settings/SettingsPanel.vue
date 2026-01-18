@@ -5,10 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { openPath } from "@tauri-apps/plugin-opener";
 import { downloadDir } from "@tauri-apps/api/path";
+import {onMounted} from "vue";
 
 const store = useConversionStore();
+onMounted(async () => {
+  store.outputFolder = await downloadDir();
+})
 
 const selectOutputFolder = async () => {
   try {
@@ -23,17 +26,6 @@ const selectOutputFolder = async () => {
   }
 };
 
-const openOutputFolder = async () => {
-  try {
-    const folderPath = store.outputFolder || (await downloadDir());
-    await openPath(folderPath);
-  } catch (error) {
-    console.error("打开目录失败：", error);
-    const folderPath =
-      store.outputFolder || (await downloadDir().catch(() => "下载目录"));
-    alert(`目录路径：${folderPath}\n请手动在文件管理器中打开此目录`);
-  }
-};
 </script>
 
 <template>
@@ -116,7 +108,7 @@ const openOutputFolder = async () => {
     <div class="p-6 border-t bg-muted/20">
       <Button
         @click="store.startConversion"
-        :disabled="store.isConverting"
+        :disabled="store.isConverting || !store.isReadyForConversion"
         class="w-full h-11 text-base"
       >
         开始批量转换

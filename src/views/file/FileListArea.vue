@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import {onMounted, onUnmounted, ref} from "vue";
 import { useConversionStore } from "@/stores/conversionStore";
 import { formatSize } from "@/utils";
 import {
@@ -10,6 +10,7 @@ import {
   Loader2,
   FolderOpen,
 } from "lucide-vue-next";
+import { open } from '@tauri-apps/plugin-dialog'
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,36 +23,113 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip/";
 
-const convertionStore = useConversionStore();
+import {listen, TauriEvent, UnlistenFn} from "@tauri-apps/api/event";
+import {info} from "@tauri-apps/plugin-log";
+import {alertSevere} from "@/utils/useError.ts";
+
+const conversionStore = useConversionStore();
 const isFileDragging = ref(false);
-
-const handleDrop = (e: DragEvent) => {
-  e.preventDefault();
-  isFileDragging.value = false;
-  const files = e.dataTransfer?.files;
-  if (files && files.length > 0) {
-    convertionStore.addFiles(files);
+const fileRefs = ref<Record<string, HTMLElement>>({});
+const setFileRef = (path: string, el: any) => {
+  if (el) {
+    fileRefs.value[path] = el;
+  } else {
+    delete fileRefs.value[path];
   }
-};
+}
+let unlistenDragEnter: UnlistenFn | null = null;
+let unlistenDragDrop: UnlistenFn | null = null;
+let unlistenDragLeave: UnlistenFn | null = null;
+let unlistenConversion: UnlistenFn | null = null;
+let unlistenBatchFinished: UnlistenFn | null = null;
 
-const handleDragEnter = (e: DragEvent) => {
-  e.preventDefault();
-  isFileDragging.value = true;
-};
+onMounted(async () => {
+  // 监听：文件悬停在窗口任意位置
+  unlistenDragEnter = await listen(TauriEvent.DRAG_ENTER, () => {
+    isFileDragging.value = true;
+    info(`Drag Enter`);
+  });
 
-const handleDragLeave = (e: DragEvent) => {
-  e.preventDefault();
-  isFileDragging.value = false;
-};
+  // 监听：放下文件
+  unlistenDragDrop = await listen(TauriEvent.DRAG_DROP, (event) => {
+    // 1. 先结束动画状态
+    isFileDragging.value = false;
+    info(`Drag Drop`);
+    // 2. 直接处理，不做区域判断
+    // const paths = event.payload as string[];
+    const payload = event.payload as any;
+    const paths = payload.paths as string[];
+    conversionStore.addPaths(paths);
+  });
 
-const handleDragOver = (e: DragEvent) => {
-  e.preventDefault();
-};
+  // 监听：取消 (离开窗口或拖到别处去了)
+  unlistenDragLeave = await listen(TauriEvent.DRAG_LEAVE, () => {
+    isFileDragging.value = false;
+    info(`Drag Leave`);
+  });
 
-const handleInputFiles = (e: Event) => {
-  const target = e.target as HTMLInputElement;
-  if (target.files && target.files.length > 0) {
-    convertionStore.addFiles(target.files);
+  unlistenConversion = await listen("conversion-update", (event) => {
+    const payload = event.payload as any;
+    const {path, status, progress, output_path, error } = payload;
+    if (status === "done") {
+      conversionStore.updateFileSuccess(path, output_path);
+    } else if (status === "converting") {
+      conversionStore.updateFileStatus(path, "converting", progress);
+      if (progress === 0) {
+        const el = fileRefs.value[path];
+        if (el) {
+          el.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+            inline: "nearest",
+          });
+        }
+      }
+    } else if (status === "error") {
+      conversionStore.updateFileError(path, error);
+    }
+  })
+
+  unlistenBatchFinished = await listen("conversion-batch-finished", (event) => {
+    info(`转换任务完成`);
+    conversionStore.isConverting = false;
+    const payload = event.payload as any;
+    let spendTime = (payload.spend_time/1000).toFixed(1)
+    info(`转换耗时：${spendTime}s`);
+    conversionStore.isReadyForConversion = false;
+  })
+
+});
+
+onUnmounted(() => {
+  unlistenDragEnter?.();
+  unlistenDragDrop?.();
+  unlistenDragLeave?.();
+  unlistenConversion?.();
+  unlistenBatchFinished?.();
+});
+
+// import { ConversionService } from "@/services/conversionService"; // 你的服务
+
+// 新的文件选择函数
+const selectFilesWithDialog = async () => {
+  try {
+    const selected = await open({
+      multiple: true,
+      filters: [
+        {
+          name: "HEIC/HEIF 文件",
+          extensions: ["heic", "heif"],
+        },
+      ],
+    });
+
+    if (!selected) return;
+
+    const filePaths = Array.isArray(selected) ? selected : [selected];
+    await conversionStore.addPaths(filePaths);
+  } catch (error) {
+    alertSevere("选择文件失败：" + error)
   }
 };
 
@@ -61,9 +139,10 @@ const handleOpenFileDir = async (file: FileItem) => {
       await revealItemInDir(file.convertedFilePath);
     }
   } catch (error) {
-    console.error("打开目录并定位文件失败：", error);
+    alertSevere("打开目录并定位文件失败：" + error);
   }
 };
+
 </script>
 
 <template>
@@ -72,30 +151,26 @@ const handleOpenFileDir = async (file: FileItem) => {
   >
     <div class="h-12 px-4 flex items-center justify-between border-b shrink-0">
       <h3 class="text-sm font-medium text-muted-foreground">
-        文件队列 ({{ convertionStore.stats.total }})
+        文件队列 ({{ conversionStore.stats.total }})
       </h3>
       <Button
-        v-if="convertionStore.stats.total > 0"
+        v-if="conversionStore.stats.total > 0"
         variant="ghost"
         size="sm"
         class="h-8 text-xs"
-        @click="convertionStore.clearFiles"
+        @click="conversionStore.clearPaths()"
         >清空列表</Button
       >
     </div>
 
     <div
       class="flex-1 w-full overflow-y-auto p-2 space-y-1"
-      @dragenter="handleDragEnter"
-      @dragover="handleDragOver"
-      @dragleave="handleDragLeave"
-      @drop="handleDrop"
       :class="{
         'bg-primary/10': isFileDragging, // 【背景】明显变蓝
       }"
     >
       <div
-        v-if="convertionStore.stats.total === 0"
+        v-if="conversionStore.stats.total === 0"
         class="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground/50 pointer-events-none"
       >
         <div
@@ -114,14 +189,15 @@ const handleOpenFileDir = async (file: FileItem) => {
         </p>
       </div>
 
-      <!-- TODO: 待增加快捷打开目录的按钮 -->
       <Card
-        v-for="file in convertionStore.files"
-        :key="file.id"
+        v-for="file in conversionStore.files"
+        :key="file.path"
         class="group overflow-hidden transition-colors hover:border-primary/50"
       >
         <CardContent class="p-1 flex items-center justify-between gap-2">
-          <div class="flex items-center gap-2 min-w-0 flex-1">
+          <div class="flex items-center gap-2 min-w-0 flex-1"
+               :ref="(el) => setFileRef(file.path, el)"
+          >
             <div
               class="h-7 w-7 shrink-0 rounded bg-secondary flex items-center justify-center text-secondary-foreground"
             >
@@ -152,11 +228,15 @@ const handleOpenFileDir = async (file: FileItem) => {
                 {{ formatSize(file.size) }}
               </div>
               <div
-                v-if="file.status === 'converting'"
+                v-if="file.status === 'converting' || file.status === 'done'"
                 class="h-1.5 w-full bg-secondary rounded-full overflow-hidden"
               >
                 <div
                   class="h-full bg-primary transition-all duration-300 ease-out"
+                  :class="{
+                    'bg-green-500': file.status === 'done',  // 完成后变绿
+                    'bg-primary': file.status === 'converting'
+                  }"
                   :style="{ width: file.progress + '%' }"
                 ></div>
               </div>
@@ -188,7 +268,7 @@ const handleOpenFileDir = async (file: FileItem) => {
                     variant="ghost"
                     size="icon"
                     class="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                    @click="convertionStore.removeFile(file.id)"
+                    @click="conversionStore.removePath(file.path)"
                   >
                     <Trash2 :size="14" />
                   </Button>
@@ -205,18 +285,11 @@ const handleOpenFileDir = async (file: FileItem) => {
 
     <div class="p-2 border-t bg-card shrink-0 relative z-10">
       <div class="relative w-full">
-        <input
-          type="file"
-          multiple
-          accept=".heic,.heif"
-          class="hidden"
-          id="fileInput"
-          ref="fileInput"
-          @change="handleInputFiles"
-        />
+        
         <label
           for="fileInput"
           class="cursor-pointer flex items-center justify-center w-full h-10 rounded-md border border-input bg-background px-8 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+          @click="selectFilesWithDialog"
         >
           <Upload :size="16" class="mr-2" /> 选择文件
         </label>

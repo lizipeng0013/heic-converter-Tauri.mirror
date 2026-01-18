@@ -26,13 +26,13 @@ pub fn toggle_maximize_window(window: Window) {
 }
 
 // --- 关闭窗口 ---
-#[tauri::command]
+#[command]
 pub fn close_window(window: Window) {
     window.close().ok(); // 改为 ok() 更安全
 }
 
 // --- 窗口置顶 ---
-#[tauri::command]
+#[command]
 pub async fn toggle_always_on_top(window: Window) -> Result<(), String> {
     // 获取或初始化状态（初始为 false）
     let new_state = !IS_TOP.load(Ordering::SeqCst);
