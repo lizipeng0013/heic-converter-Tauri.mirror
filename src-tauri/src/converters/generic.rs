@@ -2,7 +2,7 @@ use super::common::{ConversionError, OutputFormat, save_image_buffer};
 use image::ImageReader;
 use serde_json::json;
 use tauri::{AppHandle, Emitter};
-use tauri_plugin_log::log::{debug, info};
+use tauri_plugin_log::log::info;
 
 /// 处理普通图片格式转换 (JPEG, PNG, WebP, GIF, BMP等)
 pub fn convert_regular_image(

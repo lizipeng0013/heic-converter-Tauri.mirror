@@ -1,6 +1,6 @@
 use thiserror::Error;
-use image::{ImageFormat, ImageBuffer, RgbImage};
-use tauri_plugin_log::log::{debug, info, error};
+use image::{ImageFormat, RgbImage};
+use tauri_plugin_log::log::{debug, info};
 
 /// 统一的错误类型，覆盖所有转换场景
 #[derive(Error, Debug)]
