@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Loader2,
   FolderOpen,
+  AlertCircle,
 } from "lucide-vue-next";
 import { open } from '@tauri-apps/plugin-dialog'
 import { Button } from "@/components/ui/button";
@@ -96,6 +97,7 @@ onMounted(async () => {
     const payload = event.payload as any;
     let spendTime = (payload.spend_time/1000).toFixed(1)
     info(`转换耗时：${spendTime}s`);
+    conversionStore.spendTime = parseFloat(spendTime);
     conversionStore.isReadyForConversion = false;
   })
 
@@ -206,8 +208,20 @@ const handleOpenFileDir = async (file: FileItem) => {
             <div class="flex flex-col justify-center gap-0.5 overflow-hidden">
               <div class="flex items-center gap-2">
                 <p class="text-sm font-medium truncate">{{ file.name }}</p>
+                <TooltipProvider v-if="file.status === 'error' && file.error">
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <div class="flex items-center gap-0.5 text-destructive cursor-help">
+                        <AlertCircle :size="12" />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p class="max-w-xs break-words">{{ file.error }}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <Badge
-                  :variant="file.status === 'done' ? 'default' : 'secondary'"
+                  :variant="file.status === 'done' ? 'default' : file.status === 'error' ? 'destructive' : 'secondary'"
                   class="h-5 px-1.5 text-[10px] flex-shrink-0"
                 >
                   <span
@@ -220,6 +234,11 @@ const handleOpenFileDir = async (file: FileItem) => {
                     class="flex items-center gap-0.5 text-yellow-500 dark:text-yellow-400"
                     ><Loader2 :size="10" class="animate-spin" />
                     {{ file.progress }}%</span
+                  >
+                  <span
+                    v-else-if="file.status === 'error'"
+                    class="flex items-center gap-0.5"
+                    >失败</span
                   >
                   <span v-else>等待</span>
                 </Badge>

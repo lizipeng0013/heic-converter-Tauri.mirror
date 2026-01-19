@@ -14,11 +14,13 @@ export const useConversionStore = defineStore("conversion", () => {
   const isConverting = ref(false);
   const outputFolder = ref<string | null>(null);
   const isReadyForConversion = ref(false);
+  const spendTime = ref<number | null>(null);
   // --- Getters ---
   const stats = computed(() => ({
     total: files.length,
     done: files.filter((f) => f.status === "done").length,
     pending: files.filter((f) => f.status === "pending").length,
+    error: files.filter((f) => f.status === "error").length,
   }));
 
   // --- Actions ---
@@ -149,6 +151,7 @@ export const useConversionStore = defineStore("conversion", () => {
     isConverting,
     isReadyForConversion,
     outputFolder,
+    spendTime,
     stats,
     addPaths,
     updateFileStatus,
