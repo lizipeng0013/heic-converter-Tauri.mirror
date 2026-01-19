@@ -18,8 +18,18 @@ export interface FileItem {
   error?: string;
 }
 
+// --- 支持的输出格式类型 ---
+export type OutputFormat = "jpeg" | "jpg" | "png" | "webp" | "bmp" | "tiff" | "ico";
+
+// --- 格式信息接口 ---
+export interface FormatInfo {
+  value: OutputFormat;
+  label: string;
+  supportsQuality: boolean;
+}
+
 // --- 转换设置接口 ---
 export interface ConverterSettings {
-  format: "jpeg" | "png" | "jpg";
+  format: OutputFormat;
   quality: number[];
 }
