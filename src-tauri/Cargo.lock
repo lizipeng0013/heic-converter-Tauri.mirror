@@ -1788,6 +1788,7 @@ dependencies = [
  "image",
  "jpeg-encoder",
  "libheif-rs",
+ "rayon",
  "serde",
  "serde_json",
  "tauri",
