@@ -10,6 +10,8 @@ export const useConversionStore = defineStore("conversion", () => {
   void debug("useConversionStore");
   // --- State ---
   const files = reactive<FileItem[]>([]);
+  const completedFiles = reactive<FileItem[]>([]); // 已完成的文件
+  const activeTab = ref<'pending' | 'completed'>('pending'); // 当前激活的标签页
   const settings = ref<ConverterSettings>({ format: "jpeg", quality: [90] });
   const isConverting = ref(false);
   const isStopping = ref(false); // 标记是否正在停止转换
@@ -19,16 +21,25 @@ export const useConversionStore = defineStore("conversion", () => {
   const spendTime = ref<number | null>(null);
   // --- Getters ---
   const stats = computed(() => ({
-    total: files.length,
-    done: files.filter((f) => f.status === "done").length,
-    pending: files.filter((f) => f.status === "pending").length,
-    error: files.filter((f) => f.status === "error").length,
+    total: files.length + completedFiles.length, // 总计包括待转换和已完成的文件
+    done: completedFiles.length, // 已完成的文件数量
+    pending: files.filter((f) => f.status === "pending").length, // 待转换的文件数量
+    converting: files.filter((f) => f.status === "converting").length, // 正在转换的文件数量
+    error: files.filter((f) => f.status === "error").length, // 失败的文件数量
+    completed: completedFiles.length, // 已完成的文件数量（与 done 相同）
   }));
 
   // --- Actions ---
   const addPaths = async (paths: string[]) => {
     if (!paths || paths.length === 0) return;
     await info(`前端addPaths获取到: ${paths}`);
+    
+    // 如果待转换列表为空，重置 hasStartedConversion 标志
+    // 这样新导入的文件会显示"开始批量转换"而不是"继续转换"
+    if (files.length === 0) {
+      hasStartedConversion.value = false;
+    }
+    
     const filePromises = paths.map(async (path) => {
       const ext = path.split(".").pop()?.toLowerCase();
       if (ext !== "heic" && ext !== "heif") {
@@ -80,11 +91,16 @@ export const useConversionStore = defineStore("conversion", () => {
   };
 
   const updateFileSuccess = (path: string, output_path: string)=> {
-    const file = files.find((f) => f.path === path);
-    if (file) {
+    const fileIndex = files.findIndex((f) => f.path === path);
+    if (fileIndex !== -1) {
+      const file = files[fileIndex];
       file.status = "done";
       file.progress = 100;
       file.convertedFilePath = output_path;
+      
+      // 从待转换列表移除，添加到已完成列表
+      files.splice(fileIndex, 1);
+      completedFiles.push(file);
     }
   }
 
@@ -117,6 +133,23 @@ export const useConversionStore = defineStore("conversion", () => {
     isConverting.value = false;
     isStopping.value = false;
     hasStartedConversion.value = false;
+  };
+
+  const clearCompletedFiles = () => {
+    // 只清空已完成文件
+    completedFiles.splice(0, completedFiles.length);
+  };
+
+  const removeCompletedFile = (path: string) => {
+    // 从已完成列表中删除指定文件
+    const index = completedFiles.findIndex((f) => f.path === path);
+    if (index !== -1) {
+      completedFiles.splice(index, 1);
+    }
+  };
+
+  const setActiveTab = (tab: 'pending' | 'completed') => {
+    activeTab.value = tab;
   };
 
   const updateSettings = (newSettings: Partial<ConverterSettings>) => {
@@ -174,13 +207,8 @@ export const useConversionStore = defineStore("conversion", () => {
       // 立即更新UI状态，让用户感觉立即停止
       isConverting.value = false;
       
-      // 重置正在转换的文件状态
-      files.forEach(file => {
-        if (file.status === "converting") {
-          file.status = "pending";
-          file.progress = 0;
-        }
-      });
+      // 由于转换速度很快，让正在转换的文件继续完成，只是停止后续文件的转换
+      // 不再重置正在转换的文件状态
       
       await invoke("stop_conversion");
       await info(`已停止转换任务`);
@@ -197,6 +225,8 @@ export const useConversionStore = defineStore("conversion", () => {
 
   return {
     files,
+    completedFiles,
+    activeTab,
     settings,
     isConverting,
     isStopping,
@@ -210,7 +240,10 @@ export const useConversionStore = defineStore("conversion", () => {
     updateFileSuccess,
     updateFileError,
     removePath,
+    removeCompletedFile,
     clearPaths,
+    clearCompletedFiles,
+    setActiveTab,
     updateSettings,
     setOutputFolder,
     startConversion,
