@@ -211,9 +211,15 @@ const handleOpenFileDir = async (file: FileItem) => {
                 <TooltipProvider v-if="file.status === 'error' && file.error">
                   <Tooltip>
                     <TooltipTrigger as-child>
-                      <div class="flex items-center gap-0.5 text-destructive cursor-help">
-                        <AlertCircle :size="12" />
-                      </div>
+                      <Badge
+                        variant="destructive"
+                        class="h-5 px-1.5 text-[10px] flex-shrink-0 cursor-help"
+                      >
+                        <span class="flex items-center gap-0.5">
+                          <AlertCircle :size="12" />
+                          失败
+                        </span>
+                      </Badge>
                     </TooltipTrigger>
                     <TooltipContent>
                       <p class="max-w-xs break-words">{{ file.error }}</p>
@@ -221,7 +227,8 @@ const handleOpenFileDir = async (file: FileItem) => {
                   </Tooltip>
                 </TooltipProvider>
                 <Badge
-                  :variant="file.status === 'done' ? 'default' : file.status === 'error' ? 'destructive' : 'secondary'"
+                  v-else
+                  :variant="file.status === 'done' ? 'default' : 'secondary'"
                   class="h-5 px-1.5 text-[10px] flex-shrink-0"
                 >
                   <span
@@ -234,11 +241,6 @@ const handleOpenFileDir = async (file: FileItem) => {
                     class="flex items-center gap-0.5 text-yellow-500 dark:text-yellow-400"
                     ><Loader2 :size="10" class="animate-spin" />
                     {{ file.progress }}%</span
-                  >
-                  <span
-                    v-else-if="file.status === 'error'"
-                    class="flex items-center gap-0.5"
-                    >失败</span
                   >
                   <span v-else>等待</span>
                 </Badge>
