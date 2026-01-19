@@ -12,6 +12,8 @@ export const useConversionStore = defineStore("conversion", () => {
   const files = reactive<FileItem[]>([]);
   const settings = ref<ConverterSettings>({ format: "jpeg", quality: [90] });
   const isConverting = ref(false);
+  const isStopping = ref(false); // 标记是否正在停止转换
+  const hasStartedConversion = ref(false); // 标记是否曾经开始过转换
   const outputFolder = ref<string | null>(null);
   const isReadyForConversion = ref(false);
   const spendTime = ref<number | null>(null);
@@ -113,6 +115,8 @@ export const useConversionStore = defineStore("conversion", () => {
     // 重置转换状态
     isReadyForConversion.value = false;
     isConverting.value = false;
+    isStopping.value = false;
+    hasStartedConversion.value = false;
   };
 
   const updateSettings = (newSettings: Partial<ConverterSettings>) => {
@@ -126,7 +130,12 @@ export const useConversionStore = defineStore("conversion", () => {
   // --- 重写开始转换逻辑：调用批量方法 ---
   const startConversion = async () => {
     await info(`前端开始执行转换逻辑...`)
-    if (isConverting.value) return;
+    
+    // 如果正在转换或正在停止，不允许启动新的转换任务
+    if (isConverting.value || isStopping.value) {
+      void warn(`转换任务正在进行中或正在停止，忽略新的转换请求`);
+      return;
+    }
 
     const pending = files.filter((f) => f.status === "pending");
 
@@ -138,6 +147,8 @@ export const useConversionStore = defineStore("conversion", () => {
     const paths = pending.map((f) => f.path);
 
     isConverting.value = true;
+    isStopping.value = false;
+    hasStartedConversion.value = true;
     try {
       await invoke("convert_images", {
         paths: paths,
@@ -148,6 +159,39 @@ export const useConversionStore = defineStore("conversion", () => {
       await info(`已发起转换任务`);
     } catch (error) {
       alertSevere("转换任务执行失败！" + error)
+      isConverting.value = false;
+      isStopping.value = false;
+    }
+  };
+
+  // 停止转换
+  const stopConversion = async () => {
+    await info(`前端停止转换...`)
+    try {
+      // 设置停止标志，防止在停止过程中启动新的转换任务
+      isStopping.value = true;
+      
+      // 立即更新UI状态，让用户感觉立即停止
+      isConverting.value = false;
+      
+      // 重置正在转换的文件状态
+      files.forEach(file => {
+        if (file.status === "converting") {
+          file.status = "pending";
+          file.progress = 0;
+        }
+      });
+      
+      await invoke("stop_conversion");
+      await info(`已停止转换任务`);
+      
+      // 等待一段时间确保后端停止完成
+      setTimeout(() => {
+        isStopping.value = false;
+      }, 1000);
+    } catch (error) {
+      alertSevere("停止转换任务失败！" + error)
+      isStopping.value = false;
     }
   };
 
@@ -155,6 +199,8 @@ export const useConversionStore = defineStore("conversion", () => {
     files,
     settings,
     isConverting,
+    isStopping,
+    hasStartedConversion,
     isReadyForConversion,
     outputFolder,
     spendTime,
@@ -168,5 +214,6 @@ export const useConversionStore = defineStore("conversion", () => {
     updateSettings,
     setOutputFolder,
     startConversion,
+    stopConversion,
   };
 });

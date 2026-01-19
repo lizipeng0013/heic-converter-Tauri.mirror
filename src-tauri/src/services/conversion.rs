@@ -2,6 +2,7 @@ use serde_json::json;
 use tauri::{AppHandle, Emitter};
 use crate::converters::common::OutputFormat;
 use crate::converters::dispatcher::convert_image_auto;
+use crate::commands::conversion::should_stop;
 use tauri_plugin_log::log::{error, info, debug};
 
 /// 批量转换多个文件（支持混合格式）
@@ -47,6 +48,12 @@ fn batch_convert_images(
     let mut error_count = 0;
 
     files.into_iter().enumerate().for_each(|(index, (input, output))| {
+        // 检查是否应该停止
+        if should_stop() {
+            info!("收到停止信号，中止转换任务");
+            return;
+        }
+
         let current = index + 1;
         debug!("处理文件 {}/{}: {}", current, total, input);
 

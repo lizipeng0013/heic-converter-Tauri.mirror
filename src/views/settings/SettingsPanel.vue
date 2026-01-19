@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useConversionStore } from "@/stores/conversionStore";
-import { Settings2, FolderOpen, ChevronDown } from "lucide-vue-next";
+import { Settings2, FolderOpen, ChevronDown, Square } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
@@ -127,6 +127,36 @@ const showQualityControl = computed(() => {
   return isQualityEnabled.value;
 });
 
+// 按钮文字
+const buttonText = computed(() => {
+  if (store.isConverting) {
+    return "停止转换";
+  }
+  const pendingCount = store.stats.pending;
+  
+  // 如果从未开始过转换，或者没有待转换文件，显示"开始批量转换"
+  if (!store.hasStartedConversion || pendingCount === 0) {
+    return "开始批量转换";
+  }
+  
+  // 如果已经转换过，并且还有待转换文件，显示"继续转换"
+  if (pendingCount > 0) {
+    return `继续转换 (${pendingCount} 待处理)`;
+  }
+  
+  return "开始批量转换";
+});
+
+// 按钮变体
+const buttonVariant = computed(() => {
+  return store.isConverting ? "destructive" : "default";
+});
+
+// 按钮图标
+const buttonIcon = computed(() => {
+  return store.isConverting ? Square : null;
+});
+
 </script>
 
 <template>
@@ -248,11 +278,18 @@ const showQualityControl = computed(() => {
     </div>
     <div class="p-6 border-t bg-muted/20">
       <Button
-        @click="store.startConversion"
-        :disabled="store.isConverting || !store.isReadyForConversion"
+        @click="store.isConverting ? store.stopConversion() : store.startConversion()"
+        :variant="buttonVariant"
+        :disabled="!store.isConverting && store.stats.pending === 0 || store.isStopping"
         class="w-full h-11 text-base"
       >
-        开始批量转换
+        <component
+          v-if="buttonIcon"
+          :is="buttonIcon"
+          :size="18"
+          class="mr-2"
+        />
+        {{ buttonText }}
       </Button>
     </div>
   </aside>

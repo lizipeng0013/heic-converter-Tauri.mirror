@@ -2,6 +2,11 @@ use tauri::{AppHandle, Emitter};
 use crate::services::conversion::batch_convert;
 use tauri_plugin_log::log::{info, debug};
 use tracing::instrument;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+
+// 全局停止标志
+static SHOULD_STOP: AtomicBool = AtomicBool::new(false);
 
 /// 批量转换图片命令
 ///
@@ -33,6 +38,9 @@ pub async fn convert_images(
     let paths_clone = paths.clone();
     let format_clone = target_type.clone();
 
+    // 重置停止标志
+    SHOULD_STOP.store(false, Ordering::SeqCst);
+
     // 开启后台任务，不阻塞主响应
     tauri::async_runtime::spawn(async move {
         info!("开始后台转换任务");
@@ -62,4 +70,17 @@ pub async fn convert_images(
     });
 
     Ok(())
+}
+
+/// 停止转换命令
+#[tauri::command]
+pub fn stop_conversion() -> Result<(), String> {
+    info!("收到停止转换请求");
+    SHOULD_STOP.store(true, Ordering::SeqCst);
+    Ok(())
+}
+
+/// 检查是否应该停止
+pub fn should_stop() -> bool {
+    SHOULD_STOP.load(Ordering::SeqCst)
 }

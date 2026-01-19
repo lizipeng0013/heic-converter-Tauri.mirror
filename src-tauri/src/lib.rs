@@ -4,7 +4,7 @@ mod services;
 mod converters;
 mod utils;
 
-use commands::conversion::{convert_images};
+use commands::conversion::{convert_images, stop_conversion};
 use commands::window::{close_window, minimize_window, toggle_always_on_top, toggle_maximize_window};
 
 #[tauri::command]
@@ -24,6 +24,7 @@ pub fn run() {
             toggle_always_on_top,
             // 业务逻辑类
             convert_images,
+            stop_conversion,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

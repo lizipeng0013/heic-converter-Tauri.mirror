@@ -70,6 +70,11 @@ onMounted(async () => {
   });
 
   unlistenConversion = await listen("conversion-update", (event) => {
+    // 如果已经停止转换，忽略这些更新
+    if (!conversionStore.isConverting) {
+      return;
+    }
+    
     const payload = event.payload as any;
     const {path, status, progress, output_path, error } = payload;
     if (status === "done") {
@@ -93,7 +98,10 @@ onMounted(async () => {
 
   unlistenBatchFinished = await listen("conversion-batch-finished", (event) => {
     info(`转换任务完成`);
-    conversionStore.isConverting = false;
+    // 只有在转换状态下才设置为 false
+    if (conversionStore.isConverting) {
+      conversionStore.isConverting = false;
+    }
     const payload = event.payload as any;
     let spendTime = (payload.spend_time/1000).toFixed(1)
     info(`转换耗时：${spendTime}s`);
