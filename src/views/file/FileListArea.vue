@@ -197,7 +197,7 @@ const handleOpenFileDir = async (file: FileItem) => {
         class="group overflow-hidden transition-colors hover:border-primary/50"
       >
         <CardContent class="p-1 flex items-center justify-between gap-2">
-          <div class="flex items-center gap-2 min-w-0 flex-1"
+          <div class="flex items-center gap-2 min-w-0 flex-1 max-w-[calc(100%-2rem)]"
                :ref="(el) => setFileRef(file.path, el)"
           >
             <div
@@ -205,15 +205,33 @@ const handleOpenFileDir = async (file: FileItem) => {
             >
               <FileImage :size="14" />
             </div>
-            <div class="flex flex-col justify-center gap-0.5 overflow-hidden">
+            <div class="flex flex-col justify-center gap-0.5 overflow-hidden min-w-0 flex-1">
               <div class="flex items-center gap-2">
-                <p class="text-sm font-medium truncate">{{ file.name }}</p>
+                <p class="text-sm font-medium truncate flex-1 min-w-0">{{ file.name }}</p>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Button
+                          v-if="file.convertedFilePath"
+                          variant="ghost"
+                          size="icon"
+                          class="h-7 w-7 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-primary dark:hover:text-primary transition-colors"
+                          @click="handleOpenFileDir(file)"
+                      >
+                        <FolderOpen :size="14" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>打开转换成功的文件所在目录</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <TooltipProvider v-if="file.status === 'error' && file.error">
                   <Tooltip>
                     <TooltipTrigger as-child>
                       <Badge
                         variant="destructive"
-                        class="h-5 px-1.5 text-[10px] flex-shrink-0 cursor-help"
+                        class="h-5 px-1.5 text-[10px] flex-shrink-0 cursor-help w-16 justify-center"
                       >
                         <span class="flex items-center gap-0.5">
                           <AlertCircle :size="12" />
@@ -229,7 +247,7 @@ const handleOpenFileDir = async (file: FileItem) => {
                 <Badge
                   v-else
                   :variant="file.status === 'done' ? 'default' : 'secondary'"
-                  class="h-5 px-1.5 text-[10px] flex-shrink-0"
+                  class="h-5 px-1.5 text-[10px] flex-shrink-0 w-16 justify-center"
                 >
                   <span
                     v-if="file.status === 'done'"
@@ -263,25 +281,8 @@ const handleOpenFileDir = async (file: FileItem) => {
               </div>
             </div>
           </div>
-          <div class="flex items-center gap-1 shrink-0">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Button
-                    v-if="file.convertedFilePath"
-                    variant="ghost"
-                    size="icon"
-                    class="h-7 w-7 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-primary dark:hover:text-primary transition-colors"
-                    @click="handleOpenFileDir(file)"
-                  >
-                    <FolderOpen :size="14" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>打开转换成功的文件所在目录</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <div class="flex items-center gap-1 shrink-0 w-8 justify-end">
+
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger>
