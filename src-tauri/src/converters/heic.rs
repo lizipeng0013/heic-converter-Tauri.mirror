@@ -3,8 +3,7 @@ use libheif_rs::{LibHeif, HeifContext, ColorSpace, RgbChroma, Chroma};
 use image::{ImageBuffer, RgbImage};
 use serde_json::json;
 use tauri::{AppHandle, Emitter};
-use tauri_plugin_log::log::{info, warn};
-use tracing::debug;
+use tauri_plugin_log::log::{info, warn, debug};
 
 /// 检测是否为 HEIC/HEIF 文件
 pub fn is_heic_format(input_path: &str) -> bool {
