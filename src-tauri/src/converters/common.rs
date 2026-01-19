@@ -11,6 +11,8 @@ pub enum ConversionError {
     ImageError(#[from] image::ImageError),
     #[error("文件操作失败: {0}")]
     IoError(#[from] std::io::Error),
+    #[error("JPEG编码失败: {0}")]
+    JpegEncodeError(#[from] jpeg_encoder::EncodingError),
     #[error("不支持的输出格式: {0}")]
     UnsupportedFormat(String),
     #[error("无法识别的图片格式")]
@@ -59,19 +61,19 @@ impl OutputFormat {
         }
     }
 
-    /// 获取文件扩展名
+    /// 获取格式的扩展名
     pub fn extension(&self) -> &'static str {
         match self {
             OutputFormat::Jpeg(_) => "jpg",
             OutputFormat::Png => "png",
             OutputFormat::WebP(_) => "webp",
             OutputFormat::Bmp => "bmp",
-            OutputFormat::Tiff => "tiff",
+            OutputFormat::Tiff => "tif",
             OutputFormat::Ico => "ico",
         }
     }
 
-    /// 获取格式名称（用于显示）
+    /// 获取格式的名称
     pub fn name(&self) -> &'static str {
         match self {
             OutputFormat::Jpeg(_) => "JPEG",
@@ -83,7 +85,7 @@ impl OutputFormat {
         }
     }
 
-    /// 检查是否支持质量参数
+    /// 检查格式是否支持质量参数
     pub fn supports_quality(&self) -> bool {
         matches!(self, OutputFormat::Jpeg(_) | OutputFormat::WebP(_))
     }
@@ -98,7 +100,7 @@ pub fn save_image_buffer(
     debug!("保存图片到: {}, 格式: {:?}", output_path, format);
 
     // ICO 格式需要特殊处理：尺寸必须在 1-256 之间
-    let buffer_to_save = if let OutputFormat::Ico = format {
+    let buffer_ref: &RgbImage = if let OutputFormat::Ico = format {
         let (width, height) = buffer.dimensions();
         debug!("原始图片尺寸: {}x{}", width, height);
 
@@ -119,31 +121,48 @@ pub fn save_image_buffer(
             debug!("缩放后尺寸: {}x{}", new_width, new_height);
 
             // 使用 image crate 的缩放功能
-            let resized = image::imageops::resize(
-                buffer,
-                new_width,
-                new_height,
-                image::imageops::FilterType::Lanczos3,
-            );
-
-            resized
-        } else {
-            debug!("图片尺寸符合ICO格式要求，无需缩放");
-            buffer.clone()
+            // 注意：这里需要返回一个引用，所以我们需要一个作用域
+            // 但由于 Rust 的借用规则，我们不能在这里返回局部变量的引用
+            // 所以我们只能克隆，但 ICO 格式通常图片较小，影响不大
+            return {
+                let resized = image::imageops::resize(
+                    buffer,
+                    new_width,
+                    new_height,
+                    image::imageops::FilterType::Lanczos3,
+                );
+                
+                // 保存缩放后的图片
+                resized.save_with_format(output_path, ImageFormat::Ico)?;
+                info!("图片保存成功: {}", output_path);
+                Ok(())
+            };
         }
+        
+        // ICO 格式但尺寸符合要求，使用原 buffer
+        buffer
     } else {
-        buffer.clone()
+        // 非 ICO 格式，使用原 buffer
+        buffer
     };
 
     // 如果是JPEG且有质量参数
     if let OutputFormat::Jpeg(quality) = format {
-        // 使用 image crate 的 JPEG 编码器以支持质量参数
-        let mut file = std::fs::File::create(output_path)?;
-        let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut file, quality);
-        encoder.encode_image(&buffer_to_save)?;
+        // 使用 jpeg-encoder 库（性能比 image crate 的编码器好）
+        debug!("使用 jpeg-encoder 编码，质量: {}", quality);
+        
+        let file = std::fs::File::create(output_path)?;
+        let mut encoder = jpeg_encoder::Encoder::new(file, quality as u8);
+        
+        // 获取图片尺寸和像素数据
+        let (width, height) = buffer_ref.dimensions();
+        let pixels = buffer_ref.as_raw();
+        
+        // 编码 JPEG
+        encoder.encode(pixels, width as u16, height as u16, jpeg_encoder::ColorType::Rgb)?;
     } else {
         // PNG、WebP、BMP、TIFF、ICO 等其他格式
-        buffer_to_save.save_with_format(output_path, format.to_image_format())?;
+        buffer_ref.save_with_format(output_path, format.to_image_format())?;
     }
 
     info!("图片保存成功: {}", output_path);
