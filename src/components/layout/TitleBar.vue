@@ -83,12 +83,7 @@ const onDoubleClick = () => {
 
 <template>
   <header
-    class="h-14 px-4 flex items-center justify-between shrink-0 select-none relative z-50"
-    :class="
-      isDark
-        ? 'bg-slate-900 border-b border-slate-700'
-        : 'bg-white border-b border-slate-200'
-    "
+    class="h-14 px-4 flex items-center justify-between shrink-0 select-none relative z-50 bg-titlebar border-b border-border"
   >
     <!-- 标题栏可拖拽区域 -->
     <div
