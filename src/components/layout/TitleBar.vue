@@ -83,7 +83,7 @@ const onDoubleClick = () => {
 
 <template>
   <header
-    class="h-14 px-4 flex items-center justify-between shrink-0 select-none relative z-50 bg-titlebar border-b border-border"
+    class="h-12 px-4 flex items-center justify-between shrink-0 select-none relative z-50 bg-titlebar border-b border-border"
   >
     <!-- 标题栏可拖拽区域 -->
     <div
@@ -96,10 +96,10 @@ const onDoubleClick = () => {
     >
       <!-- 左侧Logo -->
       <div
-        class="flex items-center gap-2 font-semibold text-lg tracking-tight text-foreground"
+        class="flex items-center gap-2 font-semibold text-base tracking-tight text-foreground"
       >
         <div class="bg-primary text-primary-foreground p-1.5 rounded-md">
-          <ImageIcon :size="20" />
+          <ImageIcon :size="18" />
         </div>
         <span>HEIC Converter</span>
       </div>
