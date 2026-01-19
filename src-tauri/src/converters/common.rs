@@ -28,9 +28,12 @@ pub enum OutputFormat {
 
 impl OutputFormat {
     /// 从字符串解析输出格式
-    pub fn from_str(format: &str) -> Result<Self, ConversionError> {
+    /// # 参数
+    /// - `format`: 格式字符串（"jpg", "jpeg", "png"）
+    /// - `quality`: JPEG质量（1-100），仅对JPEG格式有效
+    pub fn from_str(format: &str, quality: u8) -> Result<Self, ConversionError> {
         match format.to_lowercase().as_str() {
-            "jpg" | "jpeg" => Ok(OutputFormat::Jpeg(85)), // 默认质量85
+            "jpg" | "jpeg" => Ok(OutputFormat::Jpeg(quality)),
             "png" => Ok(OutputFormat::Png),
             _ => Err(ConversionError::UnsupportedFormat(format.to_string())),
         }

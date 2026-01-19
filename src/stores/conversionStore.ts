@@ -143,6 +143,7 @@ export const useConversionStore = defineStore("conversion", () => {
         paths: paths,
         targetType: settings.value.format,
         outputFolder: outputFolder.value,
+        quality: settings.value.quality[0],
       });
       await info(`已发起转换任务`);
     } catch (error) {

@@ -34,10 +34,6 @@ const truncatedOutputFolder = computed(() => {
   const maxLength = 35;
   if (path.length <= maxLength) return path;
 
-  const parts = path.split(/[/\\]/);
-  const filename = parts[parts.length - 1];
-  const extension = filename.includes('.') ? '.' + filename.split('.').pop() : '';
-
   // 尝试保留开头和结尾
   const startLength = Math.floor(maxLength / 2) - 2;
   const endLength = maxLength - startLength - 3;

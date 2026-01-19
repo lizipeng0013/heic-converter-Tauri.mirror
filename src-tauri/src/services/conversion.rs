@@ -5,22 +5,24 @@ use crate::converters::dispatcher::convert_image_auto;
 use tauri_plugin_log::log::{error, info, debug};
 
 /// 批量转换多个文件（支持混合格式）
-/// 
+///
 /// # 参数
 /// - `app`: Tauri 应用句柄
 /// - `files`: 文件对列表，每个元素包含 (输入路径, 输出路径)
 /// - `format`: 目标输出格式
-/// 
+/// - `quality`: JPEG质量（1-100），仅对JPEG格式有效
+///
 /// # 返回
 /// 成功返回 Ok(())，失败返回错误信息
 pub async fn batch_convert(
     app: &AppHandle,
     files: Vec<(String, String)>,
     format: String,
+    quality: u8,
 ) -> Result<(), String> {
-    debug!("验证输出格式: {}", format);
+    debug!("验证输出格式: {}, 质量: {}", format, quality);
 
-    let output_format = match OutputFormat::from_str(&format) {
+    let output_format = match OutputFormat::from_str(&format, quality) {
         Ok(fmt) => fmt,
         Err(e) => {
             error!("不支持的输出格式: {} - {}", format, e);
