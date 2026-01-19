@@ -108,6 +108,11 @@ export const useConversionStore = defineStore("conversion", () => {
     // 重置为空数组
     // files.length = 0 也可以
     files.splice(0, files.length);
+    // 清零耗时
+    spendTime.value = null;
+    // 重置转换状态
+    isReadyForConversion.value = false;
+    isConverting.value = false;
   };
 
   const updateSettings = (newSettings: Partial<ConverterSettings>) => {
