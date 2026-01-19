@@ -4,9 +4,10 @@ import { Settings2, FolderOpen } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { downloadDir } from "@tauri-apps/api/path";
-import {onMounted} from "vue";
+import {onMounted, computed} from "vue";
 
 const store = useConversionStore();
 onMounted(async () => {
@@ -25,6 +26,24 @@ const selectOutputFolder = async () => {
     console.error(e);
   }
 };
+
+// 截断路径显示，保留开头和结尾
+const truncatedOutputFolder = computed(() => {
+  if (!store.outputFolder) return "";
+  const path = store.outputFolder;
+  const maxLength = 35;
+  if (path.length <= maxLength) return path;
+
+  const parts = path.split(/[/\\]/);
+  const filename = parts[parts.length - 1];
+  const extension = filename.includes('.') ? '.' + filename.split('.').pop() : '';
+
+  // 尝试保留开头和结尾
+  const startLength = Math.floor(maxLength / 2) - 2;
+  const endLength = maxLength - startLength - 3;
+
+  return path.substring(0, startLength) + '...' + path.substring(path.length - endLength);
+});
 
 </script>
 
@@ -90,17 +109,28 @@ const selectOutputFolder = async () => {
             class="text-sm font-medium leading-none flex items-center justify-between"
             >输出目录</label
           >
-          <Button
-            variant="outline"
-            size="sm"
-            class="w-full justify-start gap-2"
-            @click="selectOutputFolder"
-            ><FolderOpen :size="16" />{{
-              store.outputFolder || "选择输出目录"
-            }}</Button
-          >
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  class="w-full justify-start gap-2"
+                  @click="selectOutputFolder"
+                >
+                  <FolderOpen :size="16" />
+                  <span class="truncate">{{
+                    store.outputFolder ? truncatedOutputFolder : "选择输出目录"
+                  }}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent v-if="store.outputFolder">
+                <p>{{ store.outputFolder }}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <p class="text-xs text-muted-foreground mt-1">
-            未选择时，将保存到系统的“下载”文件夹。
+            未选择时，将保存到系统的"下载"文件夹。
           </p>
         </div>
       </div>
