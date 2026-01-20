@@ -6,6 +6,7 @@ use crate::commands::conversion::should_stop;
 use tauri_plugin_log::log::{error, info, debug};
 use std::sync::{Arc, Mutex};
 use rayon::prelude::*;
+use rayon::ThreadPoolBuilder;
 
 /// 批量转换多个文件（支持混合格式）
 ///
@@ -49,53 +50,74 @@ fn batch_convert_images(
     // 使用 Arc<Mutex> 来共享计数器，因为并行处理需要线程安全
     let success_count = Arc::new(Mutex::new(0));
     let error_count = Arc::new(Mutex::new(0));
+    
+    // 根据 CPU 核心数动态调整线程池大小
+    // 通常设置为 CPU 核心数的 1-2 倍，避免过多线程导致上下文切换开销
+    let num_cpus = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(4);
+    let pool_size = num_cpus.min(total).max(1);
+    
+    debug!("CPU 核心数: {}, 线程池大小: {}", num_cpus, pool_size);
 
-    // 使用并行迭代器处理文件
-    files.into_par_iter().enumerate().for_each(|(index, (input, output))| {
-        // 检查是否应该停止
-        if should_stop() {
-            info!("收到停止信号，中止转换任务");
-            return;
-        }
+    // 创建自定义线程池，优化并发性能
+    let pool = ThreadPoolBuilder::new()
+        .num_threads(pool_size)
+        .thread_name(|index| format!("converter-{}", index))
+        .build()
+        .map_err(|e| format!("创建线程池失败: {}", e))?;
 
-        let current = index + 1;
-        debug!("处理文件 {}/{}: {}", current, total, input);
+    // 使用自定义线程池处理文件
+    pool.install(|| {
+        files.into_par_iter().enumerate().for_each(|(index, (input, output))| {
+            // 检查是否应该停止
+            if should_stop() {
+                info!("收到停止信号，中止转换任务");
+                return;
+            }
 
-        let _ = app.emit("conversion-update", json!({
-            "path": input,
-            "status": "converting",
-            "progress": 0,
-            "current": current,
-            "total": total
-        }));
-        
-        let result = convert_image_auto(app, &input, &output, format);
-        
-        match result {
-            Ok(_) => {
-                *success_count.lock().unwrap() += 1;
-                info!("✓ 转换成功 {}/{}: {} -> {}", current, total, input, output);
+            let current = index + 1;
+            debug!("处理文件 {}/{}: {}", current, total, input);
+
+            // 减少进度更新的频率，避免过多的 IPC 调用
+            if current % 5 == 0 || current == total {
                 let _ = app.emit("conversion-update", json!({
                     "path": input,
-                    "status": "done",
-                    "progress": 100,
-                    "output_path": output,
-                    "current": current,
-                    "total": total
-                }));
-            },
-            Err(e) => {
-                *error_count.lock().unwrap() += 1;
-                error!("✗ 转换失败 {}/{}: {} - {}", current, total, input, e);
-                let _ = app.emit("conversion-update", json!({
-                    "path": input,
-                    "status": "error",
-                    "error": e.to_string(),
+                    "status": "converting",
+                    "progress": 0,
                     "current": current,
                     "total": total
                 }));
             }
-        }
+            
+            let result = convert_image_auto(app, &input, &output, format);
+            
+            match result {
+                Ok(_) => {
+                    *success_count.lock().unwrap() += 1;
+                    info!("✓ 转换成功 {}/{}: {} -> {}", current, total, input, output);
+                    let _ = app.emit("conversion-update", json!({
+                        "path": input,
+                        "status": "done",
+                        "progress": 100,
+                        "output_path": output,
+                        "current": current,
+                        "total": total
+                    }));
+                },
+                Err(e) => {
+                    *error_count.lock().unwrap() += 1;
+                    error!("✗ 转换失败 {}/{}: {} - {}", current, total, input, e);
+                    let _ = app.emit("conversion-update", json!({
+                        "path": input,
+                        "status": "error",
+                        "error": e.to_string(),
+                        "current": current,
+                        "total": total
+                    }));
+                }
+            }
+        });
     });
 
     let success = *success_count.lock().unwrap();

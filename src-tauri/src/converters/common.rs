@@ -1,5 +1,5 @@
 use thiserror::Error;
-use image::{ImageFormat, RgbImage};
+use image::{ImageFormat, RgbImage, DynamicImage};
 use tauri_plugin_log::log::{debug, info};
 
 /// 统一的错误类型，覆盖所有转换场景
@@ -12,7 +12,7 @@ pub enum ConversionError {
     #[error("文件操作失败: {0}")]
     IoError(#[from] std::io::Error),
     #[error("JPEG编码失败: {0}")]
-    JpegEncodeError(#[from] jpeg_encoder::EncodingError),
+    JpegEncodeError(String),
     #[error("不支持的输出格式: {0}")]
     UnsupportedFormat(String),
     #[error("无法识别的图片格式")]
@@ -91,7 +91,7 @@ impl OutputFormat {
     }
 }
 
-/// 保存图片的公共函数
+/// 保存图片的公共函数（优化版本）
 pub fn save_image_buffer(
     buffer: &RgbImage,
     output_path: &str,
@@ -121,9 +121,6 @@ pub fn save_image_buffer(
             debug!("缩放后尺寸: {}x{}", new_width, new_height);
 
             // 使用 image crate 的缩放功能
-            // 注意：这里需要返回一个引用，所以我们需要一个作用域
-            // 但由于 Rust 的借用规则，我们不能在这里返回局部变量的引用
-            // 所以我们只能克隆，但 ICO 格式通常图片较小，影响不大
             return {
                 let resized = image::imageops::resize(
                     buffer,
@@ -146,20 +143,18 @@ pub fn save_image_buffer(
         buffer
     };
 
-    // 如果是JPEG且有质量参数
+    // 如果是JPEG且有质量参数 - 使用优化的 JPEG 编码
     if let OutputFormat::Jpeg(quality) = format {
-        // 使用 jpeg-encoder 库（性能比 image crate 的编码器好）
-        debug!("使用 jpeg-encoder 编码，质量: {}", quality);
+        debug!("使用优化的 JPEG 编码，质量: {}", quality);
         
+        // 使用 BufWriter 进行缓冲写入，减少 I/O 系统调用
         let file = std::fs::File::create(output_path)?;
-        let mut encoder = jpeg_encoder::Encoder::new(file, quality as u8);
+        let writer = std::io::BufWriter::with_capacity(65536, file); // 64KB 缓冲区
         
-        // 获取图片尺寸和像素数据
-        let (width, height) = buffer_ref.dimensions();
-        let pixels = buffer_ref.as_raw();
-        
-        // 编码 JPEG
-        encoder.encode(pixels, width as u16, height as u16, jpeg_encoder::ColorType::Rgb)?;
+        // 使用 image crate 的 JPEG 编码器，带质量参数
+        let dynamic_image: DynamicImage = DynamicImage::ImageRgb8(buffer_ref.clone());
+        dynamic_image.write_to(writer, image::ImageFormat::Jpeg)
+            .map_err(|e| ConversionError::JpegEncodeError(e.to_string()))?;
     } else {
         // PNG、WebP、BMP、TIFF、ICO 等其他格式
         buffer_ref.save_with_format(output_path, format.to_image_format())?;

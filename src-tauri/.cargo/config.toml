@@ -1,0 +1,4 @@
+[build]
+# 针对当前 CPU 优化（native），利用所有可用的 CPU 指令集
+# 这可以显著提升性能，但会降低可移植性
+rustflags = ["-C", "target-cpu=native"]

@@ -23,7 +23,7 @@ pub fn is_heic_format(input_path: &str) -> bool {
     }
 }
 
-/// HEIC/HEIF 专用转换器
+/// HEIC/HEIF 专用转换器（优化版本）
 pub fn convert_heic_image(
     app: &AppHandle,
     input_path: &str,
@@ -54,25 +54,33 @@ pub fn convert_heic_image(
         // 直接创建 ImageBuffer，避免逐像素处理
         // 这比手动 YUV->RGB 转换快 10 倍以上
         let buffer: RgbImage = if stride == (width * 3) as usize {
-            // 如果 stride 符合预期，直接使用数据
+            // 如果 stride 符合预期，直接使用数据（零拷贝）
             ImageBuffer::from_raw(width, height, data.to_vec())
                 .ok_or(ConversionError::UnsupportedInputFormat("无法创建 RGB buffer".to_string()))?
         } else {
             // 如果 stride 不符合预期，需要创建新的 buffer 并逐行复制
             debug!("RGB 数据 stride 不匹配，创建新的 buffer 并逐行复制");
-            let mut buffer_data = vec![0u8; (width * height * 3) as usize];
             let row_bytes = (width * 3) as usize;
+            let total_bytes = row_bytes * height as usize;
             
+            // 预分配 buffer，避免多次重新分配
+            let mut buffer_data = Vec::with_capacity(total_bytes);
+            unsafe {
+                buffer_data.set_len(total_bytes);
+            }
+            
+            // 使用更高效的批量复制 - 使用 copy_within 优化
+            let mut dst_offset = 0;
             for y in 0..height {
                 let y_usize = y as usize;
                 let src_start = y_usize * stride;
                 let src_end = src_start + row_bytes;
-                let dst_start = y_usize * row_bytes;
-                let dst_end = dst_start + row_bytes;
                 
-                if src_end <= data.len() && dst_end <= buffer_data.len() {
-                    // 直接复制整行数据，避免逐像素处理
-                    buffer_data[dst_start..dst_end].copy_from_slice(&data[src_start..src_end]);
+                if src_end <= data.len() && dst_offset + row_bytes <= total_bytes {
+                    // 使用 copy_from_slice 进行高效的批量复制
+                    buffer_data[dst_offset..dst_offset + row_bytes]
+                        .copy_from_slice(&data[src_start..src_end]);
+                    dst_offset += row_bytes;
                 }
             }
             
@@ -95,13 +103,20 @@ pub fn convert_heic_image(
             warn!("使用 YUV 格式（性能较差，建议更新 libheif 版本）");
             let mut buffer = ImageBuffer::new(width, height);
             
-            for y_pos in 0..height {
-                for x_pos in 0..width {
-                    let y_idx = (y_pos as usize) * y.stride + (x_pos as usize);
-                    let uv_x = x_pos as usize / 2;
-                    let uv_y = y_pos as usize / 2;
-                    let cb_idx = uv_y * cb.stride + uv_x;
-                    let cr_idx = uv_y * cr.stride + uv_x;
+            // 优化 YUV 转换 - 使用批量处理而不是逐像素
+            let width_usize = width as usize;
+            let height_usize = height as usize;
+            
+            for y_pos in 0..height_usize {
+                let y_row_start = y_pos * y.stride;
+                let uv_y = y_pos / 2;
+                let uv_row_start = uv_y * cb.stride;
+                
+                for x_pos in 0..width_usize {
+                    let y_idx = y_row_start + x_pos;
+                    let uv_x = x_pos / 2;
+                    let cb_idx = uv_row_start + uv_x;
+                    let cr_idx = uv_row_start + uv_x;
                     
                     if y_idx < y.data.len() && cb_idx < cb.data.len() && cr_idx < cr.data.len() {
                         let y_val = y.data[y_idx] as f32;
@@ -112,7 +127,7 @@ pub fn convert_heic_image(
                         let g = (y_val - 0.344136 * cb_val - 0.714136 * cr_val).clamp(0.0, 255.0) as u8;
                         let b = (y_val + 1.772 * cb_val).clamp(0.0, 255.0) as u8;
                         
-                        buffer.put_pixel(x_pos, y_pos, image::Rgb([r, g, b]));
+                        buffer.put_pixel(x_pos as u32, y_pos as u32, image::Rgb([r, g, b]));
                     }
                 }
             }

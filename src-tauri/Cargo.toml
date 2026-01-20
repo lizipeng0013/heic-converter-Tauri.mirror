@@ -25,10 +25,27 @@ serde_json = "1"
 tauri-plugin-dialog = "2.5.0"
 tauri-plugin-fs = "2.4.5"
 tauri-plugin-shell = "2.3.4"
-image = "0.25.9"
+image = { version = "0.25.9", features = ["jpeg", "png", "webp"] }
 libheif-rs = { version = "2.5.2", default-features = false, features = ["v1_18"] }
 thiserror = "2.0.17"
 tauri-plugin-log = "2.8.0"
 tracing = "0.1"
-jpeg-encoder = "0.5"
 rayon = "1.10"
+
+[profile.release]
+# 启用链接时优化 (LTO)，可以跨模块优化代码
+lto = "fat"
+# 启用代码生成单元化，减少函数调用开销
+codegen-units = 1
+# 最高优化级别
+opt-level = 3
+# 在链接时丢弃未使用的代码
+panic = "abort"
+# 启用增量编译（开发时有用，release 时可以关闭以获得更好的优化）
+incremental = false
+# 启用调试符号（可选，如果需要调试 release 版本）
+# debug = true
+
+# 启用额外的优化选项
+[profile.release.package."*"]
+opt-level = 3
