@@ -1,6 +1,6 @@
 use thiserror::Error;
 use image::{ImageFormat, RgbImage, DynamicImage};
-use tauri_plugin_log::log::{debug, info};
+use tauri_plugin_log::log::{debug, info, trace};
 
 /// 统一的错误类型，覆盖所有转换场景
 #[derive(Error, Debug)]
@@ -145,7 +145,7 @@ pub fn save_image_buffer(
 
     // 如果是JPEG且有质量参数 - 使用优化的 JPEG 编码
     if let OutputFormat::Jpeg(quality) = format {
-        debug!("使用优化的 JPEG 编码，质量: {}", quality);
+        trace!("使用优化的 JPEG 编码，质量: {}", quality);
         
         // 使用 BufWriter 进行缓冲写入，减少 I/O 系统调用
         let file = std::fs::File::create(output_path)?;

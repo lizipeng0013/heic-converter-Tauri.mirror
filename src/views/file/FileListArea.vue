@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/tooltip/";
 
 import {listen, TauriEvent, UnlistenFn} from "@tauri-apps/api/event";
-import {info} from "@tauri-apps/plugin-log";
+import {info, debug} from "@tauri-apps/plugin-log";
 import {alertSevere} from "@/utils/useError.ts";
 
 const conversionStore = useConversionStore();
@@ -55,16 +55,13 @@ onMounted(async () => {
   // 监听：文件悬停在窗口任意位置
   unlistenDragEnter = await listen(TauriEvent.DRAG_ENTER, () => {
     isFileDragging.value = true;
-    info(`Drag Enter`);
   });
 
   // 监听：放下文件
   unlistenDragDrop = await listen(TauriEvent.DRAG_DROP, (event) => {
     // 1. 先结束动画状态
     isFileDragging.value = false;
-    info(`Drag Drop`);
     // 2. 直接处理，不做区域判断
-    // const paths = event.payload as string[];
     const payload = event.payload as any;
     const paths = payload.paths as string[];
     conversionStore.addPaths(paths);
@@ -73,7 +70,6 @@ onMounted(async () => {
   // 监听：取消 (离开窗口或拖到别处去了)
   unlistenDragLeave = await listen(TauriEvent.DRAG_LEAVE, () => {
     isFileDragging.value = false;
-    info(`Drag Leave`);
   });
 
   unlistenConversion = await listen("conversion-update", (event) => {
@@ -101,7 +97,7 @@ onMounted(async () => {
     }
     const payload = event.payload as any;
     let spendTime = (payload.spend_time/1000).toFixed(1)
-    info(`转换耗时：${spendTime}s`);
+    debug(`转换耗时：${spendTime}s`);
     conversionStore.spendTime = parseFloat(spendTime);
     conversionStore.isReadyForConversion = false;
   })

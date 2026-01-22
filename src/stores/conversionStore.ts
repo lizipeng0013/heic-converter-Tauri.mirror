@@ -1,13 +1,12 @@
 import { defineStore } from "pinia";
 import { ref, reactive, computed } from "vue";
 import type {FileItem, ConverterSettings} from "@/types";
-import { info, debug, warn } from "@tauri-apps/plugin-log";
+import { debug, warn } from "@tauri-apps/plugin-log";
 import { invoke } from "@tauri-apps/api/core";
 import {stat} from "@tauri-apps/plugin-fs";
 import { alertSevere} from "@/utils/useError"
 
-export const useConversionStore = defineStore("conversion", () => {
-  void debug("useConversionStore");
+export const useConversionStore = defineStore('conversion', () => {
   // --- State ---
   const files = reactive<FileItem[]>([]);
   const completedFiles = reactive<FileItem[]>([]); // 已完成的文件
@@ -32,7 +31,7 @@ export const useConversionStore = defineStore("conversion", () => {
   // --- Actions ---
   const addPaths = async (paths: string[]) => {
     if (!paths || paths.length === 0) return;
-    await info(`前端addPaths获取到: ${paths}`);
+    debug(`前端addPaths获取到: ${paths}`);
     
     // 如果待转换列表为空，重置 hasStartedConversion 标志
     // 这样新导入的文件会显示"开始批量转换"而不是"继续转换"
@@ -162,7 +161,7 @@ export const useConversionStore = defineStore("conversion", () => {
 
   // --- 重写开始转换逻辑：调用批量方法 ---
   const startConversion = async () => {
-    await info(`前端开始执行转换逻辑...`)
+    debug(`前端开始执行转换逻辑...`);
     
     // 如果正在转换或正在停止，不允许启动新的转换任务
     if (isConverting.value || isStopping.value) {
@@ -189,7 +188,7 @@ export const useConversionStore = defineStore("conversion", () => {
         outputFolder: outputFolder.value,
         quality: settings.value.quality[0],
       });
-      await info(`已发起转换任务`);
+      debug(`已发起转换任务`);
     } catch (error) {
       alertSevere("转换任务执行失败！" + error)
       isConverting.value = false;
@@ -199,7 +198,7 @@ export const useConversionStore = defineStore("conversion", () => {
 
   // 停止转换
   const stopConversion = async () => {
-    await info(`前端停止转换...`)
+    debug(`前端停止转换...`)
     try {
       // 设置停止标志，防止在停止过程中启动新的转换任务
       isStopping.value = true;
@@ -211,7 +210,7 @@ export const useConversionStore = defineStore("conversion", () => {
       // 不再重置正在转换的文件状态
       
       await invoke("stop_conversion");
-      await info(`已停止转换任务`);
+      debug(`已停止转换任务`);
       
       // 等待一段时间确保后端停止完成
       setTimeout(() => {

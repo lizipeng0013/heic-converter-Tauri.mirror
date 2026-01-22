@@ -3,7 +3,7 @@ use libheif_rs::{LibHeif, HeifContext, ColorSpace, RgbChroma};
 use image::{ImageBuffer, RgbImage};
 use serde_json::json;
 use tauri::{AppHandle, Emitter};
-use tauri_plugin_log::log::{info, warn, debug, error};
+use tauri_plugin_log::log::{info, warn, debug, trace, error};
 
 /// 检测是否为 HEIC/HEIF 文件
 pub fn is_heic_format(input_path: &str) -> bool {
@@ -59,7 +59,7 @@ pub fn convert_heic_image(
                 .ok_or(ConversionError::UnsupportedInputFormat("无法创建 RGB buffer".to_string()))?
         } else {
             // 如果 stride 不符合预期，需要创建新的 buffer 并逐行复制
-            debug!("RGB 数据 stride 不匹配，创建新的 buffer 并逐行复制");
+            trace!("RGB 数据 stride 不匹配，创建新的 buffer 并逐行复制");
             let row_bytes = (width * 3) as usize;
             let total_bytes = row_bytes * height as usize;
             
@@ -97,7 +97,7 @@ pub fn convert_heic_image(
         save_image_buffer(&buffer, output_path, format)?;
     } else {
         // 如果没有交错 RGB 数据，尝试 YUV 格式（回退方案）
-        debug!("无交错 RGB 数据，尝试 YUV 格式");
+        trace!("无交错 RGB 数据，尝试 YUV 格式");
         
         if let (Some(y), Some(cb), Some(cr)) = (&planes.y, &planes.cb, &planes.cr) {
             warn!("使用 YUV 格式（性能较差，建议更新 libheif 版本）");

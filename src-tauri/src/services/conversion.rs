@@ -3,7 +3,7 @@ use tauri::{AppHandle, Emitter};
 use crate::converters::common::OutputFormat;
 use crate::converters::dispatcher::convert_image_auto;
 use crate::commands::conversion::should_stop;
-use tauri_plugin_log::log::{error, info, debug};
+use tauri_plugin_log::log::{error, info, trace};
 use std::sync::{Arc, Mutex};
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
@@ -24,7 +24,7 @@ pub async fn batch_convert(
     format: String,
     quality: u8,
 ) -> Result<(), String> {
-    debug!("验证输出格式: {}, 质量: {}", format, quality);
+    trace!("验证输出格式: {}, 质量: {}", format, quality);
 
     let output_format = match OutputFormat::from_str(&format, quality) {
         Ok(fmt) => fmt,
@@ -45,7 +45,7 @@ fn batch_convert_images(
     format: OutputFormat,
 ) -> Result<(), String> {
     let total = files.len();
-    debug!("开始并行处理 {} 个文件", total);
+    trace!("开始并行处理 {} 个文件", total);
 
     // 使用 Arc<Mutex> 来共享计数器，因为并行处理需要线程安全
     let success_count = Arc::new(Mutex::new(0));
@@ -58,7 +58,7 @@ fn batch_convert_images(
         .unwrap_or(4);
     let pool_size = num_cpus.min(total).max(1);
     
-    debug!("CPU 核心数: {}, 线程池大小: {}", num_cpus, pool_size);
+    trace!("CPU 核心数: {}, 线程池大小: {}", num_cpus, pool_size);
 
     // 创建自定义线程池，优化并发性能
     let pool = ThreadPoolBuilder::new()
@@ -77,7 +77,7 @@ fn batch_convert_images(
             }
 
             let current = index + 1;
-            debug!("处理文件 {}/{}: {}", current, total, input);
+            trace!("处理文件 {}/{}: {}", current, total, input);
 
             // 减少进度更新的频率，避免过多的 IPC 调用
             if current % 5 == 0 || current == total {
