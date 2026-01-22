@@ -36,12 +36,11 @@ const isDark = useDark({
   initialValue: "auto",
 });
 const toggleDark = useToggle(isDark);
-
-const appWindow = getCurrentWindow();
 const minWindow = () => invoke("minimize_window");
 const maxWindow = () => invoke("toggle_maximize_window");
 const closeWindow = () => invoke("close_window");
 const toggleTop = () => invoke("toggle_always_on_top");
+const dragWindow = () => invoke("drag_window");
 
 const mouseDownPosition = ref<{ x: number; y: number } | null>(null);
 const isTitleDragging = ref(false);
@@ -58,7 +57,7 @@ const handleMouseMove = (e: MouseEvent) => {
   const deltaY = Math.abs(e.clientY - mouseDownPosition.value.y);
   if (deltaX > 5 || deltaY > 5) {
     if (!isTitleDragging.value) {
-      appWindow.startDragging();
+      dragWindow();
       isTitleDragging.value = true;
       mouseDownPosition.value = null;
     }

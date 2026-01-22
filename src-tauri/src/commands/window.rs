@@ -28,7 +28,7 @@ pub fn toggle_maximize_window(window: Window) {
 // --- 关闭窗口 ---
 #[command]
 pub fn close_window(window: Window) {
-    window.close().ok(); // 改为 ok() 更安全
+    window.close().ok();
 }
 
 // --- 窗口置顶 ---
@@ -41,4 +41,10 @@ pub async fn toggle_always_on_top(window: Window) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
     IS_TOP.store(new_state, Ordering::SeqCst);
     Ok(())
+}
+
+
+#[command]
+pub fn drag_window(window: Window) {
+    window.start_dragging().ok();
 }
