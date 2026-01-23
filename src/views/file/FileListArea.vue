@@ -50,6 +50,7 @@ let unlistenDragDrop: UnlistenFn | null = null;
 let unlistenDragLeave: UnlistenFn | null = null;
 let unlistenConversion: UnlistenFn | null = null;
 let unlistenBatchFinished: UnlistenFn | null = null;
+let unlistenConversionStopped: UnlistenFn | null = null;
 
 onMounted(async () => {
   // 监听：文件悬停在窗口任意位置
@@ -73,13 +74,21 @@ onMounted(async () => {
   });
 
   unlistenConversion = await listen("conversion-update", (event) => {
-    // 如果正在停止转换，忽略这些更新
+    const payload = event.payload as any;
+    const {path, status, progress, output_path, error } = payload;
+    
+    // 如果正在停止转换，只处理 done 状态的更新（让正在转换的文件可以完成）
+    // 忽略 converting 状态的更新，避免在停止过程中显示进度变化
     if (conversionStore.isStopping) {
+      if (status === "done") {
+        conversionStore.updateFileSuccess(path, output_path);
+      } else if (status === "error") {
+        conversionStore.updateFileError(path, error);
+      }
       return;
     }
     
-    const payload = event.payload as any;
-    const {path, status, progress, output_path, error } = payload;
+    // 正常转换状态下处理所有更新
     if (status === "done") {
       conversionStore.updateFileSuccess(path, output_path);
     } else if (status === "converting") {
@@ -102,6 +111,11 @@ onMounted(async () => {
     conversionStore.isReadyForConversion = false;
   })
 
+  unlistenConversionStopped = await listen("conversion-stopped", (event) => {
+    info(`收到停止完成事件`);
+    conversionStore.handleStopped();
+  })
+
 });
 
 onUnmounted(() => {
@@ -110,6 +124,7 @@ onUnmounted(() => {
   unlistenDragLeave?.();
   unlistenConversion?.();
   unlistenBatchFinished?.();
+  unlistenConversionStopped?.();
 });
 
 // import { ConversionService } from "@/services/conversionService"; // 你的服务

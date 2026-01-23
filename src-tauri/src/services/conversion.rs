@@ -50,6 +50,7 @@ fn batch_convert_images(
     // 使用 Arc<Mutex> 来共享计数器，因为并行处理需要线程安全
     let success_count = Arc::new(Mutex::new(0));
     let error_count = Arc::new(Mutex::new(0));
+    let stopped_flag = Arc::new(Mutex::new(false)); // 记录是否因为停止信号而中止
     
     // 根据 CPU 核心数动态调整线程池大小
     // 少量文件时使用文件数，大量文件时保留 25% 给 UI
@@ -77,6 +78,7 @@ fn batch_convert_images(
             // 检查是否应该停止
             if should_stop() {
                 info!("收到停止信号，中止转换任务");
+                *stopped_flag.lock().unwrap() = true;
                 return;
             }
 
@@ -115,6 +117,15 @@ fn batch_convert_images(
 
     let success = *success_count.lock().unwrap();
     let error = *error_count.lock().unwrap();
+    let was_stopped = *stopped_flag.lock().unwrap();
+    
     info!("批量转换完成 - 成功: {}, 失败: {}, 总计: {}", success, error, total);
+    
+    // 如果是因为停止信号而中止，发送停止完成事件
+    if was_stopped {
+        info!("转换任务已停止，发送停止完成事件");
+        let _ = app.emit("conversion-stopped", json!({}));
+    }
+    
     Ok(())
 }

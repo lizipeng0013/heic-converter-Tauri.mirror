@@ -217,23 +217,32 @@ export const useConversionStore = defineStore('conversion', () => {
       // 设置停止标志，防止在停止过程中启动新的转换任务
       isStopping.value = true;
       
-      // 立即更新UI状态，让用户感觉立即停止
-      isConverting.value = false;
-      
-      // 由于转换速度很快，让正在转换的文件继续完成，只是停止后续文件的转换
-      // 不再重置正在转换的文件状态
+      // 不立即更新 isConverting，保持为 true，让按钮显示"正在停止"
+      // 不立即重置文件状态，等待后端正在转换的线程完成
       
       await invoke("stop_conversion");
-      debug(`已停止转换任务`);
-      
-      // 等待一段时间确保后端停止完成
-      setTimeout(() => {
-        isStopping.value = false;
-      }, 1000);
+      debug(`已发送停止转换请求，等待后端正在转换的线程完成`);
     } catch (error) {
       alertSevere("停止转换任务失败！" + error)
       isStopping.value = false;
     }
+  };
+
+  // 处理停止完成事件（由后端通知）
+  const handleStopped = () => {
+    debug(`收到停止完成通知，重置剩余文件状态`);
+    
+    // 将所有 converting 状态的文件重置为 pending 状态
+    const convertingFiles = files.filter((f) => f.status === "converting");
+    convertingFiles.forEach((file) => {
+      file.status = "pending";
+      file.progress = 0;
+    });
+    debug(`已将 ${convertingFiles.length} 个文件状态从 converting 重置为 pending`);
+    
+    // 重置转换状态
+    isConverting.value = false;
+    isStopping.value = false;
   };
 
   return {
@@ -261,5 +270,6 @@ export const useConversionStore = defineStore('conversion', () => {
     setOutputFolder,
     startConversion,
     stopConversion,
+    handleStopped,
   };
 });

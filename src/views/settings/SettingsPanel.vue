@@ -129,6 +129,9 @@ const showQualityControl = computed(() => {
 
 // 按钮文字
 const buttonText = computed(() => {
+  if (store.isStopping) {
+    return "正在停止...";
+  }
   if (store.isConverting) {
     return "停止转换";
   }
