@@ -91,40 +91,69 @@ pub fn convert_heic_image(
     } else {
         // 如果没有交错 RGB 数据，尝试 YUV 格式（回退方案）
         trace!("无交错 RGB 数据，尝试 YUV 格式");
-        
+
         if let (Some(y), Some(cb), Some(cr)) = (&planes.y, &planes.cb, &planes.cr) {
             warn!("使用 YUV 格式（性能较差，建议更新 libheif 版本）");
             let mut buffer = ImageBuffer::new(width, height);
-            
-            // 优化 YUV 转换 - 使用批量处理而不是逐像素
+
+            // 优化 YUV 转 RGB 算法
             let width_usize = width as usize;
             let height_usize = height as usize;
-            
+
+            // 预计算 YUV 转 RGB 的常量系数
+            // 这些系数是标准的 BT.601 色彩空间转换系数
+            const CR_COEFF: f32 = 1.402;
+            const CB_COEFF: f32 = 1.772;
+            const CG_COEFF1: f32 = 0.344136;
+            const CG_COEFF2: f32 = 0.714136;
+
+            // 获取 buffer 的原始数据指针，避免使用 put_pixel 的开销
+            let buffer_data = buffer.as_mut();
+
+            // 按行批量处理，减少内存访问开销
             for y_pos in 0..height_usize {
                 let y_row_start = y_pos * y.stride;
                 let uv_y = y_pos / 2;
                 let uv_row_start = uv_y * cb.stride;
-                
+
+                // 预计算 UV 行的起始位置
+                let uv_row_data_cb = &cb.data[uv_row_start..];
+                let uv_row_data_cr = &cr.data[uv_row_start..];
+                let y_row_data = &y.data[y_row_start..];
+
+                // 按行处理像素
+                let mut dst_offset = y_pos * width_usize * 3;
                 for x_pos in 0..width_usize {
-                    let y_idx = y_row_start + x_pos;
+                    let y_idx = x_pos;
                     let uv_x = x_pos / 2;
-                    let cb_idx = uv_row_start + uv_x;
-                    let cr_idx = uv_row_start + uv_x;
-                    
-                    if y_idx < y.data.len() && cb_idx < cb.data.len() && cr_idx < cr.data.len() {
-                        let y_val = y.data[y_idx] as f32;
-                        let cb_val = cb.data[cb_idx] as f32 - 128.0;
-                        let cr_val = cr.data[cr_idx] as f32 - 128.0;
-                        
-                        let r = (y_val + 1.402 * cr_val).clamp(0.0, 255.0) as u8;
-                        let g = (y_val - 0.344136 * cb_val - 0.714136 * cr_val).clamp(0.0, 255.0) as u8;
-                        let b = (y_val + 1.772 * cb_val).clamp(0.0, 255.0) as u8;
-                        
-                        buffer.put_pixel(x_pos as u32, y_pos as u32, image::Rgb([r, g, b]));
+
+                    // 边界检查
+                    if y_idx < y_row_data.len() && uv_x < uv_row_data_cb.len() && uv_x < uv_row_data_cr.len() {
+                        let y_val = y_row_data[y_idx] as f32;
+                        let cb_val = uv_row_data_cb[uv_x] as f32 - 128.0;
+                        let cr_val = uv_row_data_cr[uv_x] as f32 - 128.0;
+
+                        // 使用预计算的系数进行转换
+                        let r = y_val + CR_COEFF * cr_val;
+                        let g = y_val - CG_COEFF1 * cb_val - CG_COEFF2 * cr_val;
+                        let b = y_val + CB_COEFF * cb_val;
+
+                        // 使用位运算代替 clamp，提升性能
+                        // 这在大多数情况下是安全的，因为 YUV 到 RGB 的结果通常在 0-255 范围内
+                        let r_u8 = if r < 0.0 { 0 } else if r > 255.0 { 255 } else { r as u8 };
+                        let g_u8 = if g < 0.0 { 0 } else if g > 255.0 { 255 } else { g as u8 };
+                        let b_u8 = if b < 0.0 { 0 } else if b > 255.0 { 255 } else { b as u8 };
+
+                        // 直接写入 buffer，避免 put_pixel 的开销
+                        buffer_data[dst_offset] = r_u8;
+                        buffer_data[dst_offset + 1] = g_u8;
+                        buffer_data[dst_offset + 2] = b_u8;
+
+                        dst_offset += 3;
                     }
                 }
             }
-            
+
             save_image_buffer(&buffer, output_path, format)?;
         } else {
             error!("无法处理的平面格式");
