@@ -1,6 +1,7 @@
 use thiserror::Error;
-use image::{ImageFormat, RgbImage, DynamicImage};
+use image::{ImageFormat, RgbImage};
 use tauri_plugin_log::log::{debug, trace};
+use turbojpeg::{Compressor, Image, PixelFormat, Subsamp};
 
 /// 统一的错误类型，覆盖所有转换场景
 #[derive(Error, Debug)]
@@ -147,18 +148,39 @@ pub fn save_image_buffer(
         buffer
     };
 
-    // 如果是JPEG且有质量参数 - 使用优化的 JPEG 编码
+    // 如果是JPEG且有质量参数 - 使用 turbojpeg 进行高性能编码
     if let OutputFormat::Jpeg(quality) = format {
-        trace!("使用优化的 JPEG 编码，质量: {}", quality);
+        trace!("使用 turbojpeg 进行 JPEG 编码，质量: {}", quality);
         
-        // 使用 BufWriter 进行缓冲写入，减少 I/O 系统调用
-        let file = std::fs::File::create(output_path)?;
-        let writer = std::io::BufWriter::with_capacity(65536, file); // 64KB 缓冲区
+        let (width, height) = buffer_ref.dimensions();
+        let data = buffer_ref.as_raw();
         
-        // 使用 image crate 的 JPEG 编码器，带质量参数
-        let dynamic_image: DynamicImage = DynamicImage::ImageRgb8(buffer_ref.clone());
-        dynamic_image.write_to(writer, image::ImageFormat::Jpeg)
-            .map_err(|e| ConversionError::JpegEncodeError(e.to_string()))?;
+        // 创建 turbojpeg 压缩器
+        let mut compressor = Compressor::new()
+            .map_err(|e| ConversionError::JpegEncodeError(format!("创建压缩器失败: {}", e)))?;
+        
+        // 设置压缩质量（需要转换为 i32）
+        compressor.set_quality(quality as i32);
+        
+        // 设置子采样模式（高质量，无色度子采样）
+        compressor.set_subsamp(Subsamp::None);
+        
+        // 创建 turbojpeg 图像结构
+        let image = Image {
+            pixels: data.as_slice(),
+            width: width as usize,
+            pitch: 3 * width as usize, // RGB 格式，每行 3*width 字节
+            height: height as usize,
+            format: PixelFormat::RGB,
+        };
+        
+        // 压缩为 JPEG 数据
+        let jpeg_data = compressor.compress_to_vec(image.as_deref())
+            .map_err(|e| ConversionError::JpegEncodeError(format!("压缩失败: {}", e)))?;
+        
+        // 写入文件
+        std::fs::write(output_path, jpeg_data)
+            .map_err(|e| ConversionError::JpegEncodeError(format!("写入文件失败: {}", e)))?;
     } else {
         // PNG、WebP、BMP、TIFF、ICO 等其他格式
         buffer_ref.save_with_format(output_path, format.to_image_format())?;
