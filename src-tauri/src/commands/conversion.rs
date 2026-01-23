@@ -3,7 +3,6 @@ use crate::services::conversion::batch_convert;
 use tauri_plugin_log::log::{info, debug};
 use tracing::instrument;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 
 // 全局停止标志
 static SHOULD_STOP: AtomicBool = AtomicBool::new(false);

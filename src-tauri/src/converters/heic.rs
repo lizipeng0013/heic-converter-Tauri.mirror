@@ -1,9 +1,8 @@
 use super::common::{ConversionError, OutputFormat, save_image_buffer};
 use libheif_rs::{LibHeif, HeifContext, ColorSpace, RgbChroma};
 use image::{ImageBuffer, RgbImage};
-use serde_json::json;
-use tauri::{AppHandle, Emitter};
-use tauri_plugin_log::log::{info, warn, debug, trace, error};
+use tauri::AppHandle;
+use tauri_plugin_log::log::{warn, debug, trace, error};
 
 /// 检测是否为 HEIC/HEIF 文件
 pub fn is_heic_format(input_path: &str) -> bool {
@@ -25,7 +24,7 @@ pub fn is_heic_format(input_path: &str) -> bool {
 
 /// HEIC/HEIF 专用转换器（优化版本）
 pub fn convert_heic_image(
-    app: &AppHandle,
+    _app: &AppHandle,
     input_path: &str,
     output_path: &str,
     format: OutputFormat,

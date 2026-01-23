@@ -1,6 +1,6 @@
 use thiserror::Error;
 use image::{ImageFormat, RgbImage, DynamicImage};
-use tauri_plugin_log::log::{debug, info, trace};
+use tauri_plugin_log::log::{debug, trace};
 
 /// 统一的错误类型，覆盖所有转换场景
 #[derive(Error, Debug)]
@@ -16,6 +16,7 @@ pub enum ConversionError {
     #[error("不支持的输出格式: {0}")]
     UnsupportedFormat(String),
     #[error("无法识别的图片格式")]
+    #[allow(dead_code)]
     UnknownFormat,
     #[error("不支持的输入格式: {0}")]
     UnsupportedInputFormat(String),
@@ -62,6 +63,7 @@ impl OutputFormat {
     }
 
     /// 获取格式的扩展名
+    #[allow(dead_code)]
     pub fn extension(&self) -> &'static str {
         match self {
             OutputFormat::Jpeg(_) => "jpg",
@@ -74,6 +76,7 @@ impl OutputFormat {
     }
 
     /// 获取格式的名称
+    #[allow(dead_code)]
     pub fn name(&self) -> &'static str {
         match self {
             OutputFormat::Jpeg(_) => "JPEG",
@@ -86,6 +89,7 @@ impl OutputFormat {
     }
 
     /// 检查格式是否支持质量参数
+    #[allow(dead_code)]
     pub fn supports_quality(&self) -> bool {
         matches!(self, OutputFormat::Jpeg(_) | OutputFormat::WebP(_))
     }
