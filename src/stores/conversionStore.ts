@@ -18,27 +18,46 @@ export const useConversionStore = defineStore('conversion', () => {
   const outputFolder = ref<string | null>(null);
   const isReadyForConversion = ref(false);
   const spendTime = ref<number | null>(null);
+
+  // 独立计数器，避免每次访问 stats 都执行 filter 操作
+  const pendingCount = ref(0);
+  const convertingCount = ref(0);
+  const errorCount = ref(0);
+
   // --- Getters ---
   const stats = computed(() => ({
     total: files.length + completedFiles.length, // 总计包括待转换和已完成的文件
     done: completedFiles.length, // 已完成的文件数量
-    pending: files.filter((f) => f.status === "pending").length, // 待转换的文件数量
-    converting: files.filter((f) => f.status === "converting").length, // 正在转换的文件数量
-    error: files.filter((f) => f.status === "error").length, // 失败的文件数量
+    pending: pendingCount.value, // 待转换的文件数量（直接读取计数器）
+    converting: convertingCount.value, // 正在转换的文件数量（直接读取计数器）
+    error: errorCount.value, // 失败的文件数量（直接读取计数器）
     completed: completedFiles.length, // 已完成的文件数量（与 done 相同）
   }));
+
+  // --- 辅助函数：更新计数器 ---
+  const updateCounters = (oldStatus: string, newStatus: string) => {
+    // 减少旧状态的计数
+    if (oldStatus === "pending") pendingCount.value--;
+    if (oldStatus === "converting") convertingCount.value--;
+    if (oldStatus === "error") errorCount.value--;
+
+    // 增加新状态的计数
+    if (newStatus === "pending") pendingCount.value++;
+    if (newStatus === "converting") convertingCount.value++;
+    if (newStatus === "error") errorCount.value++;
+  };
 
   // --- Actions ---
   const addPaths = async (paths: string[]) => {
     if (!paths || paths.length === 0) return;
     debug(`前端addPaths获取到: ${paths}`);
-    
+
     // 如果待转换列表为空，重置 hasStartedConversion 标志
     // 这样新导入的文件会显示"开始批量转换"而不是"继续转换"
     if (files.length === 0) {
       hasStartedConversion.value = false;
     }
-    
+
     const filePromises = paths.map(async (path) => {
       const ext = path.split(".").pop()?.toLowerCase();
       if (ext !== "heic" && ext !== "heif") {
@@ -62,13 +81,14 @@ export const useConversionStore = defineStore('conversion', () => {
       }
     });
     const results = await Promise.all(filePromises);
-    
+
     // 过滤掉无效的文件并添加到列表
     results.forEach((file) => {
       if (file) {
         const isDuplicate = files.some(f => f.path === file.path);
         if (!isDuplicate) {
           files.push(file);
+          pendingCount.value++; // 更新计数器
         } else {
           warn(`检测到重复导入文件，已跳过：${file.path}`);
         }
@@ -84,8 +104,10 @@ export const useConversionStore = defineStore('conversion', () => {
   ) => {
     const file = files.find((f) => f.path === path);
     if (file) {
+      const oldStatus = file.status;
       file.status = status as any;
       file.progress = progress;
+      updateCounters(oldStatus, status); // 更新计数器
     }
   };
 
@@ -93,10 +115,13 @@ export const useConversionStore = defineStore('conversion', () => {
     const fileIndex = files.findIndex((f) => f.path === path);
     if (fileIndex !== -1) {
       const file = files[fileIndex];
+      const oldStatus = file.status;
       file.status = "done";
       file.progress = 100;
       file.convertedFilePath = output_path;
-      
+
+      updateCounters(oldStatus, "done"); // 更新计数器
+
       // 从待转换列表移除，添加到已完成列表
       files.splice(fileIndex, 1);
       completedFiles.push(file);
@@ -106,9 +131,11 @@ export const useConversionStore = defineStore('conversion', () => {
   const updateFileError = (path: string, error: string)=> {
     const file = files.find((f) => f.path === path);
     if (file) {
+      const oldStatus = file.status;
       file.status = "error";
       file.progress = 0;
       file.error = error;
+      updateCounters(oldStatus, "error"); // 更新计数器
     }
   }
 
@@ -117,7 +144,14 @@ export const useConversionStore = defineStore('conversion', () => {
     // 方法 1: splice
     const index = files.findIndex((f) => f.path === path);
     if (index !== -1) {
+      const file = files[index];
+      const oldStatus = file.status;
       files.splice(index, 1);
+
+      // 更新计数器
+      if (oldStatus === "pending") pendingCount.value--;
+      if (oldStatus === "converting") convertingCount.value--;
+      if (oldStatus === "error") errorCount.value--;
     }
   };
 
@@ -125,6 +159,12 @@ export const useConversionStore = defineStore('conversion', () => {
     // 重置为空数组
     // files.length = 0 也可以
     files.splice(0, files.length);
+
+    // 重置计数器
+    pendingCount.value = 0;
+    convertingCount.value = 0;
+    errorCount.value = 0;
+
     // 清零耗时
     spendTime.value = null;
     // 重置转换状态
@@ -162,7 +202,7 @@ export const useConversionStore = defineStore('conversion', () => {
   // --- 重写开始转换逻辑：调用批量方法 ---
   const startConversion = async () => {
     debug(`前端开始执行转换逻辑...`);
-    
+
     // 如果正在转换或正在停止，不允许启动新的转换任务
     if (isConverting.value || isStopping.value) {
       void warn(`转换任务正在进行中或正在停止，忽略新的转换请求`);
@@ -188,6 +228,10 @@ export const useConversionStore = defineStore('conversion', () => {
       file.status = "converting";
       file.progress = 0;
     });
+
+    // 更新计数器
+    pendingCount.value = 0;
+    convertingCount.value += pending.length;
     debug(`已将 ${pending.length} 个文件状态更新为 converting`);
 
     try {
@@ -207,6 +251,10 @@ export const useConversionStore = defineStore('conversion', () => {
         file.status = "pending";
         file.progress = 0;
       });
+
+      // 重置计数器
+      convertingCount.value = 0;
+      pendingCount.value += pending.length;
     }
   };
 
@@ -231,15 +279,19 @@ export const useConversionStore = defineStore('conversion', () => {
   // 处理停止完成事件（由后端通知）
   const handleStopped = () => {
     debug(`收到停止完成通知，重置剩余文件状态`);
-    
+
     // 将所有 converting 状态的文件重置为 pending 状态
     const convertingFiles = files.filter((f) => f.status === "converting");
     convertingFiles.forEach((file) => {
       file.status = "pending";
       file.progress = 0;
     });
+
+    // 更新计数器
+    convertingCount.value = 0;
+    pendingCount.value += convertingFiles.length;
     debug(`已将 ${convertingFiles.length} 个文件状态从 converting 重置为 pending`);
-    
+
     // 重置转换状态
     isConverting.value = false;
     isStopping.value = false;
