@@ -131,7 +131,7 @@ pub fn save_image_buffer(
                 
                 // 保存缩放后的图片
                 resized.save_with_format(output_path, ImageFormat::Ico)?;
-                info!("图片保存成功: {}", output_path);
+                debug!("图片保存成功: {}", output_path);
                 Ok(())
             };
         }
@@ -160,6 +160,6 @@ pub fn save_image_buffer(
         buffer_ref.save_with_format(output_path, format.to_image_format())?;
     }
 
-    info!("图片保存成功: {}", output_path);
+    debug!("图片保存成功: {}", output_path);
     Ok(())
 }

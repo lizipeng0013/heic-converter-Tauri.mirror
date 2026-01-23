@@ -19,11 +19,6 @@ pub fn convert_regular_image(
     
     // 转换为 RGB 图像缓冲区
     let rgb_img = img.to_rgb8();
-    let _ = app.emit("conversion-update", json!({
-            "path": input_path,
-            "status": "converting",
-            "progress": 90
-        }));
     
     // 使用公共保存函数
     save_image_buffer(&rgb_img, output_path, format)

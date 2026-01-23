@@ -30,7 +30,7 @@ pub fn convert_heic_image(
     output_path: &str,
     format: OutputFormat,
 ) -> Result<(), ConversionError> {
-    info!("转换HEIC图片: {} -> {}", input_path, output_path);
+    debug!("转换HEIC图片: {} -> {}", input_path, output_path);
     
     let libheif = LibHeif::new();
     let ctx = HeifContext::read_from_file(input_path)?;
@@ -88,12 +88,6 @@ pub fn convert_heic_image(
                 .ok_or(ConversionError::UnsupportedInputFormat("无法创建 RGB buffer".to_string()))?
         };
         
-        let _ = app.emit("conversion-update", json!({
-            "path": input_path,
-            "status": "converting",
-            "progress": 90
-        }));
-        
         save_image_buffer(&buffer, output_path, format)?;
     } else {
         // 如果没有交错 RGB 数据，尝试 YUV 格式（回退方案）
@@ -131,12 +125,6 @@ pub fn convert_heic_image(
                     }
                 }
             }
-            
-            let _ = app.emit("conversion-update", json!({
-                "path": input_path,
-                "status": "converting",
-                "progress": 90
-            }));
             
             save_image_buffer(&buffer, output_path, format)?;
         } else {

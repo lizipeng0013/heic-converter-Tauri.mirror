@@ -3,7 +3,7 @@ use tauri::{AppHandle, Emitter};
 use crate::converters::common::OutputFormat;
 use crate::converters::dispatcher::convert_image_auto;
 use crate::commands::conversion::should_stop;
-use tauri_plugin_log::log::{error, info, trace};
+use tauri_plugin_log::log::{error, info, debug, trace};
 use std::sync::{Arc, Mutex};
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
@@ -52,13 +52,17 @@ fn batch_convert_images(
     let error_count = Arc::new(Mutex::new(0));
     
     // 根据 CPU 核心数动态调整线程池大小
-    // 通常设置为 CPU 核心数的 1-2 倍，避免过多线程导致上下文切换开销
+    // 少量文件时使用文件数，大量文件时保留 25% 给 UI
     let num_cpus = std::thread::available_parallelism()
         .map(|n| n.get())
         .unwrap_or(4);
-    let pool_size = num_cpus.min(total).max(1);
+    let pool_size = if total < 10 {
+        total  // 少量文件时使用文件数
+    } else {
+        (num_cpus * 3 / 4).max(2)  // 大量文件时保留 25% 给 UI
+    };
     
-    trace!("CPU 核心数: {}, 线程池大小: {}", num_cpus, pool_size);
+    trace!("CPU 核心数: {}, 文件数: {}, 线程池大小: {}", num_cpus, total, pool_size);
 
     // 创建自定义线程池，优化并发性能
     let pool = ThreadPoolBuilder::new()
@@ -79,23 +83,12 @@ fn batch_convert_images(
             let current = index + 1;
             trace!("处理文件 {}/{}: {}", current, total, input);
 
-            // 减少进度更新的频率，避免过多的 IPC 调用
-            if current % 5 == 0 || current == total {
-                let _ = app.emit("conversion-update", json!({
-                    "path": input,
-                    "status": "converting",
-                    "progress": 0,
-                    "current": current,
-                    "total": total
-                }));
-            }
-            
             let result = convert_image_auto(app, &input, &output, format);
             
             match result {
                 Ok(_) => {
                     *success_count.lock().unwrap() += 1;
-                    info!("✓ 转换成功 {}/{}: {} -> {}", current, total, input, output);
+                    debug!("✓ 转换成功 {}/{}: {} -> {}", current, total, input, output);
                     let _ = app.emit("conversion-update", json!({
                         "path": input,
                         "status": "done",

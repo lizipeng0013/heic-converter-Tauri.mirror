@@ -181,6 +181,15 @@ export const useConversionStore = defineStore('conversion', () => {
     isConverting.value = true;
     isStopping.value = false;
     hasStartedConversion.value = true;
+
+    // 立即将所有 pending 状态的文件更新为 converting 状态
+    // 这样用户点击开始按钮后，所有文件会立即显示为"正在转换"状态
+    pending.forEach((file) => {
+      file.status = "converting";
+      file.progress = 0;
+    });
+    debug(`已将 ${pending.length} 个文件状态更新为 converting`);
+
     try {
       await invoke("convert_images", {
         paths: paths,
@@ -193,6 +202,11 @@ export const useConversionStore = defineStore('conversion', () => {
       alertSevere("转换任务执行失败！" + error)
       isConverting.value = false;
       isStopping.value = false;
+      // 如果调用失败，将文件状态重置回 pending
+      pending.forEach((file) => {
+        file.status = "pending";
+        file.progress = 0;
+      });
     }
   };
 

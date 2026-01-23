@@ -25,7 +25,7 @@ pub fn run() {
             drag_window,
             // 业务逻辑类
             convert_images,
-            stop_conversion,
+            stop_conversion
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
