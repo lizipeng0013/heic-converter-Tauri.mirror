@@ -4,7 +4,7 @@ use crate::converters::common::OutputFormat;
 use crate::converters::dispatcher::convert_image_auto;
 use crate::commands::conversion::should_stop;
 use tauri_plugin_log::log::{error, info, debug, trace};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, atomic::{AtomicUsize, AtomicBool, Ordering}};
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
 
@@ -47,13 +47,13 @@ fn batch_convert_images(
     let total = files.len();
     trace!("开始并行处理 {} 个文件", total);
 
-    // 使用 Arc<Mutex> 来共享计数器和任务队列
-    let success_count = Arc::new(Mutex::new(0));
-    let error_count = Arc::new(Mutex::new(0));
-    let stopped_flag = Arc::new(Mutex::new(false)); // 记录是否因为停止信号而中止
-    let processed_count = Arc::new(Mutex::new(0)); // 记录已处理的文件数
-    let files_arc = Arc::new(Mutex::new(files)); // 将文件列表包装在 Arc<Mutex> 中
-    let next_index = Arc::new(Mutex::new(0usize)); // 下一个要处理的文件索引
+    // 使用原子操作替代 Mutex，减少锁竞争
+    let success_count = Arc::new(AtomicUsize::new(0));
+    let error_count = Arc::new(AtomicUsize::new(0));
+    let stopped_flag = Arc::new(AtomicBool::new(false)); // 记录是否因为停止信号而中止
+    let processed_count = Arc::new(AtomicUsize::new(0)); // 记录已处理的文件数
+    let files_arc = Arc::new(files); // 文件列表是只读的，不需要 Mutex
+    let next_index = Arc::new(AtomicUsize::new(0)); // 下一个要处理的文件索引
     
     // 根据 CPU 核心数动态调整线程池大小
     // 少量文件时使用文件数，大量文件时保留 25% 给 UI
@@ -83,47 +83,36 @@ fn batch_convert_images(
             loop {
                 // 检查停止标志
                 if should_stop() {
-                    *stopped_flag.lock().unwrap() = true;
+                    stopped_flag.store(true, Ordering::Release);
                     break;
                 }
-                
-                // 获取下一个任务索引
-                let index = {
-                    let mut idx = next_index.lock().unwrap();
-                    if *idx >= total {
-                        break; // 所有文件都已处理
-                    }
-                    let i = *idx;
-                    *idx += 1;
-                    i
-                };
-                
+
+                // 使用原子操作获取下一个任务索引
+                let index = next_index.fetch_add(1, Ordering::Relaxed);
+                if index >= total {
+                    break; // 所有文件都已处理
+                }
+
                 // 再次检查停止标志（在获取索引后）
                 if should_stop() {
-                    // 将索引放回去，让其他线程可以处理
-                    let mut idx = next_index.lock().unwrap();
-                    if *idx > index {
-                        *idx = index;
-                    }
-                    *stopped_flag.lock().unwrap() = true;
+                    stopped_flag.store(true, Ordering::Release);
+                    // 直接退出，不回退索引（前端会将剩余文件重置为 pending）
                     break;
                 }
-                
-                // 获取文件
-                let (input, output) = {
-                    let files = files_arc.lock().unwrap();
-                    files[index].clone()
-                };
-                
+
+                // 直接访问文件列表（只读，不需要锁）
+                let (input, output) = files_arc[index].clone();
+
                 let current = index + 1;
                 trace!("处理文件 {}/{}: {}", current, total, input);
 
                 let result = convert_image_auto(app, &input, &output, format);
-                
+
                 match result {
                     Ok(_) => {
-                        *success_count.lock().unwrap() += 1;
-                        *processed_count.lock().unwrap() += 1;
+                        // 使用原子操作更新计数器
+                        success_count.fetch_add(1, Ordering::Relaxed);
+                        processed_count.fetch_add(1, Ordering::Relaxed);
                         debug!("✓ 转换成功 {}/{}: {} -> {}", current, total, input, output);
                         let _ = app.emit("conversion-update", json!({
                             "path": input,
@@ -135,8 +124,9 @@ fn batch_convert_images(
                         }));
                     },
                     Err(e) => {
-                        *error_count.lock().unwrap() += 1;
-                        *processed_count.lock().unwrap() += 1;
+                        // 使用原子操作更新计数器
+                        error_count.fetch_add(1, Ordering::Relaxed);
+                        processed_count.fetch_add(1, Ordering::Relaxed);
                         error!("✗ 转换失败 {}/{}: {} - {}", current, total, input, e);
                         let _ = app.emit("conversion-update", json!({
                             "path": input,
@@ -151,10 +141,10 @@ fn batch_convert_images(
         });
     });
 
-    let success = *success_count.lock().unwrap();
-    let error = *error_count.lock().unwrap();
-    let processed = *processed_count.lock().unwrap();
-    let was_stopped = *stopped_flag.lock().unwrap();
+    let success = success_count.load(Ordering::Relaxed);
+    let error = error_count.load(Ordering::Relaxed);
+    let processed = processed_count.load(Ordering::Relaxed);
+    let was_stopped = stopped_flag.load(Ordering::Relaxed);
     
     info!("批量转换完成 - 成功: {}, 失败: {}, 已处理: {}, 总计: {}", success, error, processed, total);
     
