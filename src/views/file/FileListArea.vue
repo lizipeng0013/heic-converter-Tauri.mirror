@@ -359,7 +359,7 @@ const handleOpenFileDir = async (file: any) => {
 
           <div
             v-if="convertingFiles.length > 0"
-            class="group-section flex-shrink-0 min-h-0"
+            :class="['group-section min-h-0', conversionStore.convertingExpanded ? 'flex-1' : 'flex-shrink-0']"
           >
             <div
               class="group-header cursor-pointer hover:bg-accent/50 transition-colors"
@@ -416,7 +416,7 @@ const handleOpenFileDir = async (file: any) => {
 
           <div
             v-if="pendingFiles.length > 0"
-            class="group-section flex-shrink-0 min-h-0"
+            :class="['group-section min-h-0', conversionStore.pendingExpanded ? 'flex-1' : 'flex-shrink-0']"
           >
             <div
               class="group-header cursor-pointer hover:bg-accent/50 transition-colors"
@@ -471,7 +471,7 @@ const handleOpenFileDir = async (file: any) => {
 
           <div
             v-if="errorFiles.length > 0"
-            class="group-section flex-shrink-0 min-h-0"
+            :class="['group-section min-h-0', conversionStore.errorExpanded ? 'flex-1' : 'flex-shrink-0']"
           >
             <div
               class="group-header text-destructive cursor-pointer hover:bg-destructive/10 transition-colors"
