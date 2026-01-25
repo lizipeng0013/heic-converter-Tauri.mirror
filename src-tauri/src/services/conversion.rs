@@ -54,7 +54,8 @@ fn batch_convert_images(
     let processed_count = Arc::new(AtomicUsize::new(0)); // 记录已处理的文件数
     let files_arc = Arc::new(files); // 文件列表是只读的，不需要 Mutex
     let next_index = Arc::new(AtomicUsize::new(0)); // 下一个要处理的文件索引
-    
+    let app_arc = Arc::new(app.clone()); // Arc 包装 AppHandle，避免 Clone 开销
+
     // 根据 CPU 核心数动态调整线程池大小
     // 少量文件时使用文件数，大量文件时保留 25% 给 UI
     let num_cpus = std::thread::available_parallelism()
@@ -65,7 +66,7 @@ fn batch_convert_images(
     } else {
         (num_cpus * 3 / 4).max(2)  // 大量文件时保留 25% 给 UI
     };
-    
+
     trace!("CPU 核心数: {}, 文件数: {}, 线程池大小: {}", num_cpus, total, pool_size);
 
     // 创建自定义线程池，优化并发性能
@@ -106,7 +107,7 @@ fn batch_convert_images(
                 let current = index + 1;
                 trace!("处理文件 {}/{}: {}", current, total, input);
 
-                let result = convert_image_auto(app, &input, &output, format);
+                let result = convert_image_auto(&app_arc, &input, &output, format);
 
                 match result {
                     Ok(_) => {
@@ -114,7 +115,7 @@ fn batch_convert_images(
                         success_count.fetch_add(1, Ordering::Relaxed);
                         processed_count.fetch_add(1, Ordering::Relaxed);
                         debug!("✓ 转换成功 {}/{}: {} -> {}", current, total, input, output);
-                        let _ = app.emit("conversion-update", json!({
+                        let _ = app_arc.emit("conversion-update", json!({
                             "path": input,
                             "status": "done",
                             "progress": 100,
@@ -128,7 +129,7 @@ fn batch_convert_images(
                         error_count.fetch_add(1, Ordering::Relaxed);
                         processed_count.fetch_add(1, Ordering::Relaxed);
                         error!("✗ 转换失败 {}/{}: {} - {}", current, total, input, e);
-                        let _ = app.emit("conversion-update", json!({
+                        let _ = app_arc.emit("conversion-update", json!({
                             "path": input,
                             "status": "error",
                             "error": e.to_string(),
@@ -141,18 +142,30 @@ fn batch_convert_images(
         });
     });
 
+    // 显式释放线程池，确保线程被正确回收
+    drop(pool);
+
     let success = success_count.load(Ordering::Relaxed);
     let error = error_count.load(Ordering::Relaxed);
     let processed = processed_count.load(Ordering::Relaxed);
     let was_stopped = stopped_flag.load(Ordering::Relaxed);
-    
+
     info!("批量转换完成 - 成功: {}, 失败: {}, 已处理: {}, 总计: {}", success, error, processed, total);
-    
+
     // 如果是因为停止信号而中止，发送停止完成事件
     if was_stopped {
         info!("转换任务已停止，发送停止完成事件");
-        let _ = app.emit("conversion-stopped", json!({}));
+        let _ = app_arc.emit("conversion-stopped", json!({}));
     }
-    
+
+    // 显式释放 Arc 引用
+    drop(app_arc);
+    drop(files_arc);
+    drop(success_count);
+    drop(error_count);
+    drop(stopped_flag);
+    drop(processed_count);
+    drop(next_index);
+
     Ok(())
 }

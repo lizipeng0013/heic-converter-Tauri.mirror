@@ -30,64 +30,62 @@ pub fn convert_heic_image(
     format: OutputFormat,
 ) -> Result<(), ConversionError> {
     debug!("转换HEIC图片: {} -> {}", input_path, output_path);
-    
+
     let libheif = LibHeif::new();
     let ctx = HeifContext::read_from_file(input_path)?;
     let handle = ctx.primary_image_handle()?;
-    
+
     debug!("HEIC图像信息: {}x{}", handle.width(), handle.height());
-    
+
     // 优先使用 libheif 的内置 RGB 解码，避免手动 YUV->RGB 转换
     // 这样可以利用 libheif 内部的 SIMD 优化
     let image = libheif.decode(&handle, ColorSpace::Rgb(RgbChroma::Rgb), None)?;
     let planes = image.planes();
     let width = image.width() as u32;
     let height = image.height() as u32;
-    
+
     // 检查是否有交错的 RGB 数据
-    if let Some(interleaved) = planes.interleaved {
+    let result = if let Some(ref interleaved) = planes.interleaved {
         debug!("使用 libheif 内置 RGB 解码（SIMD 优化）");
         let data = interleaved.data;
         let stride = interleaved.stride;
-        
+
         // 直接创建 ImageBuffer，避免逐像素处理
         // 这比手动 YUV->RGB 转换快 10 倍以上
         let buffer: RgbImage = if stride == (width * 3) as usize {
-            // 如果 stride 符合预期，直接使用数据（零拷贝）
-            ImageBuffer::from_raw(width, height, data.to_vec())
+            // 如果 stride 符合预期，直接复制数据（必须复制，因为 ImageBuffer 需要所有权）
+            // 使用 Vec::from 而不是 to_vec()，更高效
+            trace!("stride 匹配，直接复制 RGB 数据");
+            let buffer_data = Vec::from(data);
+            ImageBuffer::from_raw(width, height, buffer_data)
                 .ok_or(ConversionError::UnsupportedInputFormat("无法创建 RGB buffer".to_string()))?
         } else {
             // 如果 stride 不符合预期，需要创建新的 buffer 并逐行复制
-            trace!("RGB 数据 stride 不匹配，创建新的 buffer 并逐行复制");
+            trace!("RGB 数据 stride 不匹配（{}），期望 {}，创建新的 buffer 并逐行复制",
+                   stride, width * 3);
             let row_bytes = (width * 3) as usize;
             let total_bytes = row_bytes * height as usize;
-            
+
             // 预分配 buffer，避免多次重新分配
             let mut buffer_data = Vec::with_capacity(total_bytes);
-            unsafe {
-                buffer_data.set_len(total_bytes);
-            }
-            
-            // 使用更高效的批量复制 - 使用 copy_within 优化
-            let mut dst_offset = 0;
+
+            // 使用更高效的批量复制
             for y in 0..height {
                 let y_usize = y as usize;
                 let src_start = y_usize * stride;
                 let src_end = src_start + row_bytes;
-                
-                if src_end <= data.len() && dst_offset + row_bytes <= total_bytes {
-                    // 使用 copy_from_slice 进行高效的批量复制
-                    buffer_data[dst_offset..dst_offset + row_bytes]
-                        .copy_from_slice(&data[src_start..src_end]);
-                    dst_offset += row_bytes;
+
+                // 边界检查
+                if src_end <= data.len() {
+                    buffer_data.extend_from_slice(&data[src_start..src_end]);
                 }
             }
-            
+
             ImageBuffer::from_raw(width, height, buffer_data)
                 .ok_or(ConversionError::UnsupportedInputFormat("无法创建 RGB buffer".to_string()))?
         };
-        
-        save_image_buffer(&buffer, output_path, format)?;
+
+        save_image_buffer(&buffer, output_path, format)
     } else {
         // 如果没有交错 RGB 数据，尝试 YUV 格式（回退方案）
         trace!("无交错 RGB 数据，尝试 YUV 格式");
@@ -154,12 +152,13 @@ pub fn convert_heic_image(
                 }
             }
 
-            save_image_buffer(&buffer, output_path, format)?;
+            save_image_buffer(&buffer, output_path, format)
         } else {
             error!("无法处理的平面格式");
-            return Err(ConversionError::UnsupportedInputFormat("无法解码的HEIC格式".to_string()));
+            Err(ConversionError::UnsupportedInputFormat("无法解码的HEIC格式".to_string()))
         }
-    }
-    
-    Ok(())
+    };
+
+    // image 和 planes 会在作用域结束时自动释放
+    result
 }
