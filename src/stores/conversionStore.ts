@@ -19,10 +19,19 @@ export const useConversionStore = defineStore('conversion', () => {
   const isReadyForConversion = ref(false);
   const spendTime = ref<number | null>(null);
 
+  // 批量转换配置
+  const batchSize = ref(10); // 每批处理的文件数量
+  const currentBatchIndex = ref(0); // 当前批次索引
+
   // 独立计数器，避免每次访问 stats 都执行 filter 操作
   const pendingCount = ref(0);
   const convertingCount = ref(0);
   const errorCount = ref(0);
+
+  // 分组展开状态（方案C：混合方案）
+  const convertingExpanded = ref(false); // 正在转换分组是否展开
+  const pendingExpanded = ref(false); // 等待转换分组是否展开
+  const errorExpanded = ref(false); // 转换失败分组是否展开
 
   // --- Getters ---
   const stats = computed(() => ({
@@ -33,6 +42,11 @@ export const useConversionStore = defineStore('conversion', () => {
     error: errorCount.value, // 失败的文件数量（直接读取计数器）
     completed: completedFiles.length, // 已完成的文件数量（与 done 相同）
   }));
+
+  // 按状态分组的文件列表（用于 UI 显示）
+  const convertingFiles = computed(() => files.filter(f => f.status === 'converting'));
+  const pendingFiles = computed(() => files.filter(f => f.status === 'pending'));
+  const errorFiles = computed(() => files.filter(f => f.status === 'error'));
 
   // --- 辅助函数：更新计数器 ---
   const updateCounters = (oldStatus: string, newStatus: string) => {
@@ -56,6 +70,10 @@ export const useConversionStore = defineStore('conversion', () => {
     // 这样新导入的文件会显示"开始批量转换"而不是"继续转换"
     if (files.length === 0) {
       hasStartedConversion.value = false;
+      // 首次导入时自动展开"等待转换"分组（方案C规则）
+      pendingExpanded.value = true;
+      convertingExpanded.value = false;
+      errorExpanded.value = false;
     }
 
     const filePromises = paths.map(async (path) => {
@@ -82,18 +100,25 @@ export const useConversionStore = defineStore('conversion', () => {
     });
     const results = await Promise.all(filePromises);
 
-    // 过滤掉无效的文件并添加到列表
+    // 过滤掉无效的文件并去重
+    const validFiles: FileItem[] = [];
+    const existingPaths = new Set(files.map(f => f.path));
+
     results.forEach((file) => {
-      if (file) {
-        const isDuplicate = files.some(f => f.path === file.path);
-        if (!isDuplicate) {
-          files.push(file);
-          pendingCount.value++; // 更新计数器
-        } else {
-          warn(`检测到重复导入文件，已跳过：${file.path}`);
-        }
+      if (file && !existingPaths.has(file.path)) {
+        validFiles.push(file);
+        existingPaths.add(file.path);
+      } else if (file) {
+        warn(`检测到重复导入文件，已跳过：${file.path}`);
       }
     });
+
+    // 批量添加文件，只触发一次响应式更新
+    if (validFiles.length > 0) {
+      files.push(...validFiles);
+      pendingCount.value += validFiles.length;
+    }
+
     isReadyForConversion.value = true;
   };
 
@@ -108,6 +133,13 @@ export const useConversionStore = defineStore('conversion', () => {
       file.status = status as any;
       file.progress = progress;
       updateCounters(oldStatus, status); // 更新计数器
+
+      // 方案C：当文件状态变为 converting 时，自动展开"正在转换"分组
+      if (status === 'converting' && !convertingExpanded.value) {
+        convertingExpanded.value = true;
+        pendingExpanded.value = false;
+        errorExpanded.value = false;
+      }
     }
   };
 
@@ -125,6 +157,12 @@ export const useConversionStore = defineStore('conversion', () => {
       // 从待转换列表移除，添加到已完成列表
       files.splice(fileIndex, 1);
       completedFiles.push(file);
+
+      // 检查是否需要更新下一批文件
+      // 当 convertingCount 为 0 时，说明当前批次已完成，需要更新下一批
+      if (convertingCount.value === 0 && isConverting.value && !isStopping.value) {
+        updateNextBatch();
+      }
     }
   }
 
@@ -221,18 +259,19 @@ export const useConversionStore = defineStore('conversion', () => {
     isConverting.value = true;
     isStopping.value = false;
     hasStartedConversion.value = true;
+    currentBatchIndex.value = 0;
 
-    // 立即将所有 pending 状态的文件更新为 converting 状态
-    // 这样用户点击开始按钮后，所有文件会立即显示为"正在转换"状态
-    pending.forEach((file) => {
+    // 只将第一批文件更新为 converting 状态，避免一次性更新所有文件导致的 UI 卡顿
+    const firstBatch = pending.slice(0, batchSize.value);
+    firstBatch.forEach((file) => {
       file.status = "converting";
       file.progress = 0;
     });
 
     // 更新计数器
-    pendingCount.value = 0;
-    convertingCount.value += pending.length;
-    debug(`已将 ${pending.length} 个文件状态更新为 converting`);
+    pendingCount.value -= firstBatch.length;
+    convertingCount.value += firstBatch.length;
+    debug(`已将第一批 ${firstBatch.length} 个文件状态更新为 converting`);
 
     try {
       await invoke("convert_images", {
@@ -247,14 +286,14 @@ export const useConversionStore = defineStore('conversion', () => {
       isConverting.value = false;
       isStopping.value = false;
       // 如果调用失败，将文件状态重置回 pending
-      pending.forEach((file) => {
+      firstBatch.forEach((file) => {
         file.status = "pending";
         file.progress = 0;
       });
 
       // 重置计数器
-      convertingCount.value = 0;
-      pendingCount.value += pending.length;
+      convertingCount.value -= firstBatch.length;
+      pendingCount.value += firstBatch.length;
     }
   };
 
@@ -297,6 +336,59 @@ export const useConversionStore = defineStore('conversion', () => {
     isStopping.value = false;
   };
 
+  // 更新下一批文件的状态
+  const updateNextBatch = () => {
+    const pending = files.filter((f) => f.status === "pending");
+    if (pending.length === 0) {
+      debug(`没有更多待转换的文件`);
+      return;
+    }
+
+    // 计算下一批的起始索引
+    const startIndex = currentBatchIndex.value * batchSize.value;
+    const nextBatch = pending.slice(0, batchSize.value);
+
+    if (nextBatch.length === 0) {
+      debug(`下一批文件为空，停止更新`);
+      return;
+    }
+
+    // 更新下一批文件的状态
+    nextBatch.forEach((file) => {
+      file.status = "converting";
+      file.progress = 0;
+    });
+
+    // 更新计数器
+    pendingCount.value -= nextBatch.length;
+    convertingCount.value += nextBatch.length;
+    currentBatchIndex.value++;
+
+    debug(`已更新第 ${currentBatchIndex.value} 批，共 ${nextBatch.length} 个文件状态为 converting`);
+  };
+
+  // 切换分组展开状态（方案C：互斥展开）
+  const toggleGroupExpansion = (group: 'converting' | 'pending' | 'error') => {
+    // 如果点击的是当前已展开的分组，则收起它
+    if (group === 'converting' && convertingExpanded.value) {
+      convertingExpanded.value = false;
+      return;
+    }
+    if (group === 'pending' && pendingExpanded.value) {
+      pendingExpanded.value = false;
+      return;
+    }
+    if (group === 'error' && errorExpanded.value) {
+      errorExpanded.value = false;
+      return;
+    }
+
+    // 否则，展开目标分组，收起其他分组
+    convertingExpanded.value = group === 'converting';
+    pendingExpanded.value = group === 'pending';
+    errorExpanded.value = group === 'error';
+  };
+
   return {
     files,
     completedFiles,
@@ -308,7 +400,15 @@ export const useConversionStore = defineStore('conversion', () => {
     isReadyForConversion,
     outputFolder,
     spendTime,
+    batchSize,
+    currentBatchIndex,
     stats,
+    convertingFiles,
+    pendingFiles,
+    errorFiles,
+    convertingExpanded,
+    pendingExpanded,
+    errorExpanded,
     addPaths,
     updateFileStatus,
     updateFileSuccess,
@@ -323,5 +423,7 @@ export const useConversionStore = defineStore('conversion', () => {
     startConversion,
     stopConversion,
     handleStopped,
+    updateNextBatch,
+    toggleGroupExpansion,
   };
 });

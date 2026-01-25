@@ -4,7 +4,7 @@ import { Settings2, FolderOpen, ChevronDown, Square } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { downloadDir } from "@tauri-apps/api/path";
 import {onMounted, onUnmounted, computed, ref} from "vue";
@@ -253,26 +253,24 @@ const buttonIcon = computed(() => {
             class="text-sm font-medium leading-none flex items-center justify-between"
             >输出目录</label
           >
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger as-child>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  class="w-full justify-start gap-2"
-                  @click="selectOutputFolder"
-                >
-                  <FolderOpen :size="16" />
-                  <span class="truncate">{{
-                    store.outputFolder ? truncatedOutputFolder : "选择输出目录"
-                  }}</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent v-if="store.outputFolder">
-                <p>{{ store.outputFolder }}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <Button
+                variant="outline"
+                size="sm"
+                class="w-full justify-start gap-2"
+                @click="selectOutputFolder"
+              >
+                <FolderOpen :size="16" />
+                <span class="truncate">{{
+                  store.outputFolder ? truncatedOutputFolder : "选择输出目录"
+                }}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent v-if="store.outputFolder">
+              <p>{{ store.outputFolder }}</p>
+            </TooltipContent>
+          </Tooltip>
           <p class="text-xs text-muted-foreground mt-1">
             未选择时，将保存到系统的"下载"文件夹。
           </p>

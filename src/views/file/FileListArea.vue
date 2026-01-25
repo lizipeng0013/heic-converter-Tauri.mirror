@@ -1,50 +1,112 @@
 <script setup lang="ts">
-import {onMounted, onUnmounted, ref, computed} from "vue";
+import { onMounted, onUnmounted, ref, computed } from "vue";
 import { useConversionStore } from "@/stores/conversionStore";
 import { formatSize } from "@/utils";
 import {
   Upload,
   Trash2,
-  FileImage,
   CheckCircle2,
   Loader2,
   FolderOpen,
   AlertCircle,
   Clock,
+  ChevronDown,
 } from "lucide-vue-next";
-import { open } from '@tauri-apps/plugin-dialog'
+import { open } from "@tauri-apps/plugin-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { revealItemInDir } from "@tauri-apps/plugin-opener";
-import { FileItem } from "@/types/index";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip/";
-
-import {listen, TauriEvent, UnlistenFn} from "@tauri-apps/api/event";
-import {info, debug} from "@tauri-apps/plugin-log";
-import {alertSevere} from "@/utils/useError.ts";
+import { useVirtualizer } from "@tanstack/vue-virtual";
+import FileCard from "@/components/FileCard.vue";
+import { listen, TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
+import { info, debug } from "@tauri-apps/plugin-log";
+import { alertSevere } from "@/utils/useError.ts";
 
 const conversionStore = useConversionStore();
 const isFileDragging = ref(false);
 
-// 按状态分组
-const convertingFiles = computed(() => 
-  conversionStore.files.filter(f => f.status === 'converting')
+// 按状态分组（直接在 FileListArea 中过滤，确保响应式）
+const convertingFiles = computed(() => conversionStore.convertingFiles);
+const pendingFiles = computed(() =>
+  conversionStore.files.filter((f) => f.status === "pending"),
+);
+const errorFiles = computed(() =>
+  conversionStore.files.filter((f) => f.status === "error"),
 );
 
-const pendingFiles = computed(() => 
-  conversionStore.files.filter(f => f.status === 'pending')
+// 虚拟滚动容器引用
+const convertingListRef = ref<HTMLElement | null>(null);
+const pendingListRef = ref<HTMLElement | null>(null);
+const errorListRef = ref<HTMLElement | null>(null);
+const completedListRef = ref<HTMLElement | null>(null);
+
+// 虚拟滚动配置
+const itemSize = 68; // 每个文件卡片的估计高度（像素）
+const itemPadding = 4; // 每个文件卡片的上下内边距（像素）
+
+// 正在转换的虚拟滚动
+const convertingVirtualizerOptions = computed(() => ({
+  count: convertingFiles.value.length,
+  getScrollElement: () => convertingListRef.value,
+  estimateSize: () => itemSize,
+  overscan: 5,
+}));
+
+const convertingVirtualizer = useVirtualizer(convertingVirtualizerOptions);
+const convertingVirtualRows = computed(() =>
+  convertingVirtualizer.value.getVirtualItems(),
+);
+const convertingTotalSize = computed(() =>
+  convertingVirtualizer.value.getTotalSize(),
 );
 
-const errorFiles = computed(() => 
-  conversionStore.files.filter(f => f.status === 'error')
+// 等待转换的虚拟滚动
+const pendingVirtualizerOptions = computed(() => ({
+  count: pendingFiles.value.length,
+  getScrollElement: () => pendingListRef.value,
+  estimateSize: () => itemSize,
+  overscan: 5,
+}));
+
+const pendingVirtualizer = useVirtualizer(pendingVirtualizerOptions);
+const pendingVirtualRows = computed(() =>
+  pendingVirtualizer.value.getVirtualItems(),
 );
+const pendingTotalSize = computed(() =>
+  pendingVirtualizer.value.getTotalSize(),
+);
+
+// 转换失败的虚拟滚动
+const errorVirtualizerOptions = computed(() => ({
+  count: errorFiles.value.length,
+  getScrollElement: () => errorListRef.value,
+  estimateSize: () => itemSize,
+  overscan: 5,
+}));
+
+const errorVirtualizer = useVirtualizer(errorVirtualizerOptions);
+const errorVirtualRows = computed(() =>
+  errorVirtualizer.value.getVirtualItems(),
+);
+const errorTotalSize = computed(() => errorVirtualizer.value.getTotalSize());
+
+// 已完成的虚拟滚动
+const completedVirtualizerOptions = computed(() => ({
+  count: conversionStore.completedFiles.length,
+  getScrollElement: () => completedListRef.value,
+  estimateSize: () => itemSize,
+  overscan: 5,
+}));
+
+const completedVirtualizer = useVirtualizer(completedVirtualizerOptions);
+const completedVirtualRows = computed(() =>
+  completedVirtualizer.value.getVirtualItems(),
+);
+const completedTotalSize = computed(() =>
+  completedVirtualizer.value.getTotalSize(),
+);
+
 let unlistenDragEnter: UnlistenFn | null = null;
 let unlistenDragDrop: UnlistenFn | null = null;
 let unlistenDragLeave: UnlistenFn | null = null;
@@ -75,8 +137,8 @@ onMounted(async () => {
 
   unlistenConversion = await listen("conversion-update", (event) => {
     const payload = event.payload as any;
-    const {path, status, progress, output_path, error } = payload;
-    
+    const { path, status, progress, output_path, error } = payload;
+
     // 如果正在停止转换，只处理 done 状态的更新（让正在转换的文件可以完成）
     // 忽略 converting 状态的更新，避免在停止过程中显示进度变化
     if (conversionStore.isStopping) {
@@ -87,7 +149,7 @@ onMounted(async () => {
       }
       return;
     }
-    
+
     // 正常转换状态下处理所有更新
     if (status === "done") {
       conversionStore.updateFileSuccess(path, output_path);
@@ -96,7 +158,7 @@ onMounted(async () => {
     } else if (status === "error") {
       conversionStore.updateFileError(path, error);
     }
-  })
+  });
 
   unlistenBatchFinished = await listen("conversion-batch-finished", (event) => {
     info(`转换任务完成`);
@@ -105,17 +167,16 @@ onMounted(async () => {
       conversionStore.isConverting = false;
     }
     const payload = event.payload as any;
-    let spendTime = (payload.spend_time/1000).toFixed(1)
+    let spendTime = (payload.spend_time / 1000).toFixed(1);
     debug(`转换耗时：${spendTime}s`);
     conversionStore.spendTime = parseFloat(spendTime);
     conversionStore.isReadyForConversion = false;
-  })
+  });
 
   unlistenConversionStopped = await listen("conversion-stopped", (event) => {
     info(`收到停止完成事件`);
     conversionStore.handleStopped();
-  })
-
+  });
 });
 
 onUnmounted(() => {
@@ -126,8 +187,6 @@ onUnmounted(() => {
   unlistenBatchFinished?.();
   unlistenConversionStopped?.();
 });
-
-// import { ConversionService } from "@/services/conversionService"; // 你的服务
 
 // 新的文件选择函数
 const selectFilesWithDialog = async () => {
@@ -147,20 +206,20 @@ const selectFilesWithDialog = async () => {
     const filePaths = Array.isArray(selected) ? selected : [selected];
     await conversionStore.addPaths(filePaths);
   } catch (error) {
-    alertSevere("选择文件失败：" + error)
+    alertSevere("选择文件失败：" + error);
   }
 };
 
-const handleOpenFileDir = async (file: FileItem) => {
+const handleOpenFileDir = async (file: any) => {
   try {
     if (file.convertedFilePath) {
+      const { revealItemInDir } = await import("@tauri-apps/plugin-opener");
       await revealItemInDir(file.convertedFilePath);
     }
   } catch (error) {
     alertSevere("打开目录并定位文件失败：" + error);
   }
 };
-
 </script>
 
 <style scoped>
@@ -189,6 +248,21 @@ const handleOpenFileDir = async (file: FileItem) => {
   color: hsl(var(--destructive));
   background: hsl(var(--destructive) / 0.1);
 }
+
+.virtual-list {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.virtual-item {
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.virtual-item > * {
+  padding: 4px 0;
+  box-sizing: border-box;
+}
 </style>
 
 <template>
@@ -199,7 +273,7 @@ const handleOpenFileDir = async (file: FileItem) => {
       <Tabs v-model="conversionStore.activeTab" class="w-full">
         <TabsList class="h-8">
           <TabsTrigger value="pending" class="text-xs">
-            待转换 ({{ conversionStore.files.length }})
+            任务列表 ({{ conversionStore.files.length }})
           </TabsTrigger>
           <TabsTrigger value="completed" class="text-xs">
             已完成 ({{ conversionStore.completedFiles.length }})
@@ -207,7 +281,10 @@ const handleOpenFileDir = async (file: FileItem) => {
         </TabsList>
       </Tabs>
       <Button
-        v-if="conversionStore.activeTab === 'pending' && conversionStore.files.length > 0"
+        v-if="
+          conversionStore.activeTab === 'pending' &&
+          conversionStore.files.length > 0
+        "
         variant="ghost"
         size="sm"
         class="h-8 text-xs ml-2"
@@ -215,7 +292,10 @@ const handleOpenFileDir = async (file: FileItem) => {
         >清空列表</Button
       >
       <Button
-        v-if="conversionStore.activeTab === 'completed' && conversionStore.completedFiles.length > 0"
+        v-if="
+          conversionStore.activeTab === 'completed' &&
+          conversionStore.completedFiles.length > 0
+        "
         variant="ghost"
         size="sm"
         class="h-8 text-xs ml-2"
@@ -225,14 +305,17 @@ const handleOpenFileDir = async (file: FileItem) => {
     </div>
 
     <div
-      class="flex-1 w-full overflow-y-auto p-2"
+      class="flex-1 w-full overflow-hidden p-2"
       :class="{
         'bg-primary/10': isFileDragging, // 【背景】明显变蓝
       }"
     >
-      <!-- 空状态：待转换标签页 -->
+      <!-- 空状态：任务标签页 -->
       <div
-        v-if="conversionStore.activeTab === 'pending' && conversionStore.files.length === 0"
+        v-if="
+          conversionStore.activeTab === 'pending' &&
+          conversionStore.files.length === 0
+        "
         class="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground/50 pointer-events-none"
       >
         <div
@@ -253,7 +336,10 @@ const handleOpenFileDir = async (file: FileItem) => {
 
       <!-- 空状态：已完成标签页 -->
       <div
-        v-if="conversionStore.activeTab === 'completed' && conversionStore.completedFiles.length === 0"
+        v-if="
+          conversionStore.activeTab === 'completed' &&
+          conversionStore.completedFiles.length === 0
+        "
         class="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground/50 pointer-events-none"
       >
         <div
@@ -261,292 +347,229 @@ const handleOpenFileDir = async (file: FileItem) => {
         >
           <CheckCircle2 />
         </div>
-        <p class="font-medium">
-          暂无已完成的文件
-        </p>
-        <p class="text-sm mt-1 opacity-70">
-          转换完成的文件将显示在这里
-        </p>
+        <p class="font-medium">暂无已完成的文件</p>
+        <p class="text-sm mt-1 opacity-70">转换完成的文件将显示在这里</p>
       </div>
 
       <!-- 待转换标签页：按状态分组显示 -->
+
       <template v-if="conversionStore.activeTab === 'pending'">
-        <!-- 正在转换的文件分组 -->
-        <div v-if="convertingFiles.length > 0" class="group-section">
-          <div class="group-header">
-            <Loader2 :size="12" class="animate-spin text-primary" />
-            <span>正在转换 ({{ convertingFiles.length }})</span>
-          </div>
-          
-          <div class="space-y-2">
-            <Card
-              v-for="file in convertingFiles"
-              :key="file.path"
-              class="group overflow-hidden transition-colors hover:border-primary/50"
-            >
-            <CardContent class="p-1 flex items-center justify-between gap-2">
-              <div class="flex items-center gap-2 min-w-0 flex-1 max-w-[calc(100%-2rem)]">
-                <div
-                  class="h-7 w-7 shrink-0 rounded bg-secondary flex items-center justify-center text-secondary-foreground"
-                >
-                  <FileImage :size="14" />
-                </div>
-                <div class="flex flex-col justify-center gap-0.5 overflow-hidden min-w-0 flex-1">
-                  <div class="flex items-center gap-2">
-                    <p class="text-sm font-medium truncate flex-1 min-w-0">{{ file.name }}</p>
-                    <Badge
-                      variant="default"
-                      class="h-5 px-1.5 text-[10px] flex-shrink-0 w-20 justify-center"
-                    >
-                      <Loader2 :size="10" class="animate-spin" />
-                      {{ file.progress }}%
-                    </Badge>
-                  </div>
-                  <div class="text-xs text-muted-foreground">
-                    {{ formatSize(file.size) }}
-                  </div>
-                  <div class="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-                    <div
-                      class="h-full bg-primary transition-all duration-300 ease-out"
-                      :style="{ width: file.progress + '%' }"
-                    ></div>
-                  </div>
-                </div>
-              </div>
-              <div class="flex items-center gap-1 shrink-0 w-8 justify-end">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        class="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                        @click="conversionStore.removePath(file.path)"
-                      >
-                        <Trash2 :size="14" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>从文件队列中移除</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            </CardContent>
-            </Card>
-          </div>
-        </div>
+        <div class="flex flex-col h-full">
+          <!-- 正在转换的文件分组 -->
 
-        <!-- 等待转换的文件分组 -->
-        <div v-if="pendingFiles.length > 0" class="group-section">
-          <div class="group-header">
-            <Clock :size="12" />
-            <span>等待转换 ({{ pendingFiles.length }})</span>
-          </div>
-          
-          <div class="space-y-2">
-            <Card
-              v-for="file in pendingFiles"
-              :key="file.path"
-              class="group overflow-hidden transition-colors hover:border-primary/50"
+          <div
+            v-if="convertingFiles.length > 0"
+            class="group-section flex-shrink-0 min-h-0"
+          >
+            <div
+              class="group-header cursor-pointer hover:bg-accent/50 transition-colors"
+              @click="conversionStore.toggleGroupExpansion('converting')"
             >
-            <CardContent class="p-1 flex items-center justify-between gap-2">
-              <div class="flex items-center gap-2 min-w-0 flex-1 max-w-[calc(100%-2rem)]">
-                <div
-                  class="h-7 w-7 shrink-0 rounded bg-secondary flex items-center justify-center text-secondary-foreground"
-                >
-                  <FileImage :size="14" />
-                </div>
-                <div class="flex flex-col justify-center gap-0.5 overflow-hidden min-w-0 flex-1">
-                  <div class="flex items-center gap-2">
-                    <p class="text-sm font-medium truncate flex-1 min-w-0">{{ file.name }}</p>
-                    <Badge
-                      variant="secondary"
-                      class="h-5 px-1.5 text-[10px] flex-shrink-0 w-16 justify-center"
-                    >
-                      等待
-                    </Badge>
-                  </div>
-                  <div class="text-xs text-muted-foreground">
-                    {{ formatSize(file.size) }}
-                  </div>
-                </div>
-              </div>
-              <div class="flex items-center gap-1 shrink-0 w-8 justify-end">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        class="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                        @click="conversionStore.removePath(file.path)"
-                      >
-                        <Trash2 :size="14" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>从文件队列中移除</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-            </CardContent>
-            </Card>
-          </div>
-        </div>
+              <Loader2 :size="12" class="animate-spin text-primary" />
 
-        <!-- 转换失败的文件分组 -->
-        <div v-if="errorFiles.length > 0" class="group-section">
-          <div class="group-header text-destructive">
-            <AlertCircle :size="12" />
-            <span>转换失败 ({{ errorFiles.length }})</span>
-          </div>
-          
-          <div class="space-y-2">
-            <Card
-              v-for="file in errorFiles"
-              :key="file.path"
-              class="group overflow-hidden transition-colors hover:border-destructive/50"
+              <span>正在转换 ({{ convertingFiles.length }})</span>
+
+              <ChevronDown
+                :size="12"
+                class="ml-auto transition-transform duration-200"
+                :class="{ 'rotate-180': conversionStore.convertingExpanded }"
+              />
+            </div>
+
+            <div
+              v-if="conversionStore.convertingExpanded"
+              ref="convertingListRef"
+              class="virtual-list"
+              :style="{
+                height: Math.min(convertingFiles.length * itemSize, 150) + 'px',
+                overflow: 'auto',
+              }"
             >
-            <CardContent class="p-1 flex items-center justify-between gap-2">
-              <div class="flex items-center gap-2 min-w-0 flex-1 max-w-[calc(100%-2rem)]">
+              <div
+                :style="{
+                  height: `${convertingTotalSize}px`,
+                  width: '100%',
+                  position: 'relative',
+                }"
+              >
                 <div
-                  class="h-7 w-7 shrink-0 rounded bg-secondary flex items-center justify-center text-secondary-foreground"
+                  v-for="virtualRow in convertingVirtualRows"
+                  :key="virtualRow.key"
+                  class="virtual-item"
+                  :style="{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }"
                 >
-                  <FileImage :size="14" />
-                </div>
-                <div class="flex flex-col justify-center gap-0.5 overflow-hidden min-w-0 flex-1">
-                  <div class="flex items-center gap-2">
-                    <p class="text-sm font-medium truncate flex-1 min-w-0">{{ file.name }}</p>
-                    <TooltipProvider v-if="file.error">
-                      <Tooltip>
-                        <TooltipTrigger as-child>
-                          <Badge
-                            variant="destructive"
-                            class="h-5 px-1.5 text-[10px] flex-shrink-0 w-20 justify-center cursor-help"
-                          >
-                            <AlertCircle :size="10" /> 失败
-                          </Badge>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p class="max-w-xs break-words">{{ file.error }}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <Badge
-                      v-else
-                      variant="destructive"
-                      class="h-5 px-1.5 text-[10px] flex-shrink-0 w-20 justify-center"
-                    >
-                      <AlertCircle :size="10" /> 失败
-                    </Badge>
-                  </div>
-                  <div class="text-xs text-muted-foreground">
-                    {{ formatSize(file.size) }}
-                  </div>
+                  <FileCard
+                    :file="convertingFiles[virtualRow.index]"
+                    :show-progress="true"
+                  />
                 </div>
               </div>
-              <div class="flex items-center gap-1 shrink-0 w-8 justify-end">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        class="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                        @click="conversionStore.removePath(file.path)"
-                      >
-                        <Trash2 :size="14" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>从文件队列中移除</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+            </div>
+          </div>
+          <!-- 等待转换的文件分组 -->
+
+          <div
+            v-if="pendingFiles.length > 0"
+            class="group-section flex-shrink-0 flex-1 min-h-0"
+          >
+            <div
+              class="group-header cursor-pointer hover:bg-accent/50 transition-colors"
+              @click="conversionStore.toggleGroupExpansion('pending')"
+            >
+              <Clock :size="12" />
+
+              <span>等待转换 ({{ pendingFiles.length }})</span>
+
+              <ChevronDown
+                :size="12"
+                class="ml-auto transition-transform duration-200"
+                :class="{ 'rotate-180': conversionStore.pendingExpanded }"
+              />
+            </div>
+
+            <div
+              v-if="conversionStore.pendingExpanded"
+              ref="pendingListRef"
+              class="virtual-list flex-1"
+              :style="{
+                overflow: 'auto',
+                height: `calc(100vh - 240px)`,
+              }"
+            >
+              <div
+                :style="{
+                  height: `${pendingTotalSize}px`,
+                  width: '100%',
+                  position: 'relative',
+                }"
+              >
+                <div
+                  v-for="virtualRow in pendingVirtualRows"
+                  :key="virtualRow.key"
+                  class="virtual-item"
+                  :style="{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }"
+                >
+                  <FileCard :file="pendingFiles[virtualRow.index]" />
+                </div>
               </div>
-            </CardContent>
-            </Card>
+            </div>
+          </div>
+
+          <!-- 转换失败的文件分组 -->
+
+          <div
+            v-if="errorFiles.length > 0"
+            class="group-section flex-shrink-0 min-h-0"
+          >
+            <div
+              class="group-header text-destructive cursor-pointer hover:bg-destructive/10 transition-colors"
+              @click="conversionStore.toggleGroupExpansion('error')"
+            >
+              <AlertCircle :size="12" />
+
+              <span>转换失败 ({{ errorFiles.length }})</span>
+
+              <ChevronDown
+                :size="12"
+                class="ml-auto transition-transform duration-200"
+                :class="{ 'rotate-180': conversionStore.errorExpanded }"
+              />
+            </div>
+
+            <div
+              v-if="conversionStore.errorExpanded"
+              ref="errorListRef"
+              class="virtual-list"
+              :style="{
+                height: Math.min(errorFiles.length * itemSize, 150) + 'px',
+                overflow: 'auto',
+              }"
+            >
+              <div
+                :style="{
+                  height: `${errorTotalSize}px`,
+                  width: '100%',
+                  position: 'relative',
+                }"
+              >
+                <div
+                  v-for="virtualRow in errorVirtualRows"
+                  :key="virtualRow.key"
+                  class="virtual-item"
+                  :style="{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }"
+                >
+                  <FileCard
+                    :file="errorFiles[virtualRow.index]"
+                    :show-error="true"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </template>
 
       <!-- 已完成标签页：显示所有已完成的文件 -->
+
       <template v-if="conversionStore.activeTab === 'completed'">
-        <div class="space-y-2">
-          <Card
-            v-for="file in conversionStore.completedFiles"
-            :key="file.path"
-            class="group overflow-hidden transition-colors hover:border-primary/50"
+        <div
+          ref="completedListRef"
+          class="virtual-list h-full"
+          :style="{ overflow: 'auto' }"
+        >
+          <div
+            :style="{
+              height: `${completedTotalSize}px`,
+              width: '100%',
+              position: 'relative',
+            }"
           >
-          <CardContent class="p-1 flex items-center justify-between gap-2">
-            <div class="flex items-center gap-2 min-w-0 flex-1 max-w-[calc(100%-2rem)]">
-              <div
-                class="h-7 w-7 shrink-0 rounded bg-secondary flex items-center justify-center text-secondary-foreground"
-              >
-                <FileImage :size="14" />
-              </div>
-              <div class="flex flex-col justify-center gap-0.5 overflow-hidden min-w-0 flex-1">
-                <div class="flex items-center gap-2">
-                  <p class="text-sm font-medium truncate flex-1 min-w-0">{{ file.name }}</p>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          class="h-7 w-7 opacity-0 group-hover:opacity-100 text-slate-500 hover:text-primary dark:hover:text-primary transition-colors"
-                          @click="handleOpenFileDir(file)"
-                        >
-                          <FolderOpen :size="14" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>打开转换成功的文件所在目录</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    </TooltipProvider>
-                  <Badge
-                    variant="default"
-                    class="h-5 px-1.5 text-[10px] flex-shrink-0 w-20 justify-center"
-                  >
-                    <CheckCircle2 :size="10" /> 完成
-                  </Badge>
-                </div>
-                <div class="text-xs text-muted-foreground">
-                  {{ formatSize(file.size) }}
-                </div>
-              </div>
+            <div
+              v-for="virtualRow in completedVirtualRows"
+              :key="virtualRow.key"
+              class="virtual-item"
+              :style="{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: `${virtualRow.size}px`,
+                transform: `translateY(${virtualRow.start}px)`,
+              }"
+            >
+              <FileCard
+                :file="conversionStore.completedFiles[virtualRow.index]"
+                :show-completed="true"
+              />
             </div>
-            <div class="flex items-center gap-1 shrink-0 w-8 justify-end">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      class="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                      @click="conversionStore.removeCompletedFile(file.path)"
-                    >
-                      <Trash2 :size="14" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>从已完成列表中移除</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          </CardContent>
-          </Card>
+          </div>
         </div>
       </template>
     </div>
 
     <div class="p-2 border-t bg-card shrink-0 relative z-10">
       <div class="relative w-full">
-        
         <label
           for="fileInput"
           class="cursor-pointer flex items-center justify-center w-full h-10 rounded-md border border-input bg-background px-8 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
