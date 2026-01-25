@@ -379,9 +379,8 @@ const handleOpenFileDir = async (file: any) => {
             <div
               v-if="conversionStore.convertingExpanded"
               ref="convertingListRef"
-              class="virtual-list"
+              class="virtual-list flex-1"
               :style="{
-                height: Math.min(convertingFiles.length * itemSize, 150) + 'px',
                 overflow: 'auto',
               }"
             >
@@ -440,7 +439,6 @@ const handleOpenFileDir = async (file: any) => {
               class="virtual-list flex-1"
               :style="{
                 overflow: 'auto',
-                height: `calc(100vh - 240px)`,
               }"
             >
               <div
@@ -493,9 +491,8 @@ const handleOpenFileDir = async (file: any) => {
             <div
               v-if="conversionStore.errorExpanded"
               ref="errorListRef"
-              class="virtual-list"
+              class="virtual-list flex-1"
               :style="{
-                height: Math.min(errorFiles.length * itemSize, 150) + 'px',
                 overflow: 'auto',
               }"
             >

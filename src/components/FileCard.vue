@@ -8,9 +8,6 @@ import { formatSize } from '@/utils'
 import { useConversionStore } from '@/stores/conversionStore'
 import type { FileItem } from '@/types'
 import { ref, computed } from 'vue'
-import {
-  useVirtualizer,
-} from '@tanstack/vue-virtual'
 
 interface Props {
   file: FileItem
