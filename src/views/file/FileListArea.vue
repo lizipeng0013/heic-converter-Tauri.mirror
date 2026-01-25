@@ -416,7 +416,7 @@ const handleOpenFileDir = async (file: any) => {
 
           <div
             v-if="pendingFiles.length > 0"
-            class="group-section flex-shrink-0 flex-1 min-h-0"
+            class="group-section flex-shrink-0 min-h-0"
           >
             <div
               class="group-header cursor-pointer hover:bg-accent/50 transition-colors"
