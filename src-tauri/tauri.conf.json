@@ -37,6 +37,22 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "linux": {
+      "deb": {
+        "files": {},
+        "depends": [
+          "libgtk-3-0 (>= 3.24)",
+          "libwebkit2gtk-4.1-0 (>= 2.38)",
+          "libheif1 (>= 1.18)",
+          "libde265-0 (>= 1.0)",
+          "libx265-199 (>= 2.5)"
+        ]
+      },
+      "rpm": {
+        "epoch": 0,
+        "files": {}
+      }
+    }
   }
 }
