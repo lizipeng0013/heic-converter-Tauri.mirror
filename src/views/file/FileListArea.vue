@@ -26,18 +26,12 @@ import { alertSevere } from "@/utils/useError.ts";
 const conversionStore = useConversionStore();
 const isFileDragging = ref(false);
 
-// 按状态分组（直接在 FileListArea 中过滤，确保响应式）
-const convertingFiles = computed(() => conversionStore.convertingFiles);
-const pendingFiles = computed(() =>
-  conversionStore.files.filter((f) => f.status === "pending"),
-);
-const errorFiles = computed(() =>
-  conversionStore.files.filter((f) => f.status === "error"),
-);
+// 按集合分组
+const taskFiles = computed(() => conversionStore.taskFiles); // 任务文件
+const errorFiles = computed(() => conversionStore.errorFilesList); // 转换失败的文件
 
 // 虚拟滚动容器引用
-const convertingListRef = ref<HTMLElement | null>(null);
-const pendingListRef = ref<HTMLElement | null>(null);
+const taskListRef = ref<HTMLElement | null>(null);
 const errorListRef = ref<HTMLElement | null>(null);
 const completedListRef = ref<HTMLElement | null>(null);
 
@@ -45,36 +39,20 @@ const completedListRef = ref<HTMLElement | null>(null);
 const itemSize = 68; // 每个文件卡片的估计高度（像素）
 const itemPadding = 4; // 每个文件卡片的上下内边距（像素）
 
-// 正在转换的虚拟滚动
-const convertingVirtualizerOptions = computed(() => ({
-  count: convertingFiles.value.length,
-  getScrollElement: () => convertingListRef.value,
+// 任务文件的虚拟滚动
+const taskVirtualizerOptions = computed(() => ({
+  count: taskFiles.value.length,
+  getScrollElement: () => taskListRef.value,
   estimateSize: () => itemSize,
   overscan: 5,
 }));
 
-const convertingVirtualizer = useVirtualizer(convertingVirtualizerOptions);
-const convertingVirtualRows = computed(() =>
-  convertingVirtualizer.value.getVirtualItems(),
+const taskVirtualizer = useVirtualizer(taskVirtualizerOptions);
+const taskVirtualRows = computed(() =>
+  taskVirtualizer.value.getVirtualItems(),
 );
-const convertingTotalSize = computed(() =>
-  convertingVirtualizer.value.getTotalSize(),
-);
-
-// 等待转换的虚拟滚动
-const pendingVirtualizerOptions = computed(() => ({
-  count: pendingFiles.value.length,
-  getScrollElement: () => pendingListRef.value,
-  estimateSize: () => itemSize,
-  overscan: 5,
-}));
-
-const pendingVirtualizer = useVirtualizer(pendingVirtualizerOptions);
-const pendingVirtualRows = computed(() =>
-  pendingVirtualizer.value.getVirtualItems(),
-);
-const pendingTotalSize = computed(() =>
-  pendingVirtualizer.value.getTotalSize(),
+const taskTotalSize = computed(() =>
+  taskVirtualizer.value.getTotalSize(),
 );
 
 // 转换失败的虚拟滚动
@@ -137,10 +115,9 @@ onMounted(async () => {
 
   unlistenConversion = await listen("conversion-update", (event) => {
     const payload = event.payload as any;
-    const { path, status, progress, output_path, error } = payload;
+    const { path, status, output_path, error } = payload;
 
     // 如果正在停止转换，只处理 done 状态的更新（让正在转换的文件可以完成）
-    // 忽略 converting 状态的更新，避免在停止过程中显示进度变化
     if (conversionStore.isStopping) {
       if (status === "done") {
         conversionStore.updateFileSuccess(path, output_path);
@@ -153,8 +130,6 @@ onMounted(async () => {
     // 正常转换状态下处理所有更新
     if (status === "done") {
       conversionStore.updateFileSuccess(path, output_path);
-    } else if (status === "converting") {
-      conversionStore.updateFileStatus(path, "converting", progress);
     } else if (status === "error") {
       conversionStore.updateFileError(path, error);
     }
@@ -351,34 +326,35 @@ const handleOpenFileDir = async (file: any) => {
         <p class="text-sm mt-1 opacity-70">转换完成的文件将显示在这里</p>
       </div>
 
-      <!-- 待转换标签页：按状态分组显示 -->
+      <!-- 待转换标签页：按集合分组显示 -->
 
       <template v-if="conversionStore.activeTab === 'pending'">
         <div class="flex flex-col h-full">
-          <!-- 正在转换的文件分组 -->
+          <!-- 任务文件分组（待转换或正在转换） -->
 
           <div
-            v-if="convertingFiles.length > 0"
-            :class="['group-section min-h-0', conversionStore.convertingExpanded ? 'flex-1' : 'flex-shrink-0']"
+            v-if="taskFiles.length > 0"
+            :class="['group-section min-h-0', conversionStore.taskExpanded ? 'flex-1' : 'flex-shrink-0']"
           >
             <div
               class="group-header cursor-pointer hover:bg-accent/50 transition-colors"
-              @click="conversionStore.toggleGroupExpansion('converting')"
+              @click="conversionStore.toggleGroupExpansion('task')"
             >
-              <Loader2 :size="12" class="animate-spin text-primary" />
+              <Loader2 v-if="conversionStore.isConverting || conversionStore.isStopping" :size="12" class="animate-spin text-primary" />
+              <Clock v-else :size="12" />
 
-              <span>正在转换 ({{ convertingFiles.length }})</span>
+              <span>{{ conversionStore.isConverting || conversionStore.isStopping ? '正在转换' : '任务列表' }} ({{ taskFiles.length }})</span>
 
               <ChevronDown
                 :size="12"
                 class="ml-auto transition-transform duration-200"
-                :class="{ 'rotate-180': conversionStore.convertingExpanded }"
+                :class="{ 'rotate-180': conversionStore.taskExpanded }"
               />
             </div>
 
             <div
-              v-if="conversionStore.convertingExpanded"
-              ref="convertingListRef"
+              v-if="conversionStore.taskExpanded"
+              ref="taskListRef"
               class="virtual-list flex-1"
               :style="{
                 overflow: 'auto',
@@ -386,13 +362,13 @@ const handleOpenFileDir = async (file: any) => {
             >
               <div
                 :style="{
-                  height: `${convertingTotalSize}px`,
+                  height: `${taskTotalSize}px`,
                   width: '100%',
                   position: 'relative',
                 }"
               >
                 <div
-                  v-for="virtualRow in convertingVirtualRows"
+                  v-for="virtualRow in taskVirtualRows"
                   :key="virtualRow.key"
                   class="virtual-item"
                   :style="{
@@ -405,63 +381,9 @@ const handleOpenFileDir = async (file: any) => {
                   }"
                 >
                   <FileCard
-                    :file="convertingFiles[virtualRow.index]"
-                    :show-progress="true"
+                    :file="taskFiles[virtualRow.index]"
+                    :is-task-file="true"
                   />
-                </div>
-              </div>
-            </div>
-          </div>
-          <!-- 等待转换的文件分组 -->
-
-          <div
-            v-if="pendingFiles.length > 0"
-            :class="['group-section min-h-0', conversionStore.pendingExpanded ? 'flex-1' : 'flex-shrink-0']"
-          >
-            <div
-              class="group-header cursor-pointer hover:bg-accent/50 transition-colors"
-              @click="conversionStore.toggleGroupExpansion('pending')"
-            >
-              <Clock :size="12" />
-
-              <span>等待转换 ({{ pendingFiles.length }})</span>
-
-              <ChevronDown
-                :size="12"
-                class="ml-auto transition-transform duration-200"
-                :class="{ 'rotate-180': conversionStore.pendingExpanded }"
-              />
-            </div>
-
-            <div
-              v-if="conversionStore.pendingExpanded"
-              ref="pendingListRef"
-              class="virtual-list flex-1"
-              :style="{
-                overflow: 'auto',
-              }"
-            >
-              <div
-                :style="{
-                  height: `${pendingTotalSize}px`,
-                  width: '100%',
-                  position: 'relative',
-                }"
-              >
-                <div
-                  v-for="virtualRow in pendingVirtualRows"
-                  :key="virtualRow.key"
-                  class="virtual-item"
-                  :style="{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: `${virtualRow.size}px`,
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }"
-                >
-                  <FileCard :file="pendingFiles[virtualRow.index]" />
                 </div>
               </div>
             </div>
@@ -518,7 +440,7 @@ const handleOpenFileDir = async (file: any) => {
                 >
                   <FileCard
                     :file="errorFiles[virtualRow.index]"
-                    :show-error="true"
+                    :is-error-file="true"
                   />
                 </div>
               </div>
@@ -557,7 +479,7 @@ const handleOpenFileDir = async (file: any) => {
             >
               <FileCard
                 :file="conversionStore.completedFiles[virtualRow.index]"
-                :show-completed="true"
+                :is-completed-file="true"
               />
             </div>
           </div>

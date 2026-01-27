@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FileImage, Trash2, Loader2, AlertCircle, FolderOpen } from 'lucide-vue-next'
+import { FileImage, Trash2, Loader2, AlertCircle, FolderOpen, Clock } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -11,18 +11,23 @@ import { ref, computed } from 'vue'
 
 interface Props {
   file: FileItem
-  showProgress?: boolean
-  showError?: boolean
-  showCompleted?: boolean
+  isTaskFile?: boolean  // 是否是任务文件（待转换或正在转换）
+  isErrorFile?: boolean // 是否是错误文件
+  isCompletedFile?: boolean // 是否是已完成文件
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  showProgress: false,
-  showError: false,
-  showCompleted: false
+  isTaskFile: false,
+  isErrorFile: false,
+  isCompletedFile: false
 })
 
 const conversionStore = useConversionStore()
+
+// 判断是否正在处理中（正在转换或正在停止）
+const isProcessing = computed(() =>
+  props.isTaskFile && (conversionStore.isConverting || conversionStore.isStopping)
+)
 
 const handleOpenFileDir = async () => {
   if (props.file.convertedFilePath) {
@@ -44,27 +49,28 @@ const handleOpenFileDir = async () => {
           <div class="flex items-center gap-2">
             <p class="text-sm font-medium truncate flex-1 min-w-0">{{ file.name }}</p>
           </div>
-          
+
           <div class="text-xs text-muted-foreground">
             {{ formatSize(file.size) }}
           </div>
         </div>
       </div>
-      
+
       <div class="flex items-center gap-1 shrink-0">
-        <!-- 进度徽章（待转换列表） -->
-        <Badge v-if="showProgress" variant="default" class="h-5 px-1.5 text-[10px] flex-shrink-0 w-20 justify-center">
+        <!-- 处理中徽章（任务文件，且正在转换或停止中） -->
+        <Badge v-if="isProcessing" variant="default" class="h-5 px-1.5 text-[10px] flex-shrink-0 w-20 justify-center">
           <Loader2 :size="10" class="animate-spin" />
-          {{ file.progress }}%
+          处理中
         </Badge>
-        
-        <!-- 等待徽章（待转换列表） -->
-        <Badge v-if="!showProgress && !showError && !showCompleted" variant="secondary" class="h-5 px-1.5 text-[10px] flex-shrink-0 w-16 justify-center">
+
+        <!-- 等待徽章（任务文件，且未开始转换） -->
+        <Badge v-if="isTaskFile && !isProcessing" variant="secondary" class="h-5 px-1.5 text-[10px] flex-shrink-0 w-16 justify-center">
+          <Clock :size="10" />
           等待
         </Badge>
-        
-        <!-- 错误徽章（待转换列表） -->
-        <Tooltip v-if="showError && file.error">
+
+        <!-- 错误徽章（错误文件） -->
+        <Tooltip v-if="isErrorFile && file.error">
           <TooltipTrigger as-child>
             <Badge variant="destructive" class="h-5 px-1.5 text-[10px] flex-shrink-0 w-20 justify-center cursor-help">
               <AlertCircle :size="10" /> 失败
@@ -74,9 +80,9 @@ const handleOpenFileDir = async () => {
             <p class="max-w-xs break-words">{{ file.error }}</p>
           </TooltipContent>
         </Tooltip>
-        
-        <!-- 打开文件按钮（已完成标签页） -->
-        <Tooltip v-if="showCompleted">
+
+        <!-- 打开文件按钮（已完成文件） -->
+        <Tooltip v-if="isCompletedFile">
           <TooltipTrigger as-child>
             <Button
               variant="ghost"
@@ -91,7 +97,7 @@ const handleOpenFileDir = async () => {
             <p>打开转换成功的文件所在目录</p>
           </TooltipContent>
         </Tooltip>
-        
+
         <!-- 删除按钮 -->
         <Tooltip>
           <TooltipTrigger as-child>
@@ -99,13 +105,13 @@ const handleOpenFileDir = async () => {
               variant="ghost"
               size="icon"
               class="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-              @click="showCompleted ? conversionStore.removeCompletedFile(file.path) : conversionStore.removePath(file.path)"
+              @click="isCompletedFile ? conversionStore.removeCompletedFile(file.path) : (isErrorFile ? conversionStore.removePath(file.path) : conversionStore.removePath(file.path))"
             >
               <Trash2 :size="14" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>{{ showCompleted ? '从已完成列表中移除' : '从文件队列中移除' }}</p>
+            <p>{{ isCompletedFile ? '从已完成列表中移除' : (isErrorFile ? '从失败列表中移除' : '从任务列表中移除') }}</p>
           </TooltipContent>
         </Tooltip>
       </div>

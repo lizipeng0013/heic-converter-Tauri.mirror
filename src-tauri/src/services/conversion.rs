@@ -118,7 +118,6 @@ fn batch_convert_images(
                         let _ = app_arc.emit("conversion-update", json!({
                             "path": input,
                             "status": "done",
-                            "progress": 100,
                             "output_path": output,
                             "current": current,
                             "total": total

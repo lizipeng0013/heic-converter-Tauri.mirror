@@ -1,6 +1,3 @@
-// --- 文件状态 ---
-export type FileStatus = "pending" | "converting" | "done" | "error";
-
 // --- 文件项接口 ---
 export interface FileItem {
   /**
@@ -9,12 +6,13 @@ export interface FileItem {
   path: string;
   name: string;
   size: number;
-  status: FileStatus;
-  progress: number;
   /**
    * 转换完成的文件路径
    */
   convertedFilePath?: string;
+  /**
+   * 转换错误信息
+   */
   error?: string;
 }
 
