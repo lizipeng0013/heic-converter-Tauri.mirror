@@ -253,6 +253,13 @@ const handleOpenFileDir = async (file: any) => {
           <TabsTrigger value="completed" class="text-xs">
             已完成 ({{ conversionStore.completedFiles.length }})
           </TabsTrigger>
+          <TabsTrigger
+            v-if="conversionStore.errorFiles.length > 0"
+            value="error"
+            class="text-xs"
+          >
+            转换失败 ({{ conversionStore.errorFiles.length }})
+          </TabsTrigger>
         </TabsList>
       </Tabs>
       <Button
@@ -265,6 +272,17 @@ const handleOpenFileDir = async (file: any) => {
         class="h-8 text-xs ml-2"
         @click="conversionStore.clearPaths()"
         >清空列表</Button
+      >
+      <Button
+        v-if="
+          conversionStore.activeTab === 'error' &&
+          conversionStore.errorFiles.length > 0
+        "
+        variant="ghost"
+        size="sm"
+        class="h-8 text-xs ml-2"
+        @click="conversionStore.clearPaths()"
+        >清空失败</Button
       >
       <Button
         v-if="
@@ -326,124 +344,89 @@ const handleOpenFileDir = async (file: any) => {
         <p class="text-sm mt-1 opacity-70">转换完成的文件将显示在这里</p>
       </div>
 
-      <!-- 待转换标签页：按集合分组显示 -->
+      <!-- 待转换标签页：显示任务列表 -->
 
       <template v-if="conversionStore.activeTab === 'pending'">
-        <div class="flex flex-col h-full">
-          <!-- 任务文件分组（待转换或正在转换） -->
-
+        <div
+          ref="taskListRef"
+          class="virtual-list flex-1 overflow-y-auto"
+        >
           <div
-            v-if="taskFiles.length > 0"
-            :class="['group-section min-h-0', conversionStore.taskExpanded ? 'flex-1' : 'flex-shrink-0']"
+            :style="{
+              height: `${taskTotalSize}px`,
+              width: '100%',
+              position: 'relative',
+            }"
           >
             <div
-              class="group-header cursor-pointer hover:bg-accent/50 transition-colors"
-              @click="conversionStore.toggleGroupExpansion('task')"
-            >
-              <Loader2 v-if="conversionStore.isConverting || conversionStore.isStopping" :size="12" class="animate-spin text-primary" />
-              <Clock v-else :size="12" />
-
-              <span>{{ conversionStore.isConverting || conversionStore.isStopping ? '正在转换' : '任务列表' }} ({{ taskFiles.length }})</span>
-
-              <ChevronDown
-                :size="12"
-                class="ml-auto transition-transform duration-200"
-                :class="{ 'rotate-180': conversionStore.taskExpanded }"
-              />
-            </div>
-
-            <div
-              v-if="conversionStore.taskExpanded"
-              ref="taskListRef"
-              class="virtual-list flex-1"
+              v-for="virtualRow in taskVirtualRows"
+              :key="virtualRow.key"
+              class="virtual-item"
               :style="{
-                overflow: 'auto',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: `${virtualRow.size}px`,
+                transform: `translateY(${virtualRow.start}px)`,
               }"
             >
-              <div
-                :style="{
-                  height: `${taskTotalSize}px`,
-                  width: '100%',
-                  position: 'relative',
-                }"
-              >
-                <div
-                  v-for="virtualRow in taskVirtualRows"
-                  :key="virtualRow.key"
-                  class="virtual-item"
-                  :style="{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: `${virtualRow.size}px`,
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }"
-                >
-                  <FileCard
-                    :file="taskFiles[virtualRow.index]"
-                    :is-task-file="true"
-                  />
-                </div>
-              </div>
+              <FileCard
+                :file="taskFiles[virtualRow.index]"
+                :is-task-file="true"
+              />
             </div>
           </div>
+        </div>
+      </template>
 
-          <!-- 转换失败的文件分组 -->
+      <!-- 转换失败标签页：显示所有转换失败的文件 -->
 
+      <template v-if="conversionStore.activeTab === 'error'">
+        <!-- 空状态 -->
+        <div
+          v-if="conversionStore.errorFiles.length === 0"
+          class="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground/50 pointer-events-none"
+        >
           <div
-            v-if="errorFiles.length > 0"
-            :class="['group-section min-h-0', conversionStore.errorExpanded ? 'flex-1' : 'flex-shrink-0']"
+            class="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4 border-2 border-dashed"
+          >
+            <CheckCircle2 />
+          </div>
+          <p class="font-medium">暂无转换失败的文件</p>
+          <p class="text-sm mt-1 opacity-70">转换失败的文件将显示在这里</p>
+        </div>
+
+        <!-- 错误文件列表 -->
+        <div
+          ref="errorListRef"
+          class="virtual-list h-full overflow-y-auto"
+          :style="{ overflow: 'auto' }"
+        >
+          <div
+            :style="{
+              height: `${errorTotalSize}px`,
+              width: '100%',
+              position: 'relative',
+            }"
           >
             <div
-              class="group-header text-destructive cursor-pointer hover:bg-destructive/10 transition-colors"
-              @click="conversionStore.toggleGroupExpansion('error')"
-            >
-              <AlertCircle :size="12" />
-
-              <span>转换失败 ({{ errorFiles.length }})</span>
-
-              <ChevronDown
-                :size="12"
-                class="ml-auto transition-transform duration-200"
-                :class="{ 'rotate-180': conversionStore.errorExpanded }"
-              />
-            </div>
-
-            <div
-              v-if="conversionStore.errorExpanded"
-              ref="errorListRef"
-              class="virtual-list flex-1"
+              v-for="virtualRow in errorVirtualRows"
+              :key="virtualRow.key"
+              class="virtual-item"
               :style="{
-                overflow: 'auto',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: `${virtualRow.size}px`,
+                transform: `translateY(${virtualRow.start}px)`,
               }"
             >
-              <div
-                :style="{
-                  height: `${errorTotalSize}px`,
-                  width: '100%',
-                  position: 'relative',
-                }"
-              >
-                <div
-                  v-for="virtualRow in errorVirtualRows"
-                  :key="virtualRow.key"
-                  class="virtual-item"
-                  :style="{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: `${virtualRow.size}px`,
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }"
-                >
-                  <FileCard
-                    :file="errorFiles[virtualRow.index]"
-                    :is-error-file="true"
-                  />
-                </div>
-              </div>
+              <FileCard
+                :file="errorFiles[virtualRow.index]"
+                :is-error-file="true"
+              />
             </div>
           </div>
         </div>

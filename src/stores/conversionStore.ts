@@ -11,7 +11,7 @@ export const useConversionStore = defineStore('conversion', () => {
   const files = reactive<FileItem[]>([]); // 待转换文件（包括等待和正在转换）
   const errorFiles = reactive<FileItem[]>([]); // 转换失败的文件
   const completedFiles = reactive<FileItem[]>([]); // 已完成的文件
-  const activeTab = ref<'pending' | 'completed'>('pending'); // 当前激活的标签页
+  const activeTab = ref<'pending' | 'completed' | 'error'>('pending'); // 当前激活的标签页
   const settings = ref<ConverterSettings>({ format: "jpeg", quality: [90] });
   const isConverting = ref(false);
   const isStopping = ref(false); // 标记是否正在停止转换
@@ -119,10 +119,17 @@ export const useConversionStore = defineStore('conversion', () => {
   }
 
   const removePath = (path: string) => {
-    // 从 reactive 数组中删除元素
+    // 从 files 中删除元素
     const index = files.findIndex((f) => f.path === path);
     if (index !== -1) {
       files.splice(index, 1);
+      return;
+    }
+
+    // 从 errorFiles 中删除元素
+    const errorIndex = errorFiles.findIndex((f) => f.path === path);
+    if (errorIndex !== -1) {
+      errorFiles.splice(errorIndex, 1);
     }
   };
 
