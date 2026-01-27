@@ -27,6 +27,10 @@ tauri-plugin-log = "2.8.0"
 tracing = "0.1"
 rayon = "1.10"
 turbojpeg = { version = "1.4.0", features = ["image"] }
+mimalloc = { version = "0.1", features = ["v3"] }
+
+[target.'cfg(windows)'.dependencies]
+turbojpeg-sys = { version = "1.1.1", default-features = false, features = ["cmake", "require-simd"] }
 
 [profile.release]
 lto = "fat"
@@ -34,6 +38,7 @@ codegen-units = 1
 opt-level = 3
 panic = "abort"
 incremental = false
+strip = true  # 减小二进制文件大小
 
 [profile.release.package."*"]
 opt-level = 3

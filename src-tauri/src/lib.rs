@@ -4,6 +4,12 @@ mod services;
 mod converters;
 mod utils;
 
+// 使用 mimalloc 作为全局内存分配器，提升所有平台的性能
+use mimalloc::MiMalloc;
+
+#[global_allocator]
+static GLOBAL: MiMalloc = MiMalloc;
+
 use commands::conversion::{convert_images, stop_conversion};
 use commands::window::{close_window, minimize_window, toggle_always_on_top, toggle_maximize_window, drag_window};
 
