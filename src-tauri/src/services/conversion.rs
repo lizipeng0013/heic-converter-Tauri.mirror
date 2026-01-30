@@ -17,13 +17,14 @@ use rayon::ThreadPoolBuilder;
 /// - `quality`: JPEG质量（1-100），仅对JPEG格式有效
 ///
 /// # 返回
-/// 成功返回 Ok(())，失败返回错误信息
+/// 成功返回 Ok(was_stopped)，其中 was_stopped 表示是否被停止中断
+/// 失败返回错误信息
 pub async fn batch_convert(
     app: &AppHandle,
     files: Vec<(String, String)>,
     format: String,
     quality: u8,
-) -> Result<(), String> {
+) -> Result<bool, String> {
     trace!("验证输出格式: {}, 质量: {}", format, quality);
 
     let output_format = match OutputFormat::from_str(&format, quality) {
@@ -39,11 +40,15 @@ pub async fn batch_convert(
 }
 
 /// 批量转换图片的核心实现（并行处理）
+///
+/// # 返回
+/// Ok(was_stopped): was_stopped 表示是否被停止中断（true 表示被停止，false 表示正常完成）
+/// Err(error): 错误信息
 fn batch_convert_images(
     app: &AppHandle,
     files: Vec<(String, String)>,
     format: OutputFormat,
-) -> Result<(), String> {
+) -> Result<bool, String> {
     let total = files.len();
     trace!("开始并行处理 {} 个文件", total);
 
@@ -75,6 +80,11 @@ fn batch_convert_images(
         .thread_name(|index| format!("converter-{}", index))
         .build()
         .map_err(|e| format!("创建线程池失败: {}", e))?;
+
+    debug!("线程池创建成功，准备开始转换");
+
+    // 发送转换开始事件，通知前端线程池已创建完成，开始处理
+    let _ = app.emit("conversion-started", serde_json::json!({}));
 
     debug!("开始并行处理，停止标志状态: {}", should_stop());
 
@@ -144,18 +154,17 @@ fn batch_convert_images(
     // 显式释放线程池，确保线程被正确回收
     drop(pool);
 
+    // 检查是否在准备阶段就被停止
+    if should_stop() {
+        stopped_flag.store(true, Ordering::Release);
+    }
+
     let success = success_count.load(Ordering::Relaxed);
     let error = error_count.load(Ordering::Relaxed);
     let processed = processed_count.load(Ordering::Relaxed);
     let was_stopped = stopped_flag.load(Ordering::Relaxed);
 
     info!("批量转换完成 - 成功: {}, 失败: {}, 已处理: {}, 总计: {}", success, error, processed, total);
-
-    // 如果是因为停止信号而中止，发送停止完成事件
-    if was_stopped {
-        info!("转换任务已停止，发送停止完成事件");
-        let _ = app_arc.emit("conversion-stopped", json!({}));
-    }
 
     // 显式释放 Arc 引用
     drop(app_arc);
@@ -166,5 +175,6 @@ fn batch_convert_images(
     drop(processed_count);
     drop(next_index);
 
-    Ok(())
+    // 返回是否被停止
+    Ok(was_stopped)
 }

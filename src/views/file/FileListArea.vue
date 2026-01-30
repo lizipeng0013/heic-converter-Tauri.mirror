@@ -90,6 +90,7 @@ let unlistenDragDrop: UnlistenFn | null = null;
 let unlistenDragLeave: UnlistenFn | null = null;
 let unlistenConversion: UnlistenFn | null = null;
 let unlistenBatchFinished: UnlistenFn | null = null;
+let unlistenConversionStarted: UnlistenFn | null = null;
 let unlistenConversionStopped: UnlistenFn | null = null;
 
 onMounted(async () => {
@@ -137,15 +138,12 @@ onMounted(async () => {
 
   unlistenBatchFinished = await listen("conversion-batch-finished", (event) => {
     info(`转换任务完成`);
-    // 只有在转换状态下才设置为 false
-    if (conversionStore.isConverting) {
-      conversionStore.isConverting = false;
-    }
-    const payload = event.payload as any;
-    let spendTime = (payload.spend_time / 1000).toFixed(1);
-    debug(`转换耗时：${spendTime}s`);
-    conversionStore.spendTime = parseFloat(spendTime);
-    conversionStore.isReadyForConversion = false;
+    conversionStore.handleBatchFinished();
+  });
+
+  unlistenConversionStarted = await listen("conversion-started", (event) => {
+    info(`收到转换开始事件`);
+    conversionStore.handleStarted();
   });
 
   unlistenConversionStopped = await listen("conversion-stopped", (event) => {
@@ -160,6 +158,7 @@ onUnmounted(() => {
   unlistenDragLeave?.();
   unlistenConversion?.();
   unlistenBatchFinished?.();
+  unlistenConversionStarted?.();
   unlistenConversionStopped?.();
 });
 

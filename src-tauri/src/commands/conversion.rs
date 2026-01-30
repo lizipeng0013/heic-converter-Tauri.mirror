@@ -28,11 +28,6 @@ pub async fn convert_images(
     output_folder: String,
     quality: u8,
 ) -> Result<(), String> {
-    let start_time = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
-
     let app_clone = app.clone();
     let paths_clone = paths.clone();
     let format_clone = target_type.clone();
@@ -51,21 +46,18 @@ pub async fn convert_images(
             file_pairs.push((path, target_path));
         }
 
-        let _ = batch_convert(&app_clone, file_pairs, format_clone, quality)
+        let was_stopped = batch_convert(&app_clone, file_pairs, format_clone, quality)
             .await
             .expect("批量转换出现严重错误");
 
-        let end_time = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_millis();
-        let spend_time = end_time - start_time;
-
-        info!("批量转换完成，耗时 {}ms", spend_time);
-
-        let _ = app_clone.emit("conversion-batch-finished", serde_json::json!({
-            "spend_time": spend_time
-        }));
+        // 根据是否被停止，发送不同的完成事件
+        if was_stopped {
+            info!("转换任务被停止，发送停止完成事件");
+            let _ = app_clone.emit("conversion-stopped", serde_json::json!({}));
+        } else {
+            info!("转换任务正常完成，发送批次完成事件");
+            let _ = app_clone.emit("conversion-batch-finished", serde_json::json!({}));
+        }
     });
 
     Ok(())

@@ -129,24 +129,35 @@ const showQualityControl = computed(() => {
 
 // 按钮文字
 const buttonText = computed(() => {
+  // 优先级1：正在停止（禁用）
   if (store.isStopping) {
     return "正在停止...";
   }
+  
+  // 优先级2：正在准备（禁用）
+  if (store.isPreparing) {
+    return "正在准备...";
+  }
+  
+  // 优先级3：正在转换（可点击停止）
   if (store.isConverting) {
     return "停止转换";
   }
-  const pendingCount = store.stats.pending;
   
-  // 如果从未开始过转换，或者没有待转换文件，显示"开始批量转换"
-  if (!store.hasStartedConversion || pendingCount === 0) {
-    return "开始批量转换";
+  // 优先级4：非转换状态
+  const pendingCount = store.stats.waiting;
+  const hasPendingFiles = pendingCount > 0;
+  
+  // 如果有待转换文件
+  if (hasPendingFiles) {
+    // 从未开始过转换 → 显示"开始批量转换"
+    // 曾经开始过转换 → 显示"继续转换"
+    return store.hasStartedConversion 
+      ? `继续转换 (${pendingCount} 待处理)` 
+      : "开始批量转换";
   }
   
-  // 如果已经转换过，并且还有待转换文件，显示"继续转换"
-  if (pendingCount > 0) {
-    return `继续转换 (${pendingCount} 待处理)`;
-  }
-  
+  // 没有待转换文件 → 显示"开始批量转换"（会被禁用）
   return "开始批量转换";
 });
 
@@ -281,7 +292,7 @@ const buttonIcon = computed(() => {
       <Button
         @click="store.isConverting ? store.stopConversion() : store.startConversion()"
         :variant="buttonVariant"
-        :disabled="!store.isConverting && store.stats.pending === 0 || store.isStopping"
+        :disabled="!store.isConverting && store.stats.waiting === 0 || store.isStopping"
         class="w-full h-11 text-base"
       >
         <component

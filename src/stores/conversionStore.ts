@@ -20,6 +20,13 @@ export const useConversionStore = defineStore('conversion', () => {
   const isReadyForConversion = ref(false);
   const spendTime = ref<number | null>(null);
 
+  // 前端耗时统计
+  const startTime = ref<number | null>(null); // 转换开始时间戳
+  const timerId = ref<number | null>(null); // 定时器ID，用于实时更新耗时
+  const accumulatedTime = ref<number>(0); // 累计已消耗的时间（毫秒），用于停止后继续转换
+  const isTimerRunning = ref<boolean>(false); // 计时器是否正在运行
+  const isPreparing = ref<boolean>(false); // 是否正在准备（线程池创建中）
+
   // 分组展开状态
   const taskExpanded = ref(true); // 任务分组是否展开
   const errorExpanded = ref(false); // 转换失败分组是否展开
@@ -49,6 +56,13 @@ export const useConversionStore = defineStore('conversion', () => {
       // 首次导入时自动展开"任务"分组
       taskExpanded.value = true;
       errorExpanded.value = false;
+    }
+
+    // 如果待转换列表为空且已完成列表也为空，说明是全新开始，重置耗时统计
+    if (files.length === 0 && completedFiles.length === 0) {
+      spendTime.value = null;
+      accumulatedTime.value = 0; // 重置累计时间
+      debug(`全新任务开始，重置耗时统计`);
     }
 
     const filePromises = paths.map(async (path) => {
@@ -138,8 +152,7 @@ export const useConversionStore = defineStore('conversion', () => {
     files.splice(0, files.length);
     errorFiles.splice(0, errorFiles.length);
 
-    // 清零耗时
-    spendTime.value = null;
+    // 注意：不重置耗时，因为已完成列表没有变化
     // 重置转换状态
     isReadyForConversion.value = false;
     isConverting.value = false;
@@ -150,6 +163,17 @@ export const useConversionStore = defineStore('conversion', () => {
   const clearCompletedFiles = () => {
     // 只清空已完成文件
     completedFiles.splice(0, completedFiles.length);
+    // 清空已完成文件时，重置耗时统计
+    spendTime.value = null;
+    startTime.value = null;
+    accumulatedTime.value = 0; // 重置累计时间
+    isTimerRunning.value = false; // 停止计时器
+
+    // 停止定时器
+    if (timerId.value !== null) {
+      clearInterval(timerId.value);
+      timerId.value = null;
+    }
   };
 
   const removeCompletedFile = (path: string) => {
@@ -189,9 +213,13 @@ export const useConversionStore = defineStore('conversion', () => {
 
     const paths = files.map((f) => f.path);
 
-    isConverting.value = true;
+    isPreparing.value = true;
     isStopping.value = false;
     hasStartedConversion.value = true;
+
+    // 设置为准备状态，等待后端 started 事件后再启动计时器
+    isPreparing.value = true;
+    isTimerRunning.value = false;
 
     try {
       await invoke("convert_images", {
@@ -203,8 +231,10 @@ export const useConversionStore = defineStore('conversion', () => {
       debug(`已发起转换任务`);
     } catch (error) {
       alertSevere("转换任务执行失败！" + error)
+      // 重置所有状态，包括准备状态
       isConverting.value = false;
       isStopping.value = false;
+      isPreparing.value = false;
     }
   };
 
@@ -212,6 +242,33 @@ export const useConversionStore = defineStore('conversion', () => {
   const stopConversion = async () => {
     debug(`前端停止转换...`)
     try {
+      // 如果正在准备状态，直接重置状态并返回
+      if (isPreparing.value) {
+        debug(`正在准备状态，取消转换`);
+        isPreparing.value = false;
+        isConverting.value = false;
+        isStopping.value = false;
+        return;
+      }
+
+      // 立即停止计时器，保存已经消耗的时间
+      if (startTime.value !== null && isTimerRunning.value) {
+        const elapsed = Date.now() - startTime.value;
+        accumulatedTime.value += elapsed;
+        spendTime.value = accumulatedTime.value / 1000;
+        debug(`停止转换时保存已消耗时间: ${(accumulatedTime.value / 1000).toFixed(2)}s`);
+      }
+
+      // 标记计时器为停止状态
+      isTimerRunning.value = false;
+      startTime.value = null;
+
+      // 停止定时器
+      if (timerId.value !== null) {
+        clearInterval(timerId.value);
+        timerId.value = null;
+      }
+
       // 设置停止标志，防止在停止过程中启动新的转换任务
       isStopping.value = true;
 
@@ -223,13 +280,58 @@ export const useConversionStore = defineStore('conversion', () => {
     }
   };
 
+  // 处理转换开始事件（由后端通知，线程池创建完成）
+  const handleStarted = () => {
+    debug(`收到转换开始事件，启动计时器`);
+
+    // 准备完成
+    isPreparing.value = false;
+    isConverting.value = true;
+    // 启动计时器
+    isTimerRunning.value = true;
+    startTime.value = Date.now();
+
+    // 启动定时器，每100ms更新一次耗时（累加之前已消耗的时间）
+    timerId.value = window.setInterval(() => {
+      // 必须同时检查 isTimerRunning 和 startTime，确保计时器停止后不再更新
+      if (isTimerRunning.value && startTime.value !== null) {
+        // 先累加毫秒，最后再转换为秒，避免精度丢失
+        spendTime.value = (accumulatedTime.value + (Date.now() - startTime.value)) / 1000;
+      }
+    }, 100);
+  };
+
   // 处理停止完成事件（由后端通知）
   const handleStopped = () => {
     debug(`收到停止完成通知，重置转换状态`);
 
+    // 重置准备状态和转换状态
+    isPreparing.value = false;
+    isConverting.value = false;
+    isStopping.value = false;
+
+    // 注意：计时器已经在 stopConversion 中停止，这里不需要再次停止
+  };
+
+  // 处理批次完成事件（由后端通知，所有文件都处理完毕）
+  const handleBatchFinished = () => {
+    debug(`收到批次完成通知，停止计时器`);
+
+    // 标记计时器为停止状态
+    isTimerRunning.value = false;
+    startTime.value = null;
+
+    // 停止定时器
+    if (timerId.value !== null) {
+      clearInterval(timerId.value);
+      timerId.value = null;
+    }
+
     // 重置转换状态
     isConverting.value = false;
     isStopping.value = false;
+    isPreparing.value = false;
+    isReadyForConversion.value = false;
   };
 
   // 切换分组展开状态
@@ -278,6 +380,11 @@ export const useConversionStore = defineStore('conversion', () => {
     isReadyForConversion,
     outputFolder,
     spendTime,
+    startTime,
+    timerId,
+    accumulatedTime,
+    isTimerRunning,
+    isPreparing,
     stats,
     taskFiles,
     errorFilesList,
@@ -295,7 +402,9 @@ export const useConversionStore = defineStore('conversion', () => {
     setOutputFolder,
     startConversion,
     stopConversion,
+    handleStarted,
     handleStopped,
+    handleBatchFinished,
     toggleGroupExpansion,
     retryErrorFiles,
   };
