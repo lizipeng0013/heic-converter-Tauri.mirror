@@ -158,12 +158,14 @@ pub fn save_image_buffer(
         // 创建 turbojpeg 压缩器
         let mut compressor = Compressor::new()
             .map_err(|e| ConversionError::JpegEncodeError(format!("创建压缩器失败: {}", e)))?;
-        
+
         // 设置压缩质量（需要转换为 i32）
-        compressor.set_quality(quality as i32);
-        
+        compressor.set_quality(quality as i32)
+            .map_err(|e| ConversionError::JpegEncodeError(format!("设置压缩质量失败: {}", e)))?;
+
         // 设置子采样模式（高质量，无色度子采样）
-        compressor.set_subsamp(Subsamp::None);
+        compressor.set_subsamp(Subsamp::None)
+            .map_err(|e| ConversionError::JpegEncodeError(format!("设置子采样模式失败: {}", e)))?;
         
         // 创建 turbojpeg 图像结构
         let image = Image {
