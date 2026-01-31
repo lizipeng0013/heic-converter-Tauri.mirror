@@ -1,3 +1,4 @@
+use chrono::Local;
 use tauri_plugin_log::{Target, TargetKind, log::LevelFilter};
 
 /// 初始化所有 Tauri 插件
@@ -28,6 +29,16 @@ pub fn init_plugins(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri
                 Target::new(TargetKind::LogDir { file_name: None }),
                 Target::new(TargetKind::Webview),
             ])
+            .format(move | out, message, record| {
+                let now = Local::now();
+                out.finish(format_args!(
+                        "[{}] [{}] [{}] {}",
+                        now.format("%Y-%m-%d %H:%M:%S%.3f"),
+                        record.level(),
+                        record.target(),
+                        message
+                    ));
+            })
             .build())
 }
 

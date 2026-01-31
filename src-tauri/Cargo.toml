@@ -28,6 +28,7 @@ tracing = "0.1"
 rayon = "1.10"
 turbojpeg = { version = "1.4.0", features = ["image"] }
 mimalloc = { version = "0.1", features = ["v3"] }
+chrono = "0.4"
 
 [target.'cfg(windows)'.dependencies]
 turbojpeg-sys = { version = "1.1.1", default-features = false, features = ["cmake", "require-simd"] }
