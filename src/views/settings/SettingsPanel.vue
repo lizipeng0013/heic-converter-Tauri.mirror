@@ -174,7 +174,7 @@ const buttonIcon = computed(() => {
 </script>
 
 <template>
-  <aside class="w-80 border-l bg-card flex flex-col shrink-0 h-full">
+  <aside class="w-80 bg-card flex flex-col shrink-0 h-full rounded-lg">
     <div class="p-6 flex-1 overflow-y-auto">
       <h2
         class="text-lg font-semibold tracking-tight mb-6 flex items-center gap-2"
@@ -238,7 +238,6 @@ const buttonIcon = computed(() => {
             当前选择：{{ currentFormat?.label }}
           </p>
         </div>
-        <Separator v-if="showQualityControl" />
         <div v-if="showQualityControl" class="space-y-4">
           <div class="flex justify-between items-center">
             <label class="text-sm font-medium leading-none">图片质量</label>
@@ -258,7 +257,6 @@ const buttonIcon = computed(() => {
             {{ qualityDescription }}
           </p>
         </div>
-        <Separator />
         <div class="space-y-3">
           <label
             class="text-sm font-medium leading-none flex items-center justify-between"
@@ -288,17 +286,17 @@ const buttonIcon = computed(() => {
         </div>
       </div>
     </div>
-    <div class="p-6 border-t bg-muted/20">
+    <div class="p-6 bg-muted/20">
       <Button
         @click="store.isConverting ? store.stopConversion() : store.startConversion()"
         :variant="buttonVariant"
         :disabled="!store.isConverting && store.stats.waiting === 0 || store.isStopping"
-        class="w-full h-11 text-base"
+        class="w-full h-11 text-sm"
       >
         <component
           v-if="buttonIcon"
           :is="buttonIcon"
-          :size="18"
+          :size="16"
           class="mr-2"
         />
         {{ buttonText }}

@@ -241,9 +241,9 @@ const handleOpenFileDir = async (file: any) => {
 
 <template>
   <section
-    class="flex-1 flex flex-col border-r min-w-0 bg-muted/10 h-full relative z-0"
+    class="flex-1 flex flex-col min-w-0 bg-card h-full relative z-0 rounded-lg"
   >
-    <div class="h-12 px-4 flex items-center justify-between border-b shrink-0">
+    <div class="h-12 px-4 flex items-center justify-between shrink-0">
       <Tabs v-model="conversionStore.activeTab" class="w-full">
         <TabsList class="h-8">
           <TabsTrigger value="pending" class="text-xs">
@@ -297,7 +297,7 @@ const handleOpenFileDir = async (file: any) => {
     </div>
 
     <div
-      class="flex-1 w-full overflow-hidden p-2"
+      class="flex-1 w-full overflow-hidden p-2 relative"
       :class="{
         'bg-primary/10': isFileDragging, // 【背景】明显变蓝
       }"
@@ -308,18 +308,20 @@ const handleOpenFileDir = async (file: any) => {
           conversionStore.activeTab === 'pending' &&
           conversionStore.files.length === 0
         "
-        class="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground/50 pointer-events-none"
+        class="absolute inset-0 flex flex-col items-center justify-center"
       >
-        <div
-          class="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4 border-2 border-dashed"
+        <button
+          @click="selectFilesWithDialog"
+          class="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center mb-4 hover:scale-110 transition-transform shadow-lg"
+          :class="isFileDragging ? 'scale-110 bg-primary/90' : ''"
         >
-          <Upload />
-        </div>
-        <p class="font-medium" :class="isFileDragging ? 'text-primary' : ''">
+          <Upload :size="24" />
+        </button>
+        <p class="font-medium text-muted-foreground" :class="isFileDragging ? 'text-primary' : ''">
           拖拽 HEIC 文件到此处
         </p>
         <p
-          class="text-sm mt-1 opacity-70"
+          class="text-sm mt-1 opacity-70 text-muted-foreground"
           :class="isFileDragging ? 'font-medium text-primary' : ''"
         >
           支持 .heic, .heif 格式
@@ -469,15 +471,16 @@ const handleOpenFileDir = async (file: any) => {
       </template>
     </div>
 
-    <div class="p-2 border-t bg-card shrink-0 relative z-10">
+    <div v-if="conversionStore.files.length > 0" class="p-2 shrink-0 relative z-10">
       <div class="relative w-full">
-        <label
-          for="fileInput"
-          class="cursor-pointer flex items-center justify-center w-full h-10 rounded-md border border-input bg-background px-8 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+        <Button
+          variant="default"
+          size="default"
+          class="w-full h-10 text-sm"
           @click="selectFilesWithDialog"
         >
           <Upload :size="16" class="mr-2" /> 选择文件
-        </label>
+        </Button>
       </div>
     </div>
   </section>

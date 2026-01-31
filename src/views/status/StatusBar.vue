@@ -7,7 +7,7 @@ const store = useConversionStore();
 
 <template>
   <div
-    class="h-8 px-4 flex items-center justify-between border-t bg-muted/20 text-xs text-muted-foreground"
+    class="h-8 px-4 flex items-center justify-between bg-muted/10 text-xs text-muted-foreground"
   >
     <div class="flex items-center gap-4">
       <Clock :size="12" />
