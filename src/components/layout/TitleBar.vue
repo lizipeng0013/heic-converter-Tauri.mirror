@@ -10,6 +10,7 @@ import {
   X,
   Maximize2,
   Pin,
+  MonitorDown,
 } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,6 +41,17 @@ const maxWindow = () => invoke("toggle_maximize_window");
 const closeWindow = () => invoke("close_window");
 const toggleTop = () => invoke("toggle_always_on_top");
 const dragWindow = () => invoke("drag_window");
+const minimizeToTray = async () => {
+  console.log("点击最小化到托盘按钮");
+  try {
+    await invoke("show_tray");
+    console.log("托盘显示成功");
+    await invoke("hide_window");
+    console.log("窗口隐藏成功");
+  } catch (error) {
+    console.error("最小化到托盘失败:", error);
+  }
+};
 
 const mouseDownPosition = ref<{ x: number; y: number } | null>(null);
 const isTitleDragging = ref(false);
@@ -143,6 +155,21 @@ const onDoubleClick = () => {
         </TooltipTrigger>
         <TooltipContent>
           <p>切换主题</p>
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="h-8 w-8 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+            @click="minimizeToTray"
+          >
+            <MonitorDown :size="16" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>最小化到托盘</p>
         </TooltipContent>
       </Tooltip>
       <Button

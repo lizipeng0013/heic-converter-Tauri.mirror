@@ -10,6 +10,20 @@ pub fn minimize_window(window: Window) {
     window.minimize().ok(); // 改为 ok() 更安全，避免程序崩溃
 }
 
+// --- 隐藏窗口 ---
+#[command]
+pub fn hide_window(window: Window) {
+    window.hide().ok();
+}
+
+// --- 显示窗口 ---
+#[command]
+pub fn show_window(window: Window) {
+    window.show().ok();
+    window.unminimize().ok();
+    window.set_focus().ok();
+}
+
 // --- 最大化/还原窗口 (已修复) ---
 #[tauri::command]
 pub fn toggle_maximize_window(window: Window) {
