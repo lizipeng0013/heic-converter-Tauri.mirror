@@ -39,9 +39,9 @@ const handleOpenFileDir = async () => {
 </script>
 
 <template>
-  <Card class="group overflow-hidden transition-colors hover:border-primary/50">
+  <Card class="group overflow-hidden transition-colors hover:border-primary/50 mr-3">
     <CardContent class="p-1 flex items-center justify-between gap-2">
-      <div class="flex items-center gap-2 min-w-0 flex-1 max-w-[calc(100%-2rem)]">
+      <div class="flex items-center gap-2 min-w-0 flex-1 max-w-[calc(100%-3rem)]">
         <div class="h-7 w-7 shrink-0 rounded bg-secondary flex items-center justify-center text-secondary-foreground">
           <FileImage :size="14" />
         </div>
@@ -56,7 +56,7 @@ const handleOpenFileDir = async () => {
         </div>
       </div>
 
-      <div class="flex items-center gap-1 shrink-0">
+      <div class="flex items-center gap-1 shrink-0 mr-2">
         <!-- 处理中徽章（任务文件，且正在转换或停止中） -->
         <Badge v-if="isProcessing" variant="default" class="h-5 px-1.5 text-[10px] flex-shrink-0 w-20 justify-center">
           <Loader2 :size="10" class="animate-spin" />

@@ -16,7 +16,8 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useVirtualizer } from "@tanstack/vue-virtual";
 import FileCard from "@/components/FileCard.vue";
 import { listen, TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
@@ -297,7 +298,7 @@ const handleOpenFileDir = async (file: any) => {
     </div>
 
     <div
-      class="flex-1 w-full overflow-hidden p-2 relative"
+      class="flex-1 w-full overflow-hidden pl-2 pt-2 pb-2 relative"
       :class="{
         'bg-primary/10': isFileDragging, // 【背景】明显变蓝
       }"
@@ -348,37 +349,39 @@ const handleOpenFileDir = async (file: any) => {
       <!-- 待转换标签页：显示任务列表 -->
 
       <template v-if="conversionStore.activeTab === 'pending'">
-        <div
-          ref="taskListRef"
-          class="virtual-list flex-1 overflow-y-auto"
-        >
+        <ScrollArea v-if="conversionStore.files.length > 0" class="flex-1 h-full">
           <div
-            :style="{
-              height: `${taskTotalSize}px`,
-              width: '100%',
-              position: 'relative',
-            }"
+            ref="taskListRef"
+            class="virtual-list h-full"
           >
             <div
-              v-for="virtualRow in taskVirtualRows"
-              :key="virtualRow.key"
-              class="virtual-item"
               :style="{
-                position: 'absolute',
-                top: 0,
-                left: 0,
+                height: `${taskTotalSize}px`,
                 width: '100%',
-                height: `${virtualRow.size}px`,
-                transform: `translateY(${virtualRow.start}px)`,
+                position: 'relative',
               }"
             >
-              <FileCard
-                :file="taskFiles[virtualRow.index]"
-                :is-task-file="true"
-              />
+              <div
+                v-for="virtualRow in taskVirtualRows"
+                :key="virtualRow.key"
+                class="virtual-item"
+                :style="{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: `${virtualRow.size}px`,
+                  transform: `translateY(${virtualRow.start}px)`,
+                }"
+              >
+                <FileCard
+                  :file="taskFiles[virtualRow.index]"
+                  :is-task-file="true"
+                />
+              </div>
             </div>
           </div>
-        </div>
+        </ScrollArea>
       </template>
 
       <!-- 转换失败标签页：显示所有转换失败的文件 -->
@@ -399,75 +402,77 @@ const handleOpenFileDir = async (file: any) => {
         </div>
 
         <!-- 错误文件列表 -->
-        <div
-          ref="errorListRef"
-          class="virtual-list h-full overflow-y-auto"
-          :style="{ overflow: 'auto' }"
-        >
+        <ScrollArea class="flex-1 h-full">
           <div
-            :style="{
-              height: `${errorTotalSize}px`,
-              width: '100%',
-              position: 'relative',
-            }"
+            ref="errorListRef"
+            class="virtual-list h-full"
           >
             <div
-              v-for="virtualRow in errorVirtualRows"
-              :key="virtualRow.key"
-              class="virtual-item"
               :style="{
-                position: 'absolute',
-                top: 0,
-                left: 0,
+                height: `${errorTotalSize}px`,
                 width: '100%',
-                height: `${virtualRow.size}px`,
-                transform: `translateY(${virtualRow.start}px)`,
+                position: 'relative',
               }"
             >
-              <FileCard
-                :file="errorFiles[virtualRow.index]"
-                :is-error-file="true"
-              />
+              <div
+                v-for="virtualRow in errorVirtualRows"
+                :key="virtualRow.key"
+                class="virtual-item"
+                :style="{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: `${virtualRow.size}px`,
+                  transform: `translateY(${virtualRow.start}px)`,
+                }"
+              >
+                <FileCard
+                  :file="errorFiles[virtualRow.index]"
+                  :is-error-file="true"
+                />
+              </div>
             </div>
           </div>
-        </div>
+        </ScrollArea>
       </template>
 
       <!-- 已完成标签页：显示所有已完成的文件 -->
 
       <template v-if="conversionStore.activeTab === 'completed'">
-        <div
-          ref="completedListRef"
-          class="virtual-list h-full"
-          :style="{ overflow: 'auto' }"
-        >
+        <ScrollArea class="flex-1 h-full">
           <div
-            :style="{
-              height: `${completedTotalSize}px`,
-              width: '100%',
-              position: 'relative',
-            }"
+            ref="completedListRef"
+            class="virtual-list h-full"
           >
             <div
-              v-for="virtualRow in completedVirtualRows"
-              :key="virtualRow.key"
-              class="virtual-item"
               :style="{
-                position: 'absolute',
-                top: 0,
-                left: 0,
+                height: `${completedTotalSize}px`,
                 width: '100%',
-                height: `${virtualRow.size}px`,
-                transform: `translateY(${virtualRow.start}px)`,
+                position: 'relative',
               }"
             >
-              <FileCard
-                :file="conversionStore.completedFiles[virtualRow.index]"
-                :is-completed-file="true"
-              />
+              <div
+                v-for="virtualRow in completedVirtualRows"
+                :key="virtualRow.key"
+                class="virtual-item"
+                :style="{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: `${virtualRow.size}px`,
+                  transform: `translateY(${virtualRow.start}px)`,
+                }"
+              >
+                <FileCard
+                  :file="conversionStore.completedFiles[virtualRow.index]"
+                  :is-completed-file="true"
+                />
+              </div>
             </div>
           </div>
-        </div>
+        </ScrollArea>
       </template>
     </div>
 
