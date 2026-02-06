@@ -1,30 +1,13 @@
-use std::sync::atomic::{AtomicBool, Ordering};
-use tauri::{command, AppHandle, Manager, WebviewWindow};
-use std::sync::Mutex;
-
-// 全局托盘状态
-static TRAY_VISIBLE: AtomicBool = AtomicBool::new(false);
-
-// 托盘句柄
-static TRAY_HANDLE: Mutex<Option<tauri::tray::TrayIcon>> = Mutex::new(None);
-
-// 窗口引用
-static WINDOW_HANDLE: Mutex<Option<WebviewWindow>> = Mutex::new(None);
+use tauri::{command, AppHandle, Manager};
 
 // --- 显示托盘 ---
 #[command]
 pub fn show_tray(app_handle: AppHandle) -> Result<(), String> {
     println!("show_tray 被调用");
 
-    // 保存窗口引用
-    if let Some(window) = app_handle.get_webview_window("main") {
-        let mut win_handle = WINDOW_HANDLE.lock().unwrap();
-        *win_handle = Some(window);
-    }
-
-    // 先检查状态，不持有锁
-    if TRAY_VISIBLE.load(Ordering::SeqCst) {
-        println!("托盘已经可见");
+    // 检查托盘是否已存在
+    if app_handle.tray_by_id("main-tray").is_some() {
+        println!("托盘已经存在");
         return Ok(());
     }
 
@@ -41,7 +24,7 @@ pub fn show_tray(app_handle: AppHandle) -> Result<(), String> {
         .map_err(|e| format!("添加菜单项失败: {:?}", e))?;
 
     // 创建托盘
-    let tray_result = tauri::tray::TrayIconBuilder::new()
+    let tray_result = tauri::tray::TrayIconBuilder::with_id("main-tray")
         .icon(app_handle.default_window_icon().unwrap().clone())
         .show_menu_on_left_click(false)
         .menu(&menu)
@@ -65,12 +48,8 @@ pub fn show_tray(app_handle: AppHandle) -> Result<(), String> {
         .build(&app_handle);
 
     match tray_result {
-        Ok(tray) => {
+        Ok(_) => {
             println!("托盘创建成功");
-            // 持有锁时更新状态
-            let mut tray_guard = TRAY_HANDLE.lock().unwrap();
-            *tray_guard = Some(tray);
-            TRAY_VISIBLE.store(true, Ordering::SeqCst);
             Ok(())
         }
         Err(e) => {
@@ -78,15 +57,4 @@ pub fn show_tray(app_handle: AppHandle) -> Result<(), String> {
             Err(format!("托盘创建失败: {:?}", e))
         }
     }
-}
-
-// --- 隐藏托盘 ---
-#[command]
-pub fn hide_tray() -> Result<(), String> {
-    let mut tray_guard = TRAY_HANDLE.lock().unwrap();
-    if let Some(_tray) = tray_guard.take() {
-        // Tauri 2 中，TrayIcon 会自动清理，不需要手动 remove
-    }
-    TRAY_VISIBLE.store(false, Ordering::SeqCst);
-    Ok(())
 }

@@ -12,7 +12,7 @@ static GLOBAL: MiMalloc = MiMalloc;
 
 use commands::conversion::{convert_images, stop_conversion};
 use commands::window::{close_window, minimize_window, hide_window, show_window, toggle_always_on_top, toggle_maximize_window, drag_window};
-use commands::tray::{show_tray, hide_tray};
+use commands::tray::show_tray;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -34,7 +34,6 @@ pub fn run() {
             drag_window,
             // 托盘控制类
             show_tray,
-            hide_tray,
             // 业务逻辑类
             convert_images,
             stop_conversion
