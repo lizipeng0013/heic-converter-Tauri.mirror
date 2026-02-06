@@ -1,4 +1,4 @@
-use tauri::{command, AppHandle, Manager};
+use tauri::{command, AppHandle, Manager, tray::{MouseButton, MouseButtonState, TrayIconEvent}};
 
 // --- 显示托盘 ---
 #[command]
@@ -42,6 +42,37 @@ pub fn show_tray(app_handle: AppHandle) -> Result<(), String> {
                     app_handle.exit(0);
                 }
                 _ => {}
+            }
+        })
+        // 注意on_tray_icon_event在Linux中暂不可用
+        .on_tray_icon_event(|tray, event| match event {
+            TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } => {
+                println!("左键单击托盘图标");
+                let app = tray.app_handle();
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.unminimize();
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+            TrayIconEvent::DoubleClick {
+                button: MouseButton::Left,
+                ..
+            } => {
+                println!("左键双击托盘图标");
+                let app = tray.app_handle();
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.unminimize();
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+            _ => {
+                println!("未处理的托盘事件: {:?}", event);
             }
         })
         .tooltip("HEIC Converter")
