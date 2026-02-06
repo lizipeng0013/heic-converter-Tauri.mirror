@@ -1,13 +1,14 @@
 use tauri::{command, AppHandle, Manager, tray::{MouseButton, MouseButtonState, TrayIconEvent}};
+use tauri_plugin_log::log::{info, error, warn};
 
 // --- 显示托盘 ---
 #[command]
 pub fn show_tray(app_handle: AppHandle) -> Result<(), String> {
-    println!("show_tray 被调用");
+    info!("show_tray 被调用");
 
     // 检查托盘是否已存在
     if app_handle.tray_by_id("main-tray").is_some() {
-        println!("托盘已经存在");
+        info!("托盘已经存在");
         return Ok(());
     }
 
@@ -29,7 +30,7 @@ pub fn show_tray(app_handle: AppHandle) -> Result<(), String> {
         .show_menu_on_left_click(false)
         .menu(&menu)
         .on_menu_event(|app_handle, event| {
-            println!("托盘菜单事件: {:?}", event.id);
+            info!("托盘菜单事件: {:?}", event.id);
             match event.id.as_ref() {
                 "show" => {
                     if let Some(window) = app_handle.get_webview_window("main") {
@@ -51,7 +52,7 @@ pub fn show_tray(app_handle: AppHandle) -> Result<(), String> {
                 button_state: MouseButtonState::Up,
                 ..
             } => {
-                println!("左键单击托盘图标");
+                info!("左键单击托盘图标");
                 let app = tray.app_handle();
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.unminimize();
@@ -63,7 +64,7 @@ pub fn show_tray(app_handle: AppHandle) -> Result<(), String> {
                 button: MouseButton::Left,
                 ..
             } => {
-                println!("左键双击托盘图标");
+                info!("左键双击托盘图标");
                 let app = tray.app_handle();
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.unminimize();
@@ -72,7 +73,7 @@ pub fn show_tray(app_handle: AppHandle) -> Result<(), String> {
                 }
             }
             _ => {
-                println!("未处理的托盘事件: {:?}", event);
+                warn!("未处理的托盘事件: {:?}", event);
             }
         })
         .tooltip("HEIC Converter")
@@ -80,11 +81,11 @@ pub fn show_tray(app_handle: AppHandle) -> Result<(), String> {
 
     match tray_result {
         Ok(_) => {
-            println!("托盘创建成功");
+            info!("托盘创建成功");
             Ok(())
         }
         Err(e) => {
-            println!("托盘创建失败: {:?}", e);
+            error!("托盘创建失败: {:?}", e);
             Err(format!("托盘创建失败: {:?}", e))
         }
     }
