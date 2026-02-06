@@ -1,14 +1,11 @@
 use tauri::{command, AppHandle, Manager, tray::{MouseButton, MouseButtonState, TrayIconEvent}};
-use tauri_plugin_log::log::{info, error, warn};
+use tauri_plugin_log::log::error;
 
 // --- 显示托盘 ---
 #[command]
 pub fn show_tray(app_handle: AppHandle) -> Result<(), String> {
-    info!("show_tray 被调用");
-
     // 检查托盘是否已存在
     if app_handle.tray_by_id("main-tray").is_some() {
-        info!("托盘已经存在");
         return Ok(());
     }
 
@@ -30,7 +27,6 @@ pub fn show_tray(app_handle: AppHandle) -> Result<(), String> {
         .show_menu_on_left_click(false)
         .menu(&menu)
         .on_menu_event(|app_handle, event| {
-            info!("托盘菜单事件: {:?}", event.id);
             match event.id.as_ref() {
                 "show" => {
                     if let Some(window) = app_handle.get_webview_window("main") {
@@ -52,7 +48,6 @@ pub fn show_tray(app_handle: AppHandle) -> Result<(), String> {
                 button_state: MouseButtonState::Up,
                 ..
             } => {
-                info!("左键单击托盘图标");
                 let app = tray.app_handle();
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.unminimize();
@@ -60,30 +55,13 @@ pub fn show_tray(app_handle: AppHandle) -> Result<(), String> {
                     let _ = window.set_focus();
                 }
             }
-            TrayIconEvent::DoubleClick {
-                button: MouseButton::Left,
-                ..
-            } => {
-                info!("左键双击托盘图标");
-                let app = tray.app_handle();
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.unminimize();
-                    let _ = window.show();
-                    let _ = window.set_focus();
-                }
-            }
-            _ => {
-                warn!("未处理的托盘事件: {:?}", event);
-            }
+            _ => {}
         })
         .tooltip("HEIC Converter")
         .build(&app_handle);
 
     match tray_result {
-        Ok(_) => {
-            info!("托盘创建成功");
-            Ok(())
-        }
+        Ok(_) => Ok(()),
         Err(e) => {
             error!("托盘创建失败: {:?}", e);
             Err(format!("托盘创建失败: {:?}", e))
