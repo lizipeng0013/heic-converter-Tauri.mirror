@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref, reactive, computed } from "vue";
+import { ref, shallowRef, computed } from "vue";
 import type {FileItem, ConverterSettings} from "@/types";
 import { debug, warn } from "@tauri-apps/plugin-log";
 import { invoke } from "@tauri-apps/api/core";
@@ -8,9 +8,11 @@ import { alertSevere} from "@/utils/useError"
 
 export const useConversionStore = defineStore('conversion', () => {
   // --- State ---
-  const files = reactive<FileItem[]>([]); // 待转换文件（包括等待和正在转换）
-  const errorFiles = reactive<FileItem[]>([]); // 转换失败的文件
-  const completedFiles = reactive<FileItem[]>([]); // 已完成的文件
+  // 使用 shallowRef + 普通数组，完全绕过 Vue 响应式系统
+  // Vue 只会追踪数组引用的变化，不会为数组中的对象创建代理
+  const files = shallowRef<FileItem[]>([]); // 待转换文件（包括等待和正在转换）
+  const errorFiles = shallowRef<FileItem[]>([]); // 转换失败的文件
+  const completedFiles = shallowRef<FileItem[]>([]); // 已完成的文件
   const activeTab = ref<'pending' | 'completed' | 'error'>('pending'); // 当前激活的标签页
   const settings = ref<ConverterSettings>({ format: "jpeg", quality: [90] });
   const isConverting = ref(false);
@@ -33,25 +35,25 @@ export const useConversionStore = defineStore('conversion', () => {
 
   // --- Getters ---
   const stats = computed(() => ({
-    total: files.length + errorFiles.length + completedFiles.length, // 总计包括所有文件
-    waiting: isConverting.value || isStopping.value ? 0 : files.length, // 等待转换的文件数量
-    processing: isConverting.value || isStopping.value ? files.length : 0, // 正在转换的文件数量
-    completed: completedFiles.length, // 已完成的文件数量
-    failed: errorFiles.length, // 失败的文件数量
+    total: files.value.length + errorFiles.value.length + completedFiles.value.length, // 总计包括所有文件
+    waiting: isConverting.value || isStopping.value ? 0 : files.value.length, // 等待转换的文件数量
+    processing: isConverting.value || isStopping.value ? files.value.length : 0, // 正在转换的文件数量
+    completed: completedFiles.value.length, // 已完成的文件数量
+    failed: errorFiles.value.length, // 失败的文件数量
   }));
 
   // 按集合分组的文件列表（用于 UI 显示）
-  const taskFiles = computed(() => files); // 任务文件（待转换或正在转换）
-  const errorFilesList = computed(() => errorFiles); // 转换失败的文件
+  const taskFiles = computed(() => files.value); // 任务文件（待转换或正在转换）
+  const errorFilesList = computed(() => errorFiles.value); // 转换失败的文件
 
   // --- Actions ---
   const addPaths = async (paths: string[]) => {
     if (!paths || paths.length === 0) return;
-    debug(`前端addPaths获取到: ${paths}`);
+    debug(`前端addPaths获取到: ${paths.length} 个文件`);
 
     // 如果待转换列表为空，重置 hasStartedConversion 标志
     // 这样新导入的文件会显示"开始批量转换"而不是"继续转换"
-    if (files.length === 0) {
+    if (files.value.length === 0) {
       hasStartedConversion.value = false;
       // 首次导入时自动展开"任务"分组
       taskExpanded.value = true;
@@ -59,98 +61,157 @@ export const useConversionStore = defineStore('conversion', () => {
     }
 
     // 如果待转换列表为空且已完成列表也为空，说明是全新开始，重置耗时统计
-    if (files.length === 0 && completedFiles.length === 0) {
+    if (files.value.length === 0 && completedFiles.value.length === 0) {
       spendTime.value = null;
       accumulatedTime.value = 0; // 重置累计时间
       debug(`全新任务开始，重置耗时统计`);
     }
 
-    const filePromises = paths.map(async (path) => {
-      const ext = path.split(".").pop()?.toLowerCase();
+    const existingPaths = new Set(files.value.map(f => f.path));
+    const quickFiles: Array<{ path: string; name: string }> = [];
+
+    // 第一阶段：快速过滤和创建轻量级文件对象（只包含路径和名称）
+    // 优化：使用更快的字符串操作代替正则表达式
+    for (const path of paths) {
+      const lastDotIndex = path.lastIndexOf('.');
+      const ext = lastDotIndex !== -1 ? path.slice(lastDotIndex + 1).toLowerCase() : '';
+
       if (ext !== "heic" && ext !== "heif") {
-        await warn(`跳过非HEIC/HEIF文件： ${path}`);
-        return null;
+        void warn(`跳过非HEIC/HEIF文件： ${path}`);
+        continue;
       }
-      try {
-        const meta = await stat(path);
-        const nameParts = path.split(/[/\\]/);
-        const name = nameParts[nameParts.length - 1];
-        return {
-          path: path,
-          name: name,
-          size: meta.size,
-        };
-      } catch (error) {
-        alertSevere("无法获取文件大小！" + path + error);
-        return null;
+
+      // 检查重复
+      if (existingPaths.has(path)) {
+        void warn(`检测到重复导入文件，已跳过：${path}`);
+        continue;
       }
-    });
-    const results = await Promise.all(filePromises);
 
-    // 过滤掉无效的文件并去重
-    const validFiles: FileItem[] = [];
-    const existingPaths = new Set(files.map(f => f.path));
+      // 优化：使用更快的字符串操作代替正则表达式
+      const lastSlashIndex = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+      const name = lastSlashIndex !== -1 ? path.slice(lastSlashIndex + 1) : path;
 
-    results.forEach((file) => {
-      if (file && !existingPaths.has(file.path)) {
-        validFiles.push(file);
-        existingPaths.add(file.path);
-      } else if (file) {
-        warn(`检测到重复导入文件，已跳过：${file.path}`);
-      }
-    });
+      // 先创建轻量级对象，size 设为 0（显示"加载中"）
+      quickFiles.push({ path, name });
+      existingPaths.add(path);
+    }
 
-    // 批量添加文件，只触发一次响应式更新
-    if (validFiles.length > 0) {
-      files.push(...validFiles);
+    // 第二阶段：批量添加到数组（只触发一次响应式更新）
+    if (quickFiles.length > 0) {
+      // 直接构建新数组，避免中间变量
+      const newFiles: FileItem[] = quickFiles.map(f => ({
+        path: f.path,
+        name: f.name,
+        size: 0, // 初始为0，表示待加载
+      }));
+      // 使用展开运算符合并数组，然后一次性更新引用
+      files.value = [...files.value, ...newFiles];
     }
 
     isReadyForConversion.value = true;
+
+    // 第三阶段：在后台异步获取文件大小（不阻塞UI）
+    if (quickFiles.length > 0) {
+      const loadFileSizes = async () => {
+        debug(`文件大小加载开始，共 ${quickFiles.length} 个文件`);
+
+        // 分批处理，每批处理 50 个文件，避免阻塞
+        const batchSize = 50;
+        for (let i = 0; i < quickFiles.length; i += batchSize) {
+          const batch = quickFiles.slice(i, i + batchSize);
+
+          // 并行处理当前批次
+          const sizeUpdates = await Promise.all(batch.map(async (f) => {
+            try {
+              const meta = await stat(f.path);
+              return { path: f.path, size: meta.size };
+            } catch (error) {
+              debug(`无法获取文件大小：${f.path}，${error}`);
+              return null;
+            }
+          }));
+
+          // 批量更新数组，减少响应式更新次数
+          if (sizeUpdates.some(u => u !== null)) {
+            const updatedFiles = [...files.value];
+            sizeUpdates.forEach(update => {
+              if (update) {
+                const fileIndex = updatedFiles.findIndex(item => item.path === update.path);
+                if (fileIndex !== -1) {
+                  updatedFiles[fileIndex] = { ...updatedFiles[fileIndex], size: update.size };
+                }
+              }
+            });
+            files.value = updatedFiles;
+          }
+
+          // 每批之间让出主线程，保持UI响应
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }
+
+        debug(`文件大小加载完成，共处理 ${quickFiles.length} 个文件`);
+      };
+
+      // 使用 setTimeout(0) 将任务放到下一个事件循环
+      setTimeout(loadFileSizes, 0);
+    }
   };
 
   const updateFileSuccess = (path: string, output_path: string)=> {
-    const fileIndex = files.findIndex((f) => f.path === path);
+    const fileIndex = files.value.findIndex((f) => f.path === path);
     if (fileIndex !== -1) {
-      const file = files[fileIndex];
-      file.convertedFilePath = output_path;
+      const file = files.value[fileIndex];
+      const updatedFile = { ...file, convertedFilePath: output_path };
 
       // 从待转换列表移除，添加到已完成列表
-      files.splice(fileIndex, 1);
-      completedFiles.push(file);
+      const newFiles = [...files.value];
+      newFiles.splice(fileIndex, 1);
+      files.value = newFiles;
+
+      const newCompleted = [...completedFiles.value, updatedFile];
+      completedFiles.value = newCompleted;
     }
   }
 
   const updateFileError = (path: string, error: string)=> {
-    const fileIndex = files.findIndex((f) => f.path === path);
+    const fileIndex = files.value.findIndex((f) => f.path === path);
     if (fileIndex !== -1) {
-      const file = files[fileIndex];
-      file.error = error;
+      const file = files.value[fileIndex];
+      const updatedFile = { ...file, error };
 
       // 从待转换列表移除，添加到错误列表
-      files.splice(fileIndex, 1);
-      errorFiles.push(file);
+      const newFiles = [...files.value];
+      newFiles.splice(fileIndex, 1);
+      files.value = newFiles;
+
+      const newError = [...errorFiles.value, updatedFile];
+      errorFiles.value = newError;
     }
   }
 
   const removePath = (path: string) => {
     // 从 files 中删除元素
-    const index = files.findIndex((f) => f.path === path);
+    const index = files.value.findIndex((f) => f.path === path);
     if (index !== -1) {
-      files.splice(index, 1);
+      const newFiles = [...files.value];
+      newFiles.splice(index, 1);
+      files.value = newFiles;
       return;
     }
 
     // 从 errorFiles 中删除元素
-    const errorIndex = errorFiles.findIndex((f) => f.path === path);
+    const errorIndex = errorFiles.value.findIndex((f) => f.path === path);
     if (errorIndex !== -1) {
-      errorFiles.splice(errorIndex, 1);
+      const newError = [...errorFiles.value];
+      newError.splice(errorIndex, 1);
+      errorFiles.value = newError;
     }
   };
 
   const clearPaths = () => {
     // 重置为空数组
-    files.splice(0, files.length);
-    errorFiles.splice(0, errorFiles.length);
+    files.value = [];
+    errorFiles.value = [];
 
     // 注意：不重置耗时，因为已完成列表没有变化
     // 重置转换状态
@@ -162,7 +223,7 @@ export const useConversionStore = defineStore('conversion', () => {
 
   const clearCompletedFiles = () => {
     // 只清空已完成文件
-    completedFiles.splice(0, completedFiles.length);
+    completedFiles.value = [];
     // 清空已完成文件时，重置耗时统计
     spendTime.value = null;
     startTime.value = null;
@@ -178,9 +239,11 @@ export const useConversionStore = defineStore('conversion', () => {
 
   const removeCompletedFile = (path: string) => {
     // 从已完成列表中删除指定文件
-    const index = completedFiles.findIndex((f) => f.path === path);
+    const index = completedFiles.value.findIndex((f) => f.path === path);
     if (index !== -1) {
-      completedFiles.splice(index, 1);
+      const newCompleted = [...completedFiles.value];
+      newCompleted.splice(index, 1);
+      completedFiles.value = newCompleted;
     }
   };
 
@@ -206,12 +269,12 @@ export const useConversionStore = defineStore('conversion', () => {
       return;
     }
 
-    if (files.length === 0) {
+    if (files.value.length === 0) {
       void warn(`收到转换请求，但没有待转换的文件，这可能是一个前端状态同步错误。`);
       return;
     }
 
-    const paths = files.map((f) => f.path);
+    const paths = files.value.map((f) => f.path);
 
     isPreparing.value = true;
     isStopping.value = false;
@@ -353,18 +416,16 @@ export const useConversionStore = defineStore('conversion', () => {
 
   // 重试失败的文件
   const retryErrorFiles = () => {
-    if (errorFiles.length === 0) return;
+    if (errorFiles.value.length === 0) return;
 
     // 将失败的文件移回待转换列表
-    const filesToRetry = [...errorFiles];
-    errorFiles.splice(0, errorFiles.length);
-
-    // 清除错误信息
-    filesToRetry.forEach(file => {
-      delete file.error;
+    const filesToRetry = errorFiles.value.map(file => {
+      const { error, ...rest } = file;
+      return rest;
     });
+    errorFiles.value = [];
 
-    files.push(...filesToRetry);
+    files.value = [...files.value, ...filesToRetry];
     debug(`已将 ${filesToRetry.length} 个失败文件移回待转换列表`);
   };
 

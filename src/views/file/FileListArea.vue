@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed } from "vue";
+import { onMounted, onUnmounted, ref, computed, nextTick } from "vue";
 import { useConversionStore } from "@/stores/conversionStore";
 import { formatSize } from "@/utils";
 import {
@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useVirtualizer } from "@tanstack/vue-virtual";
 import FileCard from "@/components/FileCard.vue";
 import { listen, TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
@@ -349,7 +348,7 @@ const handleOpenFileDir = async (file: any) => {
       <!-- 待转换标签页：显示任务列表 -->
 
       <template v-if="conversionStore.activeTab === 'pending'">
-        <ScrollArea v-if="conversionStore.files.length > 0" class="flex-1 h-full">
+        <div v-if="conversionStore.files.length > 0" class="flex-1 h-full overflow-y-auto">
           <div
             ref="taskListRef"
             class="virtual-list h-full"
@@ -381,7 +380,7 @@ const handleOpenFileDir = async (file: any) => {
               </div>
             </div>
           </div>
-        </ScrollArea>
+        </div>
       </template>
 
       <!-- 转换失败标签页：显示所有转换失败的文件 -->
@@ -402,7 +401,7 @@ const handleOpenFileDir = async (file: any) => {
         </div>
 
         <!-- 错误文件列表 -->
-        <ScrollArea class="flex-1 h-full">
+        <div class="flex-1 h-full overflow-y-auto">
           <div
             ref="errorListRef"
             class="virtual-list h-full"
@@ -434,13 +433,13 @@ const handleOpenFileDir = async (file: any) => {
               </div>
             </div>
           </div>
-        </ScrollArea>
+        </div>
       </template>
 
       <!-- 已完成标签页：显示所有已完成的文件 -->
 
       <template v-if="conversionStore.activeTab === 'completed'">
-        <ScrollArea class="flex-1 h-full">
+        <div class="flex-1 h-full overflow-y-auto">
           <div
             ref="completedListRef"
             class="virtual-list h-full"
@@ -472,7 +471,7 @@ const handleOpenFileDir = async (file: any) => {
               </div>
             </div>
           </div>
-        </ScrollArea>
+        </div>
       </template>
     </div>
 

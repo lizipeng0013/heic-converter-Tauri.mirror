@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { formatSize } from '@/utils'
 import { useConversionStore } from '@/stores/conversionStore'
 import type { FileItem } from '@/types'
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 
 interface Props {
   file: FileItem
@@ -51,7 +51,7 @@ const handleOpenFileDir = async () => {
           </div>
 
           <div class="text-xs text-muted-foreground">
-            {{ formatSize(file.size) }}
+            {{ file.size === 0 ? '加载中...' : formatSize(file.size) }}
           </div>
         </div>
       </div>
