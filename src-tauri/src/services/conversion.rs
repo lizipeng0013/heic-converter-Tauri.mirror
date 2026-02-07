@@ -16,8 +16,8 @@ use tauri_plugin_log::log::{debug, error, info, trace};
 /// # 参数
 /// - `app`: Tauri 应用句柄
 /// - `files`: 文件对列表，每个元素包含 (输入路径, 输出路径)
-/// - `format`: 目标输出格式
-/// - `quality`: JPEG质量（1-100），仅对JPEG格式有效
+/// - `format`: 目标输出格式（已在 commands 层验证）
+/// - `quality`: JPEG质量（1-100），已在 commands 层验证
 ///
 /// # 返回
 /// 成功返回 Ok(was_stopped)，其中 was_stopped 表示是否被停止中断
@@ -28,15 +28,9 @@ pub async fn batch_convert(
     format: String,
     quality: u8,
 ) -> Result<bool, String> {
-    trace!("验证输出格式: {}, 质量: {}", format, quality);
-
-    let output_format = match OutputFormat::from_str(&format, quality) {
-        Ok(fmt) => fmt,
-        Err(e) => {
-            error!("不支持的输出格式: {} - {}", format, e);
-            return Err(e.to_string());
-        },
-    };
+    // 参数已在 commands 层验证，直接转换
+    let output_format = OutputFormat::from_str(&format, quality)
+        .map_err(|e| format!("内部错误：格式解析失败: {}", e))?;
 
     info!(
         "开始批量转换，共 {} 个文件，目标格式: {:?}",

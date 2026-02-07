@@ -28,6 +28,29 @@ pub async fn convert_images(
     output_folder: String,
     quality: u8,
 ) -> Result<(), String> {
+    // 验证输入参数
+    if paths.is_empty() {
+        return Err("没有选择任何文件".to_string());
+    }
+
+    // 验证输出目录权限
+    crate::utils::validate_output_folder(&output_folder)?;
+
+    // 验证格式
+    let valid_formats = ["jpeg", "jpg", "png", "webp", "bmp", "tiff", "ico"];
+    if !valid_formats.contains(&target_type.to_lowercase().as_str()) {
+        return Err(format!(
+            "不支持的输出格式: {}. 支持的格式: {}",
+            target_type,
+            valid_formats.join(", ")
+        ));
+    }
+
+    // 验证质量参数
+    if quality == 0 || quality > 100 {
+        return Err(format!("质量参数必须在 1-100 之间，当前值: {}", quality));
+    }
+
     let app_clone = app.clone();
     let paths_clone = paths.clone();
     let format_clone = target_type.clone();

@@ -10,13 +10,11 @@
     "core:window:allow-start-dragging",
     "dialog:default",
     "fs:default",
-    {
-      "identifier": "fs:allow-stat"
-    },
+    { "identifier": "fs:allow-stat" },
     "log:default",
     {
       "identifier": "fs:allow-write-file",
-      "allow": [{ "path": "$HOME/**" }]
+      "allow": [{ "path": "$HOME/**" }, { "path": "/media/$USER/**" }, { "path": "/mnt/**" }]
     }
   ]
 }
