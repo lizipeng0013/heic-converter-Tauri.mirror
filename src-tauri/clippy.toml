@@ -1,0 +1,12 @@
+# Clippy 配置文件
+# 用于配置 Clippy lints 规则
+
+# 允许的复杂度阈值
+too-many-arguments-threshold = 7
+type-complexity-threshold = 250
+
+# 性能相关
+cognitive-complexity-threshold = 30
+
+# 允许的警告
+# 这里可以配置允许的 clippy lints

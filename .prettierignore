@@ -1,0 +1,16 @@
+dist
+node_modules
+src/components/ui
+*.log
+.DS_Store
+*.min.js
+*.min.css
+coverage
+.turbo
+.next
+.nuxt
+.cache
+.vscode
+.idea
+*.lock
+pnpm-lock.yaml

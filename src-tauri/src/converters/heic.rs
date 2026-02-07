@@ -1,8 +1,8 @@
-use super::common::{ConversionError, OutputFormat, save_image_buffer};
-use libheif_rs::{LibHeif, HeifContext, ColorSpace, RgbChroma};
+use super::common::{save_image_buffer, ConversionError, OutputFormat};
 use image::{ImageBuffer, RgbImage};
+use libheif_rs::{ColorSpace, HeifContext, LibHeif, RgbChroma};
 use tauri::AppHandle;
-use tauri_plugin_log::log::{warn, debug, trace, error};
+use tauri_plugin_log::log::{debug, error, trace, warn};
 
 /// 检测是否为 HEIC/HEIF 文件
 pub fn is_heic_format(input_path: &str) -> bool {
@@ -14,7 +14,7 @@ pub fn is_heic_format(input_path: &str) -> bool {
             return true;
         }
     }
-    
+
     // 然后尝试用 libheif 打开（更准确）
     match HeifContext::read_from_file(input_path) {
         Ok(ctx) => ctx.number_of_top_level_images() > 0,
@@ -41,8 +41,8 @@ pub fn convert_heic_image(
     // 这样可以利用 libheif 内部的 SIMD 优化
     let image = libheif.decode(&handle, ColorSpace::Rgb(RgbChroma::Rgb), None)?;
     let planes = image.planes();
-    let width = image.width() as u32;
-    let height = image.height() as u32;
+    let width = image.width();
+    let height = image.height();
 
     // 检查是否有交错的 RGB 数据
     let result = if let Some(ref interleaved) = planes.interleaved {
@@ -57,12 +57,16 @@ pub fn convert_heic_image(
             // 使用 Vec::from 而不是 to_vec()，更高效
             trace!("stride 匹配，直接复制 RGB 数据");
             let buffer_data = Vec::from(data);
-            ImageBuffer::from_raw(width, height, buffer_data)
-                .ok_or(ConversionError::UnsupportedInputFormat("无法创建 RGB buffer".to_string()))?
+            ImageBuffer::from_raw(width, height, buffer_data).ok_or(
+                ConversionError::UnsupportedInputFormat("无法创建 RGB buffer".to_string()),
+            )?
         } else {
             // 如果 stride 不符合预期，需要创建新的 buffer 并逐行复制
-            trace!("RGB 数据 stride 不匹配（{}），期望 {}，创建新的 buffer 并逐行复制",
-                   stride, width * 3);
+            trace!(
+                "RGB 数据 stride 不匹配（{}），期望 {}，创建新的 buffer 并逐行复制",
+                stride,
+                width * 3
+            );
             let row_bytes = (width * 3) as usize;
             let total_bytes = row_bytes * height as usize;
 
@@ -81,8 +85,9 @@ pub fn convert_heic_image(
                 }
             }
 
-            ImageBuffer::from_raw(width, height, buffer_data)
-                .ok_or(ConversionError::UnsupportedInputFormat("无法创建 RGB buffer".to_string()))?
+            ImageBuffer::from_raw(width, height, buffer_data).ok_or(
+                ConversionError::UnsupportedInputFormat("无法创建 RGB buffer".to_string()),
+            )?
         };
 
         save_image_buffer(&buffer, output_path, format)
@@ -126,7 +131,10 @@ pub fn convert_heic_image(
                     let uv_x = x_pos / 2;
 
                     // 边界检查
-                    if y_idx < y_row_data.len() && uv_x < uv_row_data_cb.len() && uv_x < uv_row_data_cr.len() {
+                    if y_idx < y_row_data.len()
+                        && uv_x < uv_row_data_cb.len()
+                        && uv_x < uv_row_data_cr.len()
+                    {
                         let y_val = y_row_data[y_idx] as f32;
                         let cb_val = uv_row_data_cb[uv_x] as f32 - 128.0;
                         let cr_val = uv_row_data_cr[uv_x] as f32 - 128.0;
@@ -138,9 +146,27 @@ pub fn convert_heic_image(
 
                         // 使用位运算代替 clamp，提升性能
                         // 这在大多数情况下是安全的，因为 YUV 到 RGB 的结果通常在 0-255 范围内
-                        let r_u8 = if r < 0.0 { 0 } else if r > 255.0 { 255 } else { r as u8 };
-                        let g_u8 = if g < 0.0 { 0 } else if g > 255.0 { 255 } else { g as u8 };
-                        let b_u8 = if b < 0.0 { 0 } else if b > 255.0 { 255 } else { b as u8 };
+                        let r_u8 = if r < 0.0 {
+                            0
+                        } else if r > 255.0 {
+                            255
+                        } else {
+                            r as u8
+                        };
+                        let g_u8 = if g < 0.0 {
+                            0
+                        } else if g > 255.0 {
+                            255
+                        } else {
+                            g as u8
+                        };
+                        let b_u8 = if b < 0.0 {
+                            0
+                        } else if b > 255.0 {
+                            255
+                        } else {
+                            b as u8
+                        };
 
                         // 直接写入 buffer，避免 put_pixel 的开销
                         buffer_data[dst_offset] = r_u8;
@@ -155,7 +181,9 @@ pub fn convert_heic_image(
             save_image_buffer(&buffer, output_path, format)
         } else {
             error!("无法处理的平面格式");
-            Err(ConversionError::UnsupportedInputFormat("无法解码的HEIC格式".to_string()))
+            Err(ConversionError::UnsupportedInputFormat(
+                "无法解码的HEIC格式".to_string(),
+            ))
         }
     };
 

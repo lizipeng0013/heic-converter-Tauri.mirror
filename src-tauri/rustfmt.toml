@@ -1,0 +1,33 @@
+# Rustfmt 配置文件
+# 用于统一 Rust 代码风格
+
+# 最大行宽
+max_width = 100
+
+# 硬制换行的缩进
+hard_tabs = false
+tab_spaces = 4
+
+# 导入排序
+reorder_imports = true
+
+# 函数参数换行
+fn_params_layout = "Tall"
+
+# 链式调用
+chain_width = 60
+
+# 使用字段初始化简写
+use_field_init_shorthand = true
+
+# 使用 try 宏
+use_try_shorthand = true
+
+# 匹配块尾随逗号
+match_block_trailing_comma = true
+
+# 归并派生
+merge_derives = true
+
+# 移除嵌套 or 模式
+remove_nested_parens = true

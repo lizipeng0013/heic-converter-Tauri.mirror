@@ -6,12 +6,15 @@ const store = useConversionStore();
 </script>
 
 <template>
-  <div
-    class="h-8 px-4 flex items-center justify-between bg-muted/10 text-xs text-muted-foreground"
-  >
+  <div class="h-8 px-4 flex items-center justify-between bg-muted/10 text-xs text-muted-foreground">
     <div class="flex items-center gap-4">
       <Clock :size="12" />
-      <span>总耗时: <span v-if="store.spendTime !== null" class="font-medium">{{ store.spendTime.toFixed(1) }}s</span><span v-else>...</span></span>
+      <span
+        >总耗时:
+        <span v-if="store.spendTime !== null" class="font-medium"
+          >{{ store.spendTime.toFixed(1) }}s</span
+        ><span v-else>...</span></span
+      >
     </div>
   </div>
 </template>

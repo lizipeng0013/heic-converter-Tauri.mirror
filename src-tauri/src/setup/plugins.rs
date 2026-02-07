@@ -1,5 +1,5 @@
 use chrono::Local;
-use tauri_plugin_log::{Target, TargetKind, log::LevelFilter};
+use tauri_plugin_log::{log::LevelFilter, Target, TargetKind};
 
 /// 初始化所有 Tauri 插件
 pub fn init_plugins(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry> {
@@ -55,6 +55,6 @@ fn parse_log_level(level_str: &str) -> LevelFilter {
             // 如果无法解析，默认使用info
             eprintln!("无法解析日志级别 '{}', 使用默认值 info", level_str);
             LevelFilter::Info
-        }
+        },
     }
 }

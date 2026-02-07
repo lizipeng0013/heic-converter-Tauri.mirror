@@ -1,19 +1,19 @@
 import { defineStore } from "pinia";
 import { ref, shallowRef, computed } from "vue";
-import type {FileItem, ConverterSettings} from "@/types";
+import type { FileItem, ConverterSettings } from "@/types";
 import { debug, warn } from "@tauri-apps/plugin-log";
 import { invoke } from "@tauri-apps/api/core";
-import {stat} from "@tauri-apps/plugin-fs";
-import { alertSevere} from "@/utils/useError"
+import { stat } from "@tauri-apps/plugin-fs";
+import { alertSevere } from "@/utils/useError";
 
-export const useConversionStore = defineStore('conversion', () => {
+export const useConversionStore = defineStore("conversion", () => {
   // --- State ---
   // 使用 shallowRef + 普通数组，完全绕过 Vue 响应式系统
   // Vue 只会追踪数组引用的变化，不会为数组中的对象创建代理
   const files = shallowRef<FileItem[]>([]); // 待转换文件（包括等待和正在转换）
   const errorFiles = shallowRef<FileItem[]>([]); // 转换失败的文件
   const completedFiles = shallowRef<FileItem[]>([]); // 已完成的文件
-  const activeTab = ref<'pending' | 'completed' | 'error'>('pending'); // 当前激活的标签页
+  const activeTab = ref<"pending" | "completed" | "error">("pending"); // 当前激活的标签页
   const settings = ref<ConverterSettings>({ format: "jpeg", quality: [90] });
   const isConverting = ref(false);
   const isStopping = ref(false); // 标记是否正在停止转换
@@ -67,14 +67,14 @@ export const useConversionStore = defineStore('conversion', () => {
       debug(`全新任务开始，重置耗时统计`);
     }
 
-    const existingPaths = new Set(files.value.map(f => f.path));
+    const existingPaths = new Set(files.value.map((f) => f.path));
     const quickFiles: Array<{ path: string; name: string }> = [];
 
     // 第一阶段：快速过滤和创建轻量级文件对象（只包含路径和名称）
     // 优化：使用更快的字符串操作代替正则表达式
     for (const path of paths) {
-      const lastDotIndex = path.lastIndexOf('.');
-      const ext = lastDotIndex !== -1 ? path.slice(lastDotIndex + 1).toLowerCase() : '';
+      const lastDotIndex = path.lastIndexOf(".");
+      const ext = lastDotIndex !== -1 ? path.slice(lastDotIndex + 1).toLowerCase() : "";
 
       if (ext !== "heic" && ext !== "heif") {
         void warn(`跳过非HEIC/HEIF文件： ${path}`);
@@ -88,7 +88,7 @@ export const useConversionStore = defineStore('conversion', () => {
       }
 
       // 优化：使用更快的字符串操作代替正则表达式
-      const lastSlashIndex = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+      const lastSlashIndex = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
       const name = lastSlashIndex !== -1 ? path.slice(lastSlashIndex + 1) : path;
 
       // 先创建轻量级对象，size 设为 0（显示"加载中"）
@@ -99,7 +99,7 @@ export const useConversionStore = defineStore('conversion', () => {
     // 第二阶段：批量添加到数组（只触发一次响应式更新）
     if (quickFiles.length > 0) {
       // 直接构建新数组，避免中间变量
-      const newFiles: FileItem[] = quickFiles.map(f => ({
+      const newFiles: FileItem[] = quickFiles.map((f) => ({
         path: f.path,
         name: f.name,
         size: 0, // 初始为0，表示待加载
@@ -121,22 +121,24 @@ export const useConversionStore = defineStore('conversion', () => {
           const batch = quickFiles.slice(i, i + batchSize);
 
           // 并行处理当前批次
-          const sizeUpdates = await Promise.all(batch.map(async (f) => {
-            try {
-              const meta = await stat(f.path);
-              return { path: f.path, size: meta.size };
-            } catch (error) {
-              debug(`无法获取文件大小：${f.path}，${error}`);
-              return null;
-            }
-          }));
+          const sizeUpdates = await Promise.all(
+            batch.map(async (f) => {
+              try {
+                const meta = await stat(f.path);
+                return { path: f.path, size: meta.size };
+              } catch (error) {
+                debug(`无法获取文件大小：${f.path}，${error}`);
+                return null;
+              }
+            })
+          );
 
           // 批量更新数组，减少响应式更新次数
-          if (sizeUpdates.some(u => u !== null)) {
+          if (sizeUpdates.some((u) => u !== null)) {
             const updatedFiles = [...files.value];
-            sizeUpdates.forEach(update => {
+            sizeUpdates.forEach((update) => {
               if (update) {
-                const fileIndex = updatedFiles.findIndex(item => item.path === update.path);
+                const fileIndex = updatedFiles.findIndex((item) => item.path === update.path);
                 if (fileIndex !== -1) {
                   updatedFiles[fileIndex] = { ...updatedFiles[fileIndex], size: update.size };
                 }
@@ -146,7 +148,7 @@ export const useConversionStore = defineStore('conversion', () => {
           }
 
           // 每批之间让出主线程，保持UI响应
-          await new Promise(resolve => setTimeout(resolve, 0));
+          await new Promise((resolve) => setTimeout(resolve, 0));
         }
 
         debug(`文件大小加载完成，共处理 ${quickFiles.length} 个文件`);
@@ -157,7 +159,7 @@ export const useConversionStore = defineStore('conversion', () => {
     }
   };
 
-  const updateFileSuccess = (path: string, output_path: string)=> {
+  const updateFileSuccess = (path: string, output_path: string) => {
     const fileIndex = files.value.findIndex((f) => f.path === path);
     if (fileIndex !== -1) {
       const file = files.value[fileIndex];
@@ -171,9 +173,9 @@ export const useConversionStore = defineStore('conversion', () => {
       const newCompleted = [...completedFiles.value, updatedFile];
       completedFiles.value = newCompleted;
     }
-  }
+  };
 
-  const updateFileError = (path: string, error: string)=> {
+  const updateFileError = (path: string, error: string) => {
     const fileIndex = files.value.findIndex((f) => f.path === path);
     if (fileIndex !== -1) {
       const file = files.value[fileIndex];
@@ -187,7 +189,7 @@ export const useConversionStore = defineStore('conversion', () => {
       const newError = [...errorFiles.value, updatedFile];
       errorFiles.value = newError;
     }
-  }
+  };
 
   const removePath = (path: string) => {
     // 从 files 中删除元素
@@ -247,7 +249,7 @@ export const useConversionStore = defineStore('conversion', () => {
     }
   };
 
-  const setActiveTab = (tab: 'pending' | 'completed') => {
+  const setActiveTab = (tab: "pending" | "completed") => {
     activeTab.value = tab;
   };
 
@@ -293,7 +295,7 @@ export const useConversionStore = defineStore('conversion', () => {
       });
       debug(`已发起转换任务`);
     } catch (error) {
-      alertSevere("转换任务执行失败！" + error)
+      alertSevere("转换任务执行失败！" + error);
       // 重置所有状态，包括准备状态
       isConverting.value = false;
       isStopping.value = false;
@@ -303,7 +305,7 @@ export const useConversionStore = defineStore('conversion', () => {
 
   // 停止转换
   const stopConversion = async () => {
-    debug(`前端停止转换...`)
+    debug(`前端停止转换...`);
     try {
       // 如果正在准备状态，直接重置状态并返回
       if (isPreparing.value) {
@@ -338,7 +340,7 @@ export const useConversionStore = defineStore('conversion', () => {
       await invoke("stop_conversion");
       debug(`已发送停止转换请求，等待后端正在转换的线程完成`);
     } catch (error) {
-      alertSevere("停止转换任务失败！" + error)
+      alertSevere("停止转换任务失败！" + error);
       isStopping.value = false;
     }
   };
@@ -398,20 +400,20 @@ export const useConversionStore = defineStore('conversion', () => {
   };
 
   // 切换分组展开状态
-  const toggleGroupExpansion = (group: 'task' | 'error') => {
+  const toggleGroupExpansion = (group: "task" | "error") => {
     // 如果点击的是当前已展开的分组，则收起它
-    if (group === 'task' && taskExpanded.value) {
+    if (group === "task" && taskExpanded.value) {
       taskExpanded.value = false;
       return;
     }
-    if (group === 'error' && errorExpanded.value) {
+    if (group === "error" && errorExpanded.value) {
       errorExpanded.value = false;
       return;
     }
 
     // 否则，展开目标分组，收起其他分组
-    taskExpanded.value = group === 'task';
-    errorExpanded.value = group === 'error';
+    taskExpanded.value = group === "task";
+    errorExpanded.value = group === "error";
   };
 
   // 重试失败的文件
@@ -419,9 +421,10 @@ export const useConversionStore = defineStore('conversion', () => {
     if (errorFiles.value.length === 0) return;
 
     // 将失败的文件移回待转换列表
-    const filesToRetry = errorFiles.value.map(file => {
-      const { error, ...rest } = file;
-      return rest;
+    const filesToRetry = errorFiles.value.map((file) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { error } = file;
+      return { ...file } as Omit<FileItem, "error">;
     });
     errorFiles.value = [];
 

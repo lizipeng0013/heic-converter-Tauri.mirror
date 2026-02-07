@@ -1,26 +1,14 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, computed, nextTick } from "vue";
+import { onMounted, onUnmounted, ref, computed } from "vue";
 import { useConversionStore } from "@/stores/conversionStore";
-import { formatSize } from "@/utils";
-import {
-  Upload,
-  Trash2,
-  CheckCircle2,
-  Loader2,
-  FolderOpen,
-  AlertCircle,
-  Clock,
-  ChevronDown,
-} from "lucide-vue-next";
+import { Upload, CheckCircle2 } from "lucide-vue-next";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useVirtualizer } from "@tanstack/vue-virtual";
 import FileCard from "@/components/FileCard.vue";
 import { listen, TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
-import { info, debug } from "@tauri-apps/plugin-log";
+import { info } from "@tauri-apps/plugin-log";
 import { alertSevere } from "@/utils/useError.ts";
 
 const conversionStore = useConversionStore();
@@ -37,7 +25,6 @@ const completedListRef = ref<HTMLElement | null>(null);
 
 // 虚拟滚动配置
 const itemSize = 68; // 每个文件卡片的估计高度（像素）
-const itemPadding = 4; // 每个文件卡片的上下内边距（像素）
 
 // 任务文件的虚拟滚动
 const taskVirtualizerOptions = computed(() => ({
@@ -48,12 +35,8 @@ const taskVirtualizerOptions = computed(() => ({
 }));
 
 const taskVirtualizer = useVirtualizer(taskVirtualizerOptions);
-const taskVirtualRows = computed(() =>
-  taskVirtualizer.value.getVirtualItems(),
-);
-const taskTotalSize = computed(() =>
-  taskVirtualizer.value.getTotalSize(),
-);
+const taskVirtualRows = computed(() => taskVirtualizer.value.getVirtualItems());
+const taskTotalSize = computed(() => taskVirtualizer.value.getTotalSize());
 
 // 转换失败的虚拟滚动
 const errorVirtualizerOptions = computed(() => ({
@@ -64,9 +47,7 @@ const errorVirtualizerOptions = computed(() => ({
 }));
 
 const errorVirtualizer = useVirtualizer(errorVirtualizerOptions);
-const errorVirtualRows = computed(() =>
-  errorVirtualizer.value.getVirtualItems(),
-);
+const errorVirtualRows = computed(() => errorVirtualizer.value.getVirtualItems());
 const errorTotalSize = computed(() => errorVirtualizer.value.getTotalSize());
 
 // 已完成的虚拟滚动
@@ -78,12 +59,8 @@ const completedVirtualizerOptions = computed(() => ({
 }));
 
 const completedVirtualizer = useVirtualizer(completedVirtualizerOptions);
-const completedVirtualRows = computed(() =>
-  completedVirtualizer.value.getVirtualItems(),
-);
-const completedTotalSize = computed(() =>
-  completedVirtualizer.value.getTotalSize(),
-);
+const completedVirtualRows = computed(() => completedVirtualizer.value.getVirtualItems());
+const completedTotalSize = computed(() => completedVirtualizer.value.getTotalSize());
 
 let unlistenDragEnter: UnlistenFn | null = null;
 let unlistenDragDrop: UnlistenFn | null = null;
@@ -104,7 +81,7 @@ onMounted(async () => {
     // 1. 先结束动画状态
     isFileDragging.value = false;
     // 2. 直接处理，不做区域判断
-    const payload = event.payload as any;
+    const payload = event.payload as { paths: string[] };
     const paths = payload.paths as string[];
     conversionStore.addPaths(paths);
   });
@@ -115,7 +92,13 @@ onMounted(async () => {
   });
 
   unlistenConversion = await listen("conversion-update", (event) => {
-    const payload = event.payload as any;
+    type ConversionUpdatePayload = {
+      path: string;
+      status: "done" | "error";
+      output_path?: string;
+      error?: string;
+    };
+    const payload = event.payload as ConversionUpdatePayload;
     const { path, status, output_path, error } = payload;
 
     // 如果正在停止转换，只处理 done 状态的更新（让正在转换的文件可以完成）
@@ -136,17 +119,17 @@ onMounted(async () => {
     }
   });
 
-  unlistenBatchFinished = await listen("conversion-batch-finished", (event) => {
+  unlistenBatchFinished = await listen("conversion-batch-finished", (_event) => {
     info(`转换任务完成`);
     conversionStore.handleBatchFinished();
   });
 
-  unlistenConversionStarted = await listen("conversion-started", (event) => {
+  unlistenConversionStarted = await listen("conversion-started", (_event) => {
     info(`收到转换开始事件`);
     conversionStore.handleStarted();
   });
 
-  unlistenConversionStopped = await listen("conversion-stopped", (event) => {
+  unlistenConversionStopped = await listen("conversion-stopped", (_event) => {
     info(`收到停止完成事件`);
     conversionStore.handleStopped();
   });
@@ -181,17 +164,6 @@ const selectFilesWithDialog = async () => {
     await conversionStore.addPaths(filePaths);
   } catch (error) {
     alertSevere("选择文件失败：" + error);
-  }
-};
-
-const handleOpenFileDir = async (file: any) => {
-  try {
-    if (file.convertedFilePath) {
-      const { revealItemInDir } = await import("@tauri-apps/plugin-opener");
-      await revealItemInDir(file.convertedFilePath);
-    }
-  } catch (error) {
-    alertSevere("打开目录并定位文件失败：" + error);
   }
 };
 </script>
@@ -240,9 +212,7 @@ const handleOpenFileDir = async (file: any) => {
 </style>
 
 <template>
-  <section
-    class="flex-1 flex flex-col min-w-0 bg-card h-full relative z-0 rounded-lg"
-  >
+  <section class="flex-1 flex flex-col min-w-0 bg-card h-full relative z-0 rounded-lg">
     <div class="h-12 px-4 flex items-center justify-between shrink-0">
       <Tabs v-model="conversionStore.activeTab" class="w-full">
         <TabsList class="h-8">
@@ -252,20 +222,13 @@ const handleOpenFileDir = async (file: any) => {
           <TabsTrigger value="completed" class="text-xs">
             已完成 ({{ conversionStore.completedFiles.length }})
           </TabsTrigger>
-          <TabsTrigger
-            v-if="conversionStore.errorFiles.length > 0"
-            value="error"
-            class="text-xs"
-          >
+          <TabsTrigger v-if="conversionStore.errorFiles.length > 0" value="error" class="text-xs">
             转换失败 ({{ conversionStore.errorFiles.length }})
           </TabsTrigger>
         </TabsList>
       </Tabs>
       <Button
-        v-if="
-          conversionStore.activeTab === 'pending' &&
-          conversionStore.files.length > 0
-        "
+        v-if="conversionStore.activeTab === 'pending' && conversionStore.files.length > 0"
         variant="ghost"
         size="sm"
         class="h-8 text-xs ml-2"
@@ -273,10 +236,7 @@ const handleOpenFileDir = async (file: any) => {
         >清空列表</Button
       >
       <Button
-        v-if="
-          conversionStore.activeTab === 'error' &&
-          conversionStore.errorFiles.length > 0
-        "
+        v-if="conversionStore.activeTab === 'error' && conversionStore.errorFiles.length > 0"
         variant="ghost"
         size="sm"
         class="h-8 text-xs ml-2"
@@ -285,8 +245,7 @@ const handleOpenFileDir = async (file: any) => {
       >
       <Button
         v-if="
-          conversionStore.activeTab === 'completed' &&
-          conversionStore.completedFiles.length > 0
+          conversionStore.activeTab === 'completed' && conversionStore.completedFiles.length > 0
         "
         variant="ghost"
         size="sm"
@@ -304,10 +263,7 @@ const handleOpenFileDir = async (file: any) => {
     >
       <!-- 空状态：任务标签页 -->
       <div
-        v-if="
-          conversionStore.activeTab === 'pending' &&
-          conversionStore.files.length === 0
-        "
+        v-if="conversionStore.activeTab === 'pending' && conversionStore.files.length === 0"
         class="absolute inset-0 flex flex-col items-center justify-center"
       >
         <button
@@ -331,8 +287,7 @@ const handleOpenFileDir = async (file: any) => {
       <!-- 空状态：已完成标签页 -->
       <div
         v-if="
-          conversionStore.activeTab === 'completed' &&
-          conversionStore.completedFiles.length === 0
+          conversionStore.activeTab === 'completed' && conversionStore.completedFiles.length === 0
         "
         class="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground/50 pointer-events-none"
       >
@@ -349,10 +304,7 @@ const handleOpenFileDir = async (file: any) => {
 
       <template v-if="conversionStore.activeTab === 'pending'">
         <div v-if="conversionStore.files.length > 0" class="flex-1 h-full overflow-y-auto">
-          <div
-            ref="taskListRef"
-            class="virtual-list h-full"
-          >
+          <div ref="taskListRef" class="virtual-list h-full">
             <div
               :style="{
                 height: `${taskTotalSize}px`,
@@ -373,10 +325,7 @@ const handleOpenFileDir = async (file: any) => {
                   transform: `translateY(${virtualRow.start}px)`,
                 }"
               >
-                <FileCard
-                  :file="taskFiles[virtualRow.index]"
-                  :is-task-file="true"
-                />
+                <FileCard :file="taskFiles[virtualRow.index]" :is-task-file="true" />
               </div>
             </div>
           </div>
@@ -402,10 +351,7 @@ const handleOpenFileDir = async (file: any) => {
 
         <!-- 错误文件列表 -->
         <div class="flex-1 h-full overflow-y-auto">
-          <div
-            ref="errorListRef"
-            class="virtual-list h-full"
-          >
+          <div ref="errorListRef" class="virtual-list h-full">
             <div
               :style="{
                 height: `${errorTotalSize}px`,
@@ -426,10 +372,7 @@ const handleOpenFileDir = async (file: any) => {
                   transform: `translateY(${virtualRow.start}px)`,
                 }"
               >
-                <FileCard
-                  :file="errorFiles[virtualRow.index]"
-                  :is-error-file="true"
-                />
+                <FileCard :file="errorFiles[virtualRow.index]" :is-error-file="true" />
               </div>
             </div>
           </div>
@@ -440,10 +383,7 @@ const handleOpenFileDir = async (file: any) => {
 
       <template v-if="conversionStore.activeTab === 'completed'">
         <div class="flex-1 h-full overflow-y-auto">
-          <div
-            ref="completedListRef"
-            class="virtual-list h-full"
-          >
+          <div ref="completedListRef" class="virtual-list h-full">
             <div
               :style="{
                 height: `${completedTotalSize}px`,

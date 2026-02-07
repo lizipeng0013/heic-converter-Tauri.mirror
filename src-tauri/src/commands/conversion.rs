@@ -1,8 +1,8 @@
-use tauri::{AppHandle, Emitter};
 use crate::services::conversion::batch_convert;
-use tauri_plugin_log::log::{info, debug};
-use tracing::instrument;
 use std::sync::atomic::{AtomicBool, Ordering};
+use tauri::{AppHandle, Emitter};
+use tauri_plugin_log::log::{debug, info};
+use tracing::instrument;
 
 // 全局停止标志
 static SHOULD_STOP: AtomicBool = AtomicBool::new(false);

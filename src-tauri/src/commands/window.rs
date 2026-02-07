@@ -57,7 +57,6 @@ pub async fn toggle_always_on_top(window: Window) -> Result<(), String> {
     Ok(())
 }
 
-
 #[command]
 pub fn drag_window(window: Window) {
     window.start_dragging().ok();

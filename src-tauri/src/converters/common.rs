@@ -1,6 +1,6 @@
-use thiserror::Error;
 use image::{ImageFormat, RgbImage};
 use tauri_plugin_log::log::{debug, trace};
+use thiserror::Error;
 use turbojpeg::{Compressor, Image, PixelFormat, Subsamp};
 
 /// 统一的错误类型，覆盖所有转换场景
@@ -133,14 +133,14 @@ pub fn save_image_buffer(
                     new_height,
                     image::imageops::FilterType::Lanczos3,
                 );
-                
+
                 // 保存缩放后的图片
                 resized.save_with_format(output_path, ImageFormat::Ico)?;
                 debug!("图片保存成功: {}", output_path);
                 Ok(())
             };
         }
-        
+
         // ICO 格式但尺寸符合要求，使用原 buffer
         buffer
     } else {
@@ -151,22 +151,24 @@ pub fn save_image_buffer(
     // 如果是JPEG且有质量参数 - 使用 turbojpeg 进行高性能编码
     if let OutputFormat::Jpeg(quality) = format {
         trace!("使用 turbojpeg 进行 JPEG 编码，质量: {}", quality);
-        
+
         let (width, height) = buffer_ref.dimensions();
         let data = buffer_ref.as_raw();
-        
+
         // 创建 turbojpeg 压缩器
         let mut compressor = Compressor::new()
             .map_err(|e| ConversionError::JpegEncodeError(format!("创建压缩器失败: {}", e)))?;
 
         // 设置压缩质量（需要转换为 i32）
-        compressor.set_quality(quality as i32)
+        compressor
+            .set_quality(quality as i32)
             .map_err(|e| ConversionError::JpegEncodeError(format!("设置压缩质量失败: {}", e)))?;
 
         // 设置子采样模式（高质量，无色度子采样）
-        compressor.set_subsamp(Subsamp::None)
+        compressor
+            .set_subsamp(Subsamp::None)
             .map_err(|e| ConversionError::JpegEncodeError(format!("设置子采样模式失败: {}", e)))?;
-        
+
         // 创建 turbojpeg 图像结构
         let image = Image {
             pixels: data.as_slice(),
@@ -175,11 +177,12 @@ pub fn save_image_buffer(
             height: height as usize,
             format: PixelFormat::RGB,
         };
-        
+
         // 压缩为 JPEG 数据
-        let jpeg_data = compressor.compress_to_vec(image.as_deref())
+        let jpeg_data = compressor
+            .compress_to_vec(image.as_deref())
             .map_err(|e| ConversionError::JpegEncodeError(format!("压缩失败: {}", e)))?;
-        
+
         // 写入文件
         std::fs::write(output_path, jpeg_data)
             .map_err(|e| ConversionError::JpegEncodeError(format!("写入文件失败: {}", e)))?;

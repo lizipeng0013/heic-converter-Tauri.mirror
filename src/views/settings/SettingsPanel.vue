@@ -3,11 +3,10 @@ import { useConversionStore } from "@/stores/conversionStore";
 import { Settings2, FolderOpen, ChevronDown, Square } from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { downloadDir } from "@tauri-apps/api/path";
-import {onMounted, onUnmounted, computed, ref} from "vue";
+import { onMounted, onUnmounted, computed, ref } from "vue";
 import type { FormatInfo, OutputFormat } from "@/types";
 
 const store = useConversionStore();
@@ -18,20 +17,20 @@ onMounted(async () => {
   store.outputFolder = await downloadDir();
 
   // 添加点击外部关闭下拉框的事件监听
-  document.addEventListener('click', handleClickOutside);
-})
+  document.addEventListener("click", handleClickOutside);
+});
 
 onUnmounted(() => {
   // 移除事件监听器
-  document.removeEventListener('click', handleClickOutside);
-})
+  document.removeEventListener("click", handleClickOutside);
+});
 
 // 点击外部关闭下拉框
 const handleClickOutside = (event: MouseEvent) => {
   if (dropdownRef.value && !dropdownRef.value.contains(event.target as Node)) {
     showFormatDropdown.value = false;
   }
-}
+};
 
 const selectOutputFolder = async () => {
   try {
@@ -57,7 +56,7 @@ const truncatedOutputFolder = computed(() => {
   const startLength = Math.floor(maxLength / 2) - 2;
   const endLength = maxLength - startLength - 3;
 
-  return path.substring(0, startLength) + '...' + path.substring(path.length - endLength);
+  return path.substring(0, startLength) + "..." + path.substring(path.length - endLength);
 });
 
 // 支持的格式列表
@@ -78,12 +77,12 @@ const quickFormats: FormatInfo[] = [
 
 // 其他格式（显示在下拉菜单中）
 const otherFormats = computed(() => {
-  return formats.filter(f => !quickFormats.some(qf => qf.value === f.value));
+  return formats.filter((f) => !quickFormats.some((qf) => qf.value === f.value));
 });
 
 // 当前格式信息
 const currentFormat = computed(() => {
-  return formats.find(f => f.value === store.settings.format);
+  return formats.find((f) => f.value === store.settings.format);
 });
 
 // 选择格式
@@ -94,7 +93,7 @@ const selectFormat = (format: OutputFormat) => {
 
 // 检查是否为常用格式
 const isQuickFormat = (format: OutputFormat) => {
-  return quickFormats.some(qf => qf.value === format);
+  return quickFormats.some((qf) => qf.value === format);
 };
 
 // 质量说明文字
@@ -133,30 +132,28 @@ const buttonText = computed(() => {
   if (store.isStopping) {
     return "正在停止...";
   }
-  
+
   // 优先级2：正在准备（禁用）
   if (store.isPreparing) {
     return "正在准备...";
   }
-  
+
   // 优先级3：正在转换（可点击停止）
   if (store.isConverting) {
     return "停止转换";
   }
-  
+
   // 优先级4：非转换状态
   const pendingCount = store.stats.waiting;
   const hasPendingFiles = pendingCount > 0;
-  
+
   // 如果有待转换文件
   if (hasPendingFiles) {
     // 从未开始过转换 → 显示"开始批量转换"
     // 曾经开始过转换 → 显示"继续转换"
-    return store.hasStartedConversion 
-      ? `继续转换 (${pendingCount} 待处理)` 
-      : "开始批量转换";
+    return store.hasStartedConversion ? `继续转换 (${pendingCount} 待处理)` : "开始批量转换";
   }
-  
+
   // 没有待转换文件 → 显示"开始批量转换"（会被禁用）
   return "开始批量转换";
 });
@@ -170,15 +167,12 @@ const buttonVariant = computed(() => {
 const buttonIcon = computed(() => {
   return store.isConverting ? Square : null;
 });
-
 </script>
 
 <template>
   <aside class="w-80 bg-card flex flex-col shrink-0 h-full rounded-lg">
     <div class="p-6 flex-1 overflow-y-auto">
-      <h2
-        class="text-lg font-semibold tracking-tight mb-6 flex items-center gap-2"
-      >
+      <h2 class="text-lg font-semibold tracking-tight mb-6 flex items-center gap-2">
         <Settings2 :size="18" class="text-muted-foreground" /> 转换设置
       </h2>
       <div class="space-y-6">
@@ -225,7 +219,7 @@ const buttonIcon = computed(() => {
                     @click="selectFormat(fmt.value)"
                     class="w-full text-left px-3 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
                     :class="{
-                      'bg-accent text-accent-foreground': store.settings.format === fmt.value
+                      'bg-accent text-accent-foreground': store.settings.format === fmt.value,
                     }"
                   >
                     {{ fmt.label }}
@@ -234,9 +228,7 @@ const buttonIcon = computed(() => {
               </div>
             </div>
           </div>
-          <p class="text-xs text-muted-foreground mt-1">
-            当前选择：{{ currentFormat?.label }}
-          </p>
+          <p class="text-xs text-muted-foreground mt-1">当前选择：{{ currentFormat?.label }}</p>
         </div>
         <div v-if="showQualityControl" class="space-y-4">
           <div class="flex justify-between items-center">
@@ -258,8 +250,7 @@ const buttonIcon = computed(() => {
           </p>
         </div>
         <div class="space-y-3">
-          <label
-            class="text-sm font-medium leading-none flex items-center justify-between"
+          <label class="text-sm font-medium leading-none flex items-center justify-between"
             >输出目录</label
           >
           <Tooltip>
@@ -280,9 +271,7 @@ const buttonIcon = computed(() => {
               <p>{{ store.outputFolder }}</p>
             </TooltipContent>
           </Tooltip>
-          <p class="text-xs text-muted-foreground mt-1">
-            未选择时，将保存到系统的"下载"文件夹。
-          </p>
+          <p class="text-xs text-muted-foreground mt-1">未选择时，将保存到系统的"下载"文件夹。</p>
         </div>
       </div>
     </div>
@@ -290,15 +279,10 @@ const buttonIcon = computed(() => {
       <Button
         @click="store.isConverting ? store.stopConversion() : store.startConversion()"
         :variant="buttonVariant"
-        :disabled="!store.isConverting && store.stats.waiting === 0 || store.isStopping"
+        :disabled="(!store.isConverting && store.stats.waiting === 0) || store.isStopping"
         class="w-full h-11 text-sm"
       >
-        <component
-          v-if="buttonIcon"
-          :is="buttonIcon"
-          :size="16"
-          class="mr-2"
-        />
+        <component v-if="buttonIcon" :is="buttonIcon" :size="16" class="mr-2" />
         {{ buttonText }}
       </Button>
     </div>

@@ -8,16 +8,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 <template>
   <TooltipProvider>
-    <div
-      class="h-screen w-screen flex flex-col overflow-hidden bg-muted text-foreground relative"
-    >
+    <div class="h-screen w-screen flex flex-col overflow-hidden bg-muted text-foreground relative">
       <TitleBar />
-       <main class="flex-1 flex overflow-hidden pointer-events-auto p-2 gap-2">
+      <main class="flex-1 flex overflow-hidden pointer-events-auto p-2 gap-2">
         <FileListArea />
         <SettingsPanel />
       </main>
       <StatusBar />
-  <!--    <InputFile />-->
+      <!--    <InputFile />-->
     </div>
   </TooltipProvider>
 </template>

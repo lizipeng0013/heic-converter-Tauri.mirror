@@ -1,12 +1,15 @@
-use serde_json::json;
-use tauri::{AppHandle, Emitter};
+use crate::commands::conversion::should_stop;
 use crate::converters::common::OutputFormat;
 use crate::converters::dispatcher::convert_image_auto;
-use crate::commands::conversion::should_stop;
-use tauri_plugin_log::log::{error, info, debug, trace};
-use std::sync::{Arc, atomic::{AtomicUsize, AtomicBool, Ordering}};
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
+use serde_json::json;
+use std::sync::{
+    atomic::{AtomicBool, AtomicUsize, Ordering},
+    Arc,
+};
+use tauri::{AppHandle, Emitter};
+use tauri_plugin_log::log::{debug, error, info, trace};
 
 /// 批量转换多个文件（支持混合格式）
 ///
@@ -32,10 +35,14 @@ pub async fn batch_convert(
         Err(e) => {
             error!("不支持的输出格式: {} - {}", format, e);
             return Err(e.to_string());
-        }
+        },
     };
 
-    info!("开始批量转换，共 {} 个文件，目标格式: {:?}", files.len(), output_format);
+    info!(
+        "开始批量转换，共 {} 个文件，目标格式: {:?}",
+        files.len(),
+        output_format
+    );
     batch_convert_images(app, files, output_format)
 }
 
@@ -67,12 +74,17 @@ fn batch_convert_images(
         .map(|n| n.get())
         .unwrap_or(4);
     let pool_size = if total < 10 {
-        total  // 少量文件时使用文件数
+        total // 少量文件时使用文件数
     } else {
-        (num_cpus * 3 / 4).max(2)  // 大量文件时保留 25% 给 UI
+        (num_cpus * 3 / 4).max(2) // 大量文件时保留 25% 给 UI
     };
 
-    trace!("CPU 核心数: {}, 文件数: {}, 线程池大小: {}", num_cpus, total, pool_size);
+    trace!(
+        "CPU 核心数: {}, 文件数: {}, 线程池大小: {}",
+        num_cpus,
+        total,
+        pool_size
+    );
 
     // 创建自定义线程池，优化并发性能
     let pool = ThreadPoolBuilder::new()
@@ -125,27 +137,33 @@ fn batch_convert_images(
                         success_count.fetch_add(1, Ordering::Relaxed);
                         processed_count.fetch_add(1, Ordering::Relaxed);
                         debug!("✓ 转换成功 {}/{}: {} -> {}", current, total, input, output);
-                        let _ = app_arc.emit("conversion-update", json!({
-                            "path": input,
-                            "status": "done",
-                            "output_path": output,
-                            "current": current,
-                            "total": total
-                        }));
+                        let _ = app_arc.emit(
+                            "conversion-update",
+                            json!({
+                                "path": input,
+                                "status": "done",
+                                "output_path": output,
+                                "current": current,
+                                "total": total
+                            }),
+                        );
                     },
                     Err(e) => {
                         // 使用原子操作更新计数器
                         error_count.fetch_add(1, Ordering::Relaxed);
                         processed_count.fetch_add(1, Ordering::Relaxed);
                         error!("✗ 转换失败 {}/{}: {} - {}", current, total, input, e);
-                        let _ = app_arc.emit("conversion-update", json!({
-                            "path": input,
-                            "status": "error",
-                            "error": e.to_string(),
-                            "current": current,
-                            "total": total
-                        }));
-                    }
+                        let _ = app_arc.emit(
+                            "conversion-update",
+                            json!({
+                                "path": input,
+                                "status": "error",
+                                "error": e.to_string(),
+                                "current": current,
+                                "total": total
+                            }),
+                        );
+                    },
                 }
             }
         });
@@ -164,7 +182,10 @@ fn batch_convert_images(
     let processed = processed_count.load(Ordering::Relaxed);
     let was_stopped = stopped_flag.load(Ordering::Relaxed);
 
-    info!("批量转换完成 - 成功: {}, 失败: {}, 已处理: {}, 总计: {}", success, error, processed, total);
+    info!(
+        "批量转换完成 - 成功: {}, 失败: {}, 已处理: {}, 总计: {}",
+        success, error, processed, total
+    );
 
     // 显式释放 Arc 引用
     drop(app_arc);

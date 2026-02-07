@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   Image as ImageIcon,
   Sun,
@@ -22,11 +21,7 @@ import {
 } from "@/components/ui/context-menu";
 
 import { useDark, useToggle } from "@vueuse/core";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip/";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip/";
 
 const isDark = useDark({
   selector: "html",
@@ -105,9 +100,7 @@ const onDoubleClick = () => {
       @dblclick="onDoubleClick"
     >
       <!-- 左侧Logo -->
-      <div
-        class="flex items-center gap-2 font-semibold text-base tracking-tight text-foreground"
-      >
+      <div class="flex items-center gap-2 font-semibold text-base tracking-tight text-foreground">
         <div class="bg-primary text-primary-foreground p-1.5 rounded-md">
           <ImageIcon :size="18" />
         </div>

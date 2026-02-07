@@ -1,7 +1,7 @@
-mod setup;
 mod commands;
-mod services;
 mod converters;
+mod services;
+mod setup;
 mod utils;
 
 // 使用 mimalloc 作为全局内存分配器，提升所有平台的性能
@@ -11,8 +11,11 @@ use mimalloc::MiMalloc;
 static GLOBAL: MiMalloc = MiMalloc;
 
 use commands::conversion::{convert_images, stop_conversion};
-use commands::window::{close_window, minimize_window, hide_window, show_window, toggle_always_on_top, toggle_maximize_window, drag_window};
 use commands::tray::show_tray;
+use commands::window::{
+    close_window, drag_window, hide_window, minimize_window, show_window, toggle_always_on_top,
+    toggle_maximize_window,
+};
 
 #[tauri::command]
 fn greet(name: &str) -> String {

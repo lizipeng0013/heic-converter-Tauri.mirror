@@ -1,7 +1,7 @@
-use tauri::AppHandle;
 use super::common::{ConversionError, OutputFormat};
-use super::heic::{is_heic_format, convert_heic_image};
 use super::generic::convert_regular_image;
+use super::heic::{convert_heic_image, is_heic_format};
+use tauri::AppHandle;
 use tauri_plugin_log::log::{debug, trace};
 
 /// 智能图片转换 - 自动检测格式并选择正确的转换器
@@ -12,7 +12,7 @@ pub fn convert_image_auto(
     format: OutputFormat,
 ) -> Result<(), ConversionError> {
     debug!("智能转换: {} -> {}", input_path, output_path);
-    
+
     // 检测是否为HEIC格式
     if is_heic_format(input_path) {
         trace!("检测到HEIC格式，使用HEIC转换器");

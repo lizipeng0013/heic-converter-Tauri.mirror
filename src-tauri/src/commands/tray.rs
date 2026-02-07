@@ -1,4 +1,8 @@
-use tauri::{command, AppHandle, Manager, tray::{MouseButton, MouseButtonState, TrayIconEvent}};
+use tauri::{
+    command,
+    tray::{MouseButton, MouseButtonState, TrayIconEvent},
+    AppHandle, Manager,
+};
 use tauri_plugin_log::log::error;
 
 // --- 显示托盘 ---
@@ -10,12 +14,13 @@ pub fn show_tray(app_handle: AppHandle) -> Result<(), String> {
     }
 
     // 创建托盘菜单
-    let menu = tauri::menu::Menu::new(&app_handle)
-        .map_err(|e| format!("创建菜单失败: {:?}", e))?;
-    let show_item = tauri::menu::MenuItem::with_id(&app_handle, "show", "显示窗口", true, None::<String>)
-        .map_err(|e| format!("创建菜单项失败: {:?}", e))?;
-    let quit_item = tauri::menu::MenuItem::with_id(&app_handle, "quit", "退出", true, None::<String>)
-        .map_err(|e| format!("创建菜单项失败: {:?}", e))?;
+    let menu = tauri::menu::Menu::new(&app_handle).map_err(|e| format!("创建菜单失败: {:?}", e))?;
+    let show_item =
+        tauri::menu::MenuItem::with_id(&app_handle, "show", "显示窗口", true, None::<String>)
+            .map_err(|e| format!("创建菜单项失败: {:?}", e))?;
+    let quit_item =
+        tauri::menu::MenuItem::with_id(&app_handle, "quit", "退出", true, None::<String>)
+            .map_err(|e| format!("创建菜单项失败: {:?}", e))?;
     menu.append(&show_item)
         .map_err(|e| format!("添加菜单项失败: {:?}", e))?;
     menu.append(&quit_item)
@@ -65,6 +70,6 @@ pub fn show_tray(app_handle: AppHandle) -> Result<(), String> {
         Err(e) => {
             error!("托盘创建失败: {:?}", e);
             Err(format!("托盘创建失败: {:?}", e))
-        }
+        },
     }
 }
