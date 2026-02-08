@@ -92,30 +92,34 @@ onMounted(async () => {
   });
 
   unlistenConversion = await listen("conversion-update", (event) => {
-    type ConversionUpdatePayload = {
-      path: string;
-      status: "done" | "error";
-      output_path?: string;
-      error?: string;
-    };
+    type ConversionUpdatePayload =
+      | {
+          path: string;
+          status: "done";
+          output_path: string;
+        }
+      | {
+          path: string;
+          status: "error";
+          error: string;
+        };
     const payload = event.payload as ConversionUpdatePayload;
-    const { path, status, output_path, error } = payload;
 
     // 如果正在停止转换，只处理 done 状态的更新（让正在转换的文件可以完成）
     if (conversionStore.isStopping) {
-      if (status === "done") {
-        conversionStore.updateFileSuccess(path, output_path);
-      } else if (status === "error") {
-        conversionStore.updateFileError(path, error);
+      if (payload.status === "done") {
+        conversionStore.updateFileSuccess(payload.path, payload.output_path);
+      } else {
+        conversionStore.updateFileError(payload.path, payload.error);
       }
       return;
     }
 
     // 正常转换状态下处理所有更新
-    if (status === "done") {
-      conversionStore.updateFileSuccess(path, output_path);
-    } else if (status === "error") {
-      conversionStore.updateFileError(path, error);
+    if (payload.status === "done") {
+      conversionStore.updateFileSuccess(payload.path, payload.output_path);
+    } else {
+      conversionStore.updateFileError(payload.path, payload.error);
     }
   });
 
