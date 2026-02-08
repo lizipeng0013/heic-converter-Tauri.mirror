@@ -17,16 +17,10 @@ use commands::window::{
     toggle_maximize_window,
 };
 
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     setup::init_plugins(tauri::Builder::default())
         .invoke_handler(tauri::generate_handler![
-            greet,
             // 窗口控制类
             minimize_window,
             hide_window,
