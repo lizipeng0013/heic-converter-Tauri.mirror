@@ -49,7 +49,7 @@ export const useConversionStore = defineStore("conversion", () => {
   // --- Actions ---
   const addPaths = async (paths: string[]) => {
     if (!paths || paths.length === 0) return;
-    debug(`前端addPaths获取到: ${paths.length} 个文件`);
+    void debug(`前端addPaths获取到: ${paths.length} 个文件`);
 
     // 如果待转换列表为空，重置 hasStartedConversion 标志
     // 这样新导入的文件会显示"开始批量转换"而不是"继续转换"
@@ -64,7 +64,7 @@ export const useConversionStore = defineStore("conversion", () => {
     if (files.value.length === 0 && completedFiles.value.length === 0) {
       spendTime.value = null;
       accumulatedTime.value = 0; // 重置累计时间
-      debug(`全新任务开始，重置耗时统计`);
+      void debug(`全新任务开始，重置耗时统计`);
     }
 
     const existingPaths = new Set(files.value.map((f) => f.path));
@@ -113,7 +113,7 @@ export const useConversionStore = defineStore("conversion", () => {
     // 第三阶段：在后台异步获取文件大小（不阻塞UI）
     if (quickFiles.length > 0) {
       const loadFileSizes = async () => {
-        debug(`文件大小加载开始，共 ${quickFiles.length} 个文件`);
+        void debug(`文件大小加载开始，共 ${quickFiles.length} 个文件`);
 
         // 分批处理，每批处理 50 个文件，避免阻塞
         const batchSize = 50;
@@ -127,7 +127,7 @@ export const useConversionStore = defineStore("conversion", () => {
                 const meta = await stat(f.path);
                 return { path: f.path, size: meta.size };
               } catch (error) {
-                debug(`无法获取文件大小：${f.path}，${error}`);
+                void debug(`无法获取文件大小：${f.path}，${error}`);
                 return null;
               }
             })
@@ -151,7 +151,7 @@ export const useConversionStore = defineStore("conversion", () => {
           await new Promise((resolve) => setTimeout(resolve, 0));
         }
 
-        debug(`文件大小加载完成，共处理 ${quickFiles.length} 个文件`);
+        void debug(`文件大小加载完成，共处理 ${quickFiles.length} 个文件`);
       };
 
       // 使用 setTimeout(0) 将任务放到下一个事件循环
@@ -263,7 +263,7 @@ export const useConversionStore = defineStore("conversion", () => {
 
   // --- 开始转换逻辑：调用批量方法 ---
   const startConversion = async () => {
-    debug(`前端开始执行转换逻辑...`);
+    void debug(`前端开始执行转换逻辑...`);
 
     // 如果正在转换或正在停止，不允许启动新的转换任务
     if (isConverting.value || isStopping.value) {
@@ -293,7 +293,7 @@ export const useConversionStore = defineStore("conversion", () => {
         outputFolder: outputFolder.value,
         quality: settings.value.quality[0],
       });
-      debug(`已发起转换任务`);
+      void debug(`已发起转换任务`);
     } catch (error) {
       alertSevere("转换任务执行失败！" + error);
       // 重置所有状态，包括准备状态
@@ -305,11 +305,11 @@ export const useConversionStore = defineStore("conversion", () => {
 
   // 停止转换
   const stopConversion = async () => {
-    debug(`前端停止转换...`);
+    void debug(`前端停止转换...`);
     try {
       // 如果正在准备状态，直接重置状态并返回
       if (isPreparing.value) {
-        debug(`正在准备状态，取消转换`);
+        void debug(`正在准备状态，取消转换`);
         isPreparing.value = false;
         isConverting.value = false;
         isStopping.value = false;
@@ -321,7 +321,7 @@ export const useConversionStore = defineStore("conversion", () => {
         const elapsed = Date.now() - startTime.value;
         accumulatedTime.value += elapsed;
         spendTime.value = accumulatedTime.value / 1000;
-        debug(`停止转换时保存已消耗时间: ${(accumulatedTime.value / 1000).toFixed(2)}s`);
+        void debug(`停止转换时保存已消耗时间: ${(accumulatedTime.value / 1000).toFixed(2)}s`);
       }
 
       // 标记计时器为停止状态
@@ -338,7 +338,7 @@ export const useConversionStore = defineStore("conversion", () => {
       isStopping.value = true;
 
       await invoke("stop_conversion");
-      debug(`已发送停止转换请求，等待后端正在转换的线程完成`);
+      void debug(`已发送停止转换请求，等待后端正在转换的线程完成`);
     } catch (error) {
       alertSevere("停止转换任务失败！" + error);
       isStopping.value = false;
@@ -347,7 +347,7 @@ export const useConversionStore = defineStore("conversion", () => {
 
   // 处理转换开始事件（由后端通知，线程池创建完成）
   const handleStarted = () => {
-    debug(`收到转换开始事件，启动计时器`);
+    void debug(`收到转换开始事件，启动计时器`);
 
     // 准备完成
     isPreparing.value = false;
@@ -368,7 +368,7 @@ export const useConversionStore = defineStore("conversion", () => {
 
   // 处理停止完成事件（由后端通知）
   const handleStopped = () => {
-    debug(`收到停止完成通知，重置转换状态`);
+    void debug(`收到停止完成通知，重置转换状态`);
 
     // 重置准备状态和转换状态
     isPreparing.value = false;
@@ -380,7 +380,7 @@ export const useConversionStore = defineStore("conversion", () => {
 
   // 处理批次完成事件（由后端通知，所有文件都处理完毕）
   const handleBatchFinished = () => {
-    debug(`收到批次完成通知，停止计时器`);
+    void debug(`收到批次完成通知，停止计时器`);
 
     // 标记计时器为停止状态
     isTimerRunning.value = false;
@@ -429,7 +429,7 @@ export const useConversionStore = defineStore("conversion", () => {
     errorFiles.value = [];
 
     files.value = [...files.value, ...filesToRetry];
-    debug(`已将 ${filesToRetry.length} 个失败文件移回待转换列表`);
+    void debug(`已将 ${filesToRetry.length} 个失败文件移回待转换列表`);
   };
 
   return {

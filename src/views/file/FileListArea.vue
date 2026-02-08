@@ -120,17 +120,17 @@ onMounted(async () => {
   });
 
   unlistenBatchFinished = await listen("conversion-batch-finished", (_event) => {
-    info(`转换任务完成`);
+    void info(`转换任务完成`);
     conversionStore.handleBatchFinished();
   });
 
   unlistenConversionStarted = await listen("conversion-started", (_event) => {
-    info(`收到转换开始事件`);
+    void info(`收到转换开始事件`);
     conversionStore.handleStarted();
   });
 
   unlistenConversionStopped = await listen("conversion-stopped", (_event) => {
-    info(`收到停止完成事件`);
+    void info(`收到停止完成事件`);
     conversionStore.handleStopped();
   });
 });

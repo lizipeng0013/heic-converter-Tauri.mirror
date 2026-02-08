@@ -8,6 +8,7 @@ import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { downloadDir } from "@tauri-apps/api/path";
 import { onMounted, onUnmounted, computed, ref } from "vue";
 import type { FormatInfo, OutputFormat } from "@/types";
+import { error } from "@tauri-apps/plugin-log";
 
 const store = useConversionStore();
 const showFormatDropdown = ref(false);
@@ -41,7 +42,7 @@ const selectOutputFolder = async () => {
     });
     if (result) store.setOutputFolder(result);
   } catch (e) {
-    console.error(e);
+    void error(`选择输出目录失败: ${e}`);
   }
 };
 

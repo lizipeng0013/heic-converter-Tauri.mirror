@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { debug, error } from "@tauri-apps/plugin-log";
 import {
   Image as ImageIcon,
   Sun,
@@ -37,14 +38,14 @@ const closeWindow = () => invoke("close_window");
 const toggleTop = () => invoke("toggle_always_on_top");
 const dragWindow = () => invoke("drag_window");
 const minimizeToTray = async () => {
-  console.log("点击最小化到托盘按钮");
+  void debug("点击最小化到托盘按钮");
   try {
     await invoke("show_tray");
-    console.log("托盘显示成功");
+    void debug("托盘显示成功");
     await invoke("hide_window");
-    console.log("窗口隐藏成功");
-  } catch (error) {
-    console.error("最小化到托盘失败:", error);
+    void debug("窗口隐藏成功");
+  } catch (e) {
+    void error(`最小化到托盘失败: ${e}`);
   }
 };
 
