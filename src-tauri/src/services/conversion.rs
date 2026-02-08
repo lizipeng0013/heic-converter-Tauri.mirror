@@ -152,7 +152,7 @@ fn batch_convert_images(
                             json!({
                                 "path": input,
                                 "status": "error",
-                                "error": e.to_string(),
+                                "error": e.user_message(),
                                 "current": current,
                                 "total": total
                             }),

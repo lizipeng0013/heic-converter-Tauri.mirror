@@ -23,6 +23,21 @@ pub enum ConversionError {
     UnsupportedInputFormat(String),
 }
 
+impl ConversionError {
+    /// 获取用户友好的错误信息
+    pub fn user_message(&self) -> String {
+        match self {
+            ConversionError::HeifError(_) => "HEIC文件解码失败，请确保文件没有损坏".to_string(),
+            ConversionError::ImageError(_) => "图片处理失败，请检查文件格式是否正确".to_string(),
+            ConversionError::IoError(_) => "文件读写失败，请检查文件权限和磁盘空间".to_string(),
+            ConversionError::JpegEncodeError(_) => "JPEG编码失败，请尝试降低图片质量".to_string(),
+            ConversionError::UnsupportedFormat(format) => format!("不支持的输出格式: {}，请选择 jpg、png、webp、bmp、tiff 或 ico", format),
+            ConversionError::UnknownFormat => "无法识别图片格式".to_string(),
+            ConversionError::UnsupportedInputFormat(format) => format!("不支持的输入格式: {}，仅支持 HEIC/HEIF 格式", format),
+        }
+    }
+}
+
 /// 统一支持的输出格式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OutputFormat {

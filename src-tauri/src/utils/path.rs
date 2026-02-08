@@ -1,5 +1,5 @@
 use std::path::Path;
-use tauri_plugin_log::log::debug;
+use tauri_plugin_log::log::{debug, error};
 
 /// 构建目标文件路径
 ///
@@ -25,7 +25,7 @@ pub fn build_target_path(source_path: &str, target_type: &str, output_folder: &s
 ///
 /// # 返回
 /// - `Ok(())`: 目录有效且有写入权限
-/// - `Err(String)`: 错误信息
+/// - `Err(String)`: 用户友好的错误信息
 pub fn validate_output_folder(folder: &str) -> Result<(), String> {
     let p = Path::new(folder);
 
@@ -37,7 +37,10 @@ pub fn validate_output_folder(folder: &str) -> Result<(), String> {
     // 检查目录是否存在，不存在则创建
     if !p.exists() {
         debug!("输出目录不存在，尝试创建: {}", folder);
-        std::fs::create_dir_all(p).map_err(|e| format!("无法创建输出目录 '{}': {}", folder, e))?;
+        if let Err(e) = std::fs::create_dir_all(p) {
+            error!("创建输出目录失败: {} - 错误详情: {}", folder, e);
+            return Err("无法创建输出目录，请检查路径是否有效".to_string());
+        }
     }
 
     // 检查是否是目录
@@ -56,6 +59,9 @@ pub fn validate_output_folder(folder: &str) -> Result<(), String> {
             debug!("输出目录写入权限验证通过: {}", folder);
             Ok(())
         },
-        Err(e) => Err(format!("输出目录 '{}' 无写入权限: {}", folder, e)),
+        Err(e) => {
+            error!("输出目录写入权限验证失败: {} - 错误详情: {}", folder, e);
+            Err("输出目录无写入权限，请选择其他目录或修改文件夹权限".to_string())
+        },
     }
 }
