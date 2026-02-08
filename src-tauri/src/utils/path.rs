@@ -37,8 +37,7 @@ pub fn validate_output_folder(folder: &str) -> Result<(), String> {
     // 检查目录是否存在，不存在则创建
     if !p.exists() {
         debug!("输出目录不存在，尝试创建: {}", folder);
-        std::fs::create_dir_all(p)
-            .map_err(|e| format!("无法创建输出目录 '{}': {}", folder, e))?;
+        std::fs::create_dir_all(p).map_err(|e| format!("无法创建输出目录 '{}': {}", folder, e))?;
     }
 
     // 检查是否是目录
@@ -56,10 +55,7 @@ pub fn validate_output_folder(folder: &str) -> Result<(), String> {
             }
             debug!("输出目录写入权限验证通过: {}", folder);
             Ok(())
-        }
-        Err(e) => Err(format!(
-            "输出目录 '{}' 无写入权限: {}",
-            folder, e
-        )),
+        },
+        Err(e) => Err(format!("输出目录 '{}' 无写入权限: {}", folder, e)),
     }
 }
