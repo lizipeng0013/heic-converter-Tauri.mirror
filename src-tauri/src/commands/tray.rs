@@ -47,12 +47,13 @@ pub fn show_tray(app_handle: AppHandle) -> Result<(), String> {
             }
         })
         // 注意on_tray_icon_event在Linux中暂不可用
-        .on_tray_icon_event(|tray, event| match event {
-            TrayIconEvent::Click {
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
                 button: MouseButton::Left,
                 button_state: MouseButtonState::Up,
                 ..
-            } => {
+            } = event
+            {
                 let app = tray.app_handle();
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.unminimize();
@@ -60,7 +61,6 @@ pub fn show_tray(app_handle: AppHandle) -> Result<(), String> {
                     let _ = window.set_focus();
                 }
             }
-            _ => {}
         })
         .tooltip("HEIC Converter")
         .build(&app_handle);

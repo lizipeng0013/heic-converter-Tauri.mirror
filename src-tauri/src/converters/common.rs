@@ -52,7 +52,7 @@ impl OutputFormat {
     }
 
     /// 转换为 image crate 的 ImageFormat
-    pub fn to_image_format(&self) -> ImageFormat {
+    pub fn as_image_format(&self) -> ImageFormat {
         match self {
             OutputFormat::Jpeg(_) => ImageFormat::Jpeg,
             OutputFormat::Png => ImageFormat::Png,
@@ -188,7 +188,7 @@ pub fn save_image_buffer(
             .map_err(|e| ConversionError::JpegEncodeError(format!("写入文件失败: {}", e)))?;
     } else {
         // PNG、WebP、BMP、TIFF、ICO 等其他格式
-        buffer_ref.save_with_format(output_path, format.to_image_format())?;
+        buffer_ref.save_with_format(output_path, format.as_image_format())?;
     }
 
     debug!("图片保存成功: {}", output_path);
