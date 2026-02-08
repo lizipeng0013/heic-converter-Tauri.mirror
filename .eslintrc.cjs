@@ -13,6 +13,7 @@ module.exports = {
     "src-tauri",
     "public",
     "src/components/ui",
+    "src/vite-env.d.ts",
   ],
   parser: "vue-eslint-parser",
   parserOptions: {
