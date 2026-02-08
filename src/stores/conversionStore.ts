@@ -416,22 +416,6 @@ export const useConversionStore = defineStore("conversion", () => {
     errorExpanded.value = group === "error";
   };
 
-  // 重试失败的文件
-  const retryErrorFiles = () => {
-    if (errorFiles.value.length === 0) return;
-
-    // 将失败的文件移回待转换列表
-    const filesToRetry = errorFiles.value.map((file) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { error } = file;
-      return { ...file } as Omit<FileItem, "error">;
-    });
-    errorFiles.value = [];
-
-    files.value = [...files.value, ...filesToRetry];
-    void debug(`已将 ${filesToRetry.length} 个失败文件移回待转换列表`);
-  };
-
   return {
     files,
     errorFiles,
@@ -470,6 +454,5 @@ export const useConversionStore = defineStore("conversion", () => {
     handleStopped,
     handleBatchFinished,
     toggleGroupExpansion,
-    retryErrorFiles,
   };
 });
