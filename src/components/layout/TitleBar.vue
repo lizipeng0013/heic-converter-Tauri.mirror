@@ -23,6 +23,9 @@ import {
 
 import { useDark, useToggle } from "@vueuse/core";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip/";
+import { useConversionStore } from "@/stores/conversionStore";
+import CloseConfirmDialog from "@/components/dialog/CloseConfirmDialog.vue";
+import { CloseAction } from "@/types";
 
 const isDark = useDark({
   selector: "html",
@@ -32,11 +35,14 @@ const isDark = useDark({
   initialValue: "auto",
 });
 const toggleDark = useToggle(isDark);
+const conversionStore = useConversionStore();
+
 const minWindow = () => invoke("minimize_window");
 const maxWindow = () => invoke("toggle_maximize_window");
 const closeWindow = () => invoke("close_window");
 const toggleTop = () => invoke("toggle_always_on_top");
 const dragWindow = () => invoke("drag_window");
+
 const minimizeToTray = async () => {
   void debug("点击最小化到托盘按钮");
   try {
@@ -46,6 +52,33 @@ const minimizeToTray = async () => {
     void debug("窗口隐藏成功");
   } catch (e) {
     void error(`最小化到托盘失败: ${e}`);
+  }
+};
+
+const showCloseDialog = ref(false);
+const isClosing = ref(false);
+
+const handleCloseRequested = async () => {
+  if (conversionStore.isConverting || conversionStore.isPreparing) {
+    showCloseDialog.value = true;
+  } else {
+    await closeWindow();
+  }
+};
+
+const handleCloseConfirm = async (action: CloseAction) => {
+  isClosing.value = true;
+
+  try {
+    if (action === "minimize") {
+      await minimizeToTray();
+    } else if (action === "exit") {
+      await closeWindow();
+    }
+  } catch (e) {
+    void error(`处理关闭请求失败: ${e}`);
+  } finally {
+    isClosing.value = false;
   }
 };
 
@@ -124,7 +157,7 @@ const onDoubleClick = () => {
               ><Pin class="mr-2 h-4 w-4" /> 置顶窗口</ContextMenuItem
             >
             <ContextMenuSeparator />
-            <ContextMenuItem class="text-destructive" @click="closeWindow"
+            <ContextMenuItem class="text-destructive" @click="handleCloseRequested"
               ><X class="mr-2 h-4 w-4" /> 关闭</ContextMenuItem
             >
           </ContextMenuContent>
@@ -184,9 +217,14 @@ const onDoubleClick = () => {
         variant="ghost"
         size="icon"
         class="h-8 w-8 text-slate-500 hover:bg-red-500 hover:text-white transition-colors"
-        @click="closeWindow"
+        @click="handleCloseRequested"
         ><X :size="16"
       /></Button>
     </div>
+    <CloseConfirmDialog
+      v-model:open="showCloseDialog"
+      :is-closing="isClosing"
+      @confirm="handleCloseConfirm"
+    />
   </header>
 </template>

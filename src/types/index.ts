@@ -31,3 +31,6 @@ export interface ConverterSettings {
   format: OutputFormat;
   quality: number[];
 }
+
+// --- 关闭窗口操作类型 ---
+export type CloseAction = "minimize" | "exit" | "cancel";

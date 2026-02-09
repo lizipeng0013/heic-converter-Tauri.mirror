@@ -184,26 +184,26 @@ const buttonIcon = computed(() => {
             <button
               v-for="fmt in quickFormats"
               :key="fmt.value"
-              @click="selectFormat(fmt.value)"
               class="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               :class="
                 store.settings.format === fmt.value
                   ? 'bg-background text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
               "
+              @click="selectFormat(fmt.value)"
             >
               {{ fmt.label }}
             </button>
             <!-- 更多格式下拉按钮 -->
-            <div class="relative" ref="dropdownRef">
+            <div ref="dropdownRef" class="relative">
               <button
-                @click="showFormatDropdown = !showFormatDropdown"
                 class="w-full inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 :class="
                   !isQuickFormat(store.settings.format)
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                 "
+                @click="showFormatDropdown = !showFormatDropdown"
               >
                 <span class="flex-1">{{ dropdownLabel }}</span>
                 <ChevronDown :size="14" />
@@ -217,11 +217,11 @@ const buttonIcon = computed(() => {
                   <button
                     v-for="fmt in otherFormats"
                     :key="fmt.value"
-                    @click="selectFormat(fmt.value)"
                     class="w-full text-left px-3 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
                     :class="{
                       'bg-accent text-accent-foreground': store.settings.format === fmt.value,
                     }"
+                    @click="selectFormat(fmt.value)"
                   >
                     {{ fmt.label }}
                   </button>
@@ -240,11 +240,11 @@ const buttonIcon = computed(() => {
           </div>
           <Slider
             :model-value="store.settings.quality"
-            @update:model-value="(v) => store.updateSettings({ quality: v })"
             :max="100"
             :min="10"
             :step="5"
             class="w-full"
+            @update:model-value="(v) => store.updateSettings({ quality: v })"
           />
           <p class="text-xs text-muted-foreground leading-relaxed">
             {{ qualityDescription }}
@@ -278,12 +278,12 @@ const buttonIcon = computed(() => {
     </div>
     <div class="p-6 bg-muted/20">
       <Button
-        @click="store.isConverting ? store.stopConversion() : store.startConversion()"
         :variant="buttonVariant"
         :disabled="(!store.isConverting && store.stats.waiting === 0) || store.isStopping"
         class="w-full h-11 text-sm"
+        @click="store.isConverting ? store.stopConversion() : store.startConversion()"
       >
-        <component v-if="buttonIcon" :is="buttonIcon" :size="16" class="mr-2" />
+        <component :is="buttonIcon" v-if="buttonIcon" :size="16" class="mr-2" />
         {{ buttonText }}
       </Button>
     </div>

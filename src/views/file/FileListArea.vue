@@ -172,49 +172,6 @@ const selectFilesWithDialog = async () => {
 };
 </script>
 
-<style scoped>
-.group-section {
-  margin-bottom: 8px;
-}
-
-.group-section:last-child {
-  margin-bottom: 0;
-}
-
-.group-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  font-size: 11px;
-  font-weight: 500;
-  color: hsl(var(--muted-foreground));
-  background: hsl(var(--muted));
-  border-radius: 6px;
-  margin-bottom: 4px;
-}
-
-.group-header.text-destructive {
-  color: hsl(var(--destructive));
-  background: hsl(var(--destructive) / 0.1);
-}
-
-.virtual-list {
-  height: 100%;
-  overflow-y: auto;
-}
-
-.virtual-item {
-  padding: 0;
-  box-sizing: border-box;
-}
-
-.virtual-item > * {
-  padding: 4px 0;
-  box-sizing: border-box;
-}
-</style>
-
 <template>
   <section class="flex-1 flex flex-col min-w-0 bg-card h-full relative z-0 rounded-lg">
     <div class="h-12 px-4 flex items-center justify-between shrink-0">
@@ -271,9 +228,9 @@ const selectFilesWithDialog = async () => {
         class="absolute inset-0 flex flex-col items-center justify-center"
       >
         <button
-          @click="selectFilesWithDialog"
           class="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center mb-4 hover:scale-110 transition-transform shadow-lg"
           :class="isFileDragging ? 'scale-110 bg-primary/90' : ''"
+          @click="selectFilesWithDialog"
         >
           <Upload :size="24" />
         </button>
@@ -433,3 +390,46 @@ const selectFilesWithDialog = async () => {
     </div>
   </section>
 </template>
+
+<style scoped>
+.group-section {
+  margin-bottom: 8px;
+}
+
+.group-section:last-child {
+  margin-bottom: 0;
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--muted));
+  border-radius: 6px;
+  margin-bottom: 4px;
+}
+
+.group-header.text-destructive {
+  color: hsl(var(--destructive));
+  background: hsl(var(--destructive) / 0.1);
+}
+
+.virtual-list {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.virtual-item {
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.virtual-item > * {
+  padding: 4px 0;
+  box-sizing: border-box;
+}
+</style>
