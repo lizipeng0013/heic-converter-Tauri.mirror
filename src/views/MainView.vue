@@ -79,6 +79,7 @@ const handleMinimizeToTray = async () => {
       <TitleBar
         app-name="HEIC Converter"
         :show-tray-button="true"
+        height="standard"
         @close-request="handleCloseRequest"
         @minimize-request="handleMinimizeRequest"
         @maximize-request="handleMaximizeRequest"

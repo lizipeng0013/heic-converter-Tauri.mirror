@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import {
   Image as ImageIcon,
@@ -44,6 +44,8 @@ interface TitleBarProps {
   showCloseButton?: boolean;
   /** 是否启用窗口拖拽 */
   enableDrag?: boolean;
+  /** 标题栏高度：'compact' | 'standard' | 'tall' */
+  height?: "compact" | "standard" | "tall";
 }
 
 const props = withDefaults(defineProps<TitleBarProps>(), {
@@ -55,6 +57,17 @@ const props = withDefaults(defineProps<TitleBarProps>(), {
   showMaximizeButton: true,
   showCloseButton: true,
   enableDrag: true,
+  height: "standard",
+});
+
+// 标题栏高度映射
+const heightClass = computed(() => {
+  const heightMap = {
+    compact: "h-8", // 32px
+    standard: "h-10", // 40px
+    tall: "h-12", // 48px
+  };
+  return heightMap[props.height];
 });
 
 // ============================================================
@@ -137,7 +150,10 @@ const onDoubleClick = () => {
 
 <template>
   <header
-    class="h-12 px-4 flex items-center justify-between shrink-0 select-none relative z-50 bg-titlebar border-b border-border/30"
+    :class="[
+      'px-4 flex items-center justify-between shrink-0 select-none relative z-50 bg-titlebar border-b border-border/30',
+      heightClass,
+    ]"
   >
     <!-- 标题栏可拖拽区域 -->
     <div
