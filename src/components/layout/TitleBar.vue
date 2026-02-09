@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { debug, error } from "@tauri-apps/plugin-log";
 import {
   Image as ImageIcon,
   Sun,
@@ -23,10 +22,65 @@ import {
 
 import { useDark, useToggle } from "@vueuse/core";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip/";
-import { useConversionStore } from "@/stores/conversionStore";
-import CloseConfirmDialog from "@/components/dialog/CloseConfirmDialog.vue";
-import { CloseAction } from "@/types";
 
+// ============================================================
+// 📝 Props 接口定义
+// ============================================================
+
+interface TitleBarProps {
+  /** 应用名称 */
+  appName?: string;
+  /** 是否显示 Logo */
+  showLogo?: boolean;
+  /** 是否显示主题切换按钮 */
+  showThemeButton?: boolean;
+  /** 是否显示托盘按钮 */
+  showTrayButton?: boolean;
+  /** 是否显示最小化按钮 */
+  showMinimizeButton?: boolean;
+  /** 是否显示最大化按钮 */
+  showMaximizeButton?: boolean;
+  /** 是否显示关闭按钮 */
+  showCloseButton?: boolean;
+  /** 是否启用窗口拖拽 */
+  enableDrag?: boolean;
+}
+
+const props = withDefaults(defineProps<TitleBarProps>(), {
+  appName: "Application",
+  showLogo: true,
+  showThemeButton: true,
+  showTrayButton: false,
+  showMinimizeButton: true,
+  showMaximizeButton: true,
+  showCloseButton: true,
+  enableDrag: true,
+});
+
+// ============================================================
+// 📝 Emits 接口定义
+// ============================================================
+
+interface TitleBarEmits {
+  /** 关闭窗口请求 */
+  "close-request": [];
+  /** 最小化窗口请求 */
+  "minimize-request": [];
+  /** 最大化窗口请求 */
+  "maximize-request": [];
+  /** 置顶窗口请求 */
+  "toggle-top-request": [];
+  /** 最小化到托盘请求 */
+  "minimize-to-tray": [];
+}
+
+const emit = defineEmits<TitleBarEmits>();
+
+// ============================================================
+// ⚙️ 通用逻辑 - 以下代码通常不需要修改
+// ============================================================
+
+// 主题切换
 const isDark = useDark({
   selector: "html",
   attribute: "class",
@@ -35,63 +89,23 @@ const isDark = useDark({
   initialValue: "auto",
 });
 const toggleDark = useToggle(isDark);
-const conversionStore = useConversionStore();
 
-const minWindow = () => invoke("minimize_window");
-const maxWindow = () => invoke("toggle_maximize_window");
-const closeWindow = () => invoke("close_window");
-const toggleTop = () => invoke("toggle_always_on_top");
+// 窗口拖拽函数
 const dragWindow = () => invoke("drag_window");
 
-const minimizeToTray = async () => {
-  void debug("点击最小化到托盘按钮");
-  try {
-    await invoke("show_tray");
-    void debug("托盘显示成功");
-    await invoke("hide_window");
-    void debug("窗口隐藏成功");
-  } catch (e) {
-    void error(`最小化到托盘失败: ${e}`);
-  }
-};
-
-const showCloseDialog = ref(false);
-const isClosing = ref(false);
-
-const handleCloseRequested = async () => {
-  if (conversionStore.isConverting || conversionStore.isPreparing) {
-    showCloseDialog.value = true;
-  } else {
-    await closeWindow();
-  }
-};
-
-const handleCloseConfirm = async (action: CloseAction) => {
-  isClosing.value = true;
-
-  try {
-    if (action === "minimize") {
-      await minimizeToTray();
-    } else if (action === "exit") {
-      await closeWindow();
-    }
-  } catch (e) {
-    void error(`处理关闭请求失败: ${e}`);
-  } finally {
-    isClosing.value = false;
-  }
-};
-
+// 窗口拖拽逻辑
 const mouseDownPosition = ref<{ x: number; y: number } | null>(null);
 const isTitleDragging = ref(false);
 
 const handleMouseDown = (e: MouseEvent) => {
+  if (!props.enableDrag) return;
   if (e.button !== 0) return;
   mouseDownPosition.value = { x: e.clientX, y: e.clientY };
   isTitleDragging.value = false;
 };
 
 const handleMouseMove = (e: MouseEvent) => {
+  if (!props.enableDrag) return;
   if (!mouseDownPosition.value) return;
   const deltaX = Math.abs(e.clientX - mouseDownPosition.value.x);
   const deltaY = Math.abs(e.clientY - mouseDownPosition.value.y);
@@ -115,8 +129,9 @@ const handleMouseLeave = () => {
 };
 
 const onDoubleClick = () => {
+  if (!props.enableDrag) return;
   if (isTitleDragging.value) return;
-  maxWindow();
+  emit("maximize-request");
 };
 </script>
 
@@ -133,13 +148,19 @@ const onDoubleClick = () => {
       @mouseleave="handleMouseLeave"
       @dblclick="onDoubleClick"
     >
-      <!-- 左侧Logo -->
-      <div class="flex items-center gap-2 font-semibold text-base tracking-tight text-foreground">
-        <div class="bg-primary text-primary-foreground p-1.5 rounded-md">
-          <ImageIcon :size="18" />
+      <!-- 左侧Logo区域 - 支持插槽 -->
+      <slot name="logo">
+        <div
+          v-if="showLogo"
+          class="flex items-center gap-2 font-semibold text-base tracking-tight text-foreground"
+        >
+          <div class="bg-primary text-primary-foreground p-1.5 rounded-md">
+            <ImageIcon :size="18" />
+          </div>
+          <span>{{ appName }}</span>
         </div>
-        <span>HEIC Converter</span>
-      </div>
+      </slot>
+
       <!-- 右键菜单区域 -->
       <div class="flex-1 h-full">
         <ContextMenu>
@@ -147,27 +168,37 @@ const onDoubleClick = () => {
             <div class="w-full h-full"></div>
           </ContextMenuTrigger>
           <ContextMenuContent class="w-48">
-            <ContextMenuItem @click="maxWindow"
-              ><Maximize2 class="mr-2 h-4 w-4" /> 最大化/还原</ContextMenuItem
+            <ContextMenuItem v-if="showMaximizeButton" @click="emit('maximize-request')">
+              <Maximize2 class="mr-2 h-4 w-4" /> 最大化/还原
+            </ContextMenuItem>
+            <ContextMenuItem v-if="showMinimizeButton" @click="emit('minimize-request')">
+              <Minus class="mr-2 h-4 w-4" /> 最小化
+            </ContextMenuItem>
+            <ContextMenuItem @click="emit('toggle-top-request')">
+              <Pin class="mr-2 h-4 w-4" /> 置顶窗口
+            </ContextMenuItem>
+            <ContextMenuSeparator v-if="showCloseButton" />
+            <ContextMenuItem
+              v-if="showCloseButton"
+              class="text-destructive"
+              @click="emit('close-request')"
             >
-            <ContextMenuItem @click="minWindow"
-              ><Minus class="mr-2 h-4 w-4" /> 最小化</ContextMenuItem
-            >
-            <ContextMenuItem @click="toggleTop"
-              ><Pin class="mr-2 h-4 w-4" /> 置顶窗口</ContextMenuItem
-            >
-            <ContextMenuSeparator />
-            <ContextMenuItem class="text-destructive" @click="handleCloseRequested"
-              ><X class="mr-2 h-4 w-4" /> 关闭</ContextMenuItem
-            >
+              <X class="mr-2 h-4 w-4" /> 关闭
+            </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>
       </div>
     </div>
+
     <!-- 标题栏控制按钮区域 -->
     <div class="flex items-center gap-1 pointer-events-auto">
+      <!-- 右侧自定义内容插槽 -->
+      <slot name="right" />
+
       <div class="w-[1px] h-6 bg-slate-200 dark:bg-slate-700 mr-2"></div>
-      <Tooltip>
+
+      <!-- 主题切换按钮 -->
+      <Tooltip v-if="showThemeButton">
         <TooltipTrigger>
           <Button
             variant="ghost"
@@ -184,13 +215,18 @@ const onDoubleClick = () => {
           <p>切换主题</p>
         </TooltipContent>
       </Tooltip>
-      <Tooltip>
+
+      <!-- 额外按钮插槽 -->
+      <slot name="extra-buttons" />
+
+      <!-- 托盘按钮 -->
+      <Tooltip v-if="showTrayButton">
         <TooltipTrigger>
           <Button
             variant="ghost"
             size="icon"
             class="h-8 w-8 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-            @click="minimizeToTray"
+            @click="emit('minimize-to-tray')"
           >
             <MonitorDown :size="16" />
           </Button>
@@ -199,32 +235,39 @@ const onDoubleClick = () => {
           <p>最小化到托盘</p>
         </TooltipContent>
       </Tooltip>
+
+      <!-- 最小化按钮 -->
       <Button
+        v-if="showMinimizeButton"
         variant="ghost"
         size="icon"
         class="h-8 w-8 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-        @click="minWindow"
-        ><Minus :size="16"
-      /></Button>
+        @click="emit('minimize-request')"
+      >
+        <Minus :size="16" />
+      </Button>
+
+      <!-- 最大化按钮 -->
       <Button
+        v-if="showMaximizeButton"
         variant="ghost"
         size="icon"
         class="h-8 w-8 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-        @click="maxWindow"
-        ><Maximize2 :size="16"
-      /></Button>
+        @click="emit('maximize-request')"
+      >
+        <Maximize2 :size="16" />
+      </Button>
+
+      <!-- 关闭按钮 -->
       <Button
+        v-if="showCloseButton"
         variant="ghost"
         size="icon"
         class="h-8 w-8 text-slate-500 hover:bg-red-500 hover:text-white transition-colors"
-        @click="handleCloseRequested"
-        ><X :size="16"
-      /></Button>
+        @click="emit('close-request')"
+      >
+        <X :size="16" />
+      </Button>
     </div>
-    <CloseConfirmDialog
-      v-model:open="showCloseDialog"
-      :is-closing="isClosing"
-      @confirm="handleCloseConfirm"
-    />
   </header>
 </template>
