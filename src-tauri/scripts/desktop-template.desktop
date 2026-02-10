@@ -1,0 +1,15 @@
+[Desktop Entry]
+Categories=Graphics;
+Name=HEIC Converter
+Name[zh_CN]=HEIC 图片格式转换器
+Keywords=heic;image;converter
+Keywords[zh_CN]=heic;图片;格式转换器
+Comment=Convert HEIC images to other formats
+Comment[zh_CN]=一款基于 Tauri 2 和 Vue 3 构建的轻量级跨平台 HEIC 图片转换工具。它可以将 HEIC/HEIF 格式的高清图片快速转换为通用的 JPG 或 PNG 格式。
+Exec={{exe}}
+Icon={{name}}
+Type=Application
+Terminal=false
+StartupNotify=true
+StartupWMClass={{name}}
+MimeType=image/heic;image/heif;
