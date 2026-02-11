@@ -164,6 +164,5 @@ onUnmounted(() => {
     v-model:open="showPendingCloseDialog"
     :is-closing="isClosing"
     @confirm="handlePendingCloseConfirm"
-    @cancel="() => (showPendingCloseDialog.value = false)"
   />
 </template>
