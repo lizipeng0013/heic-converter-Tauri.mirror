@@ -15,6 +15,7 @@
     {
       "identifier": "fs:allow-write-file",
       "allow": [{ "path": "$HOME/**" }, { "path": "/media/$USER/**" }, { "path": "/mnt/**" }]
-    }
+    },
+    "notification:default"
   ]
 }

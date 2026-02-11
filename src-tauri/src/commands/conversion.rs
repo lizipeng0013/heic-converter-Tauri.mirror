@@ -1,6 +1,7 @@
 use crate::services::conversion::batch_convert;
+use notify_rust::Notification;
 use std::sync::atomic::{AtomicBool, Ordering};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_log::log::{debug, info};
 use tracing::instrument;
 
@@ -80,6 +81,20 @@ pub async fn convert_images(
         } else {
             info!("转换任务正常完成，发送批次完成事件");
             let _ = app_clone.emit("conversion-batch-finished", serde_json::json!({}));
+
+            // 正常完成时，检查窗口状态并发送系统通知（仅当窗口最小化或隐藏时）
+            if let Some(window) = app_clone.get_webview_window("main") {
+                let is_minimized = window.is_minimized().unwrap_or(false);
+                let is_visible = window.is_visible().unwrap_or(true);
+
+                if is_minimized || !is_visible {
+                    debug!("窗口最小化或隐藏，发送系统通知");
+                    let _ = Notification::new()
+                        .summary("转换完成")
+                        .body("图片转换已完成")
+                        .show();
+                }
+            }
         }
     });
 
