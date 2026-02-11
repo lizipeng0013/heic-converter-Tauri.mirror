@@ -41,7 +41,7 @@ const handleCancel = () => {
 
 <template>
   <Dialog :open="open" @update:open="(value) => emit('update:open', value)">
-    <DialogContent class="sm:max-w-[425px]">
+    <DialogContent class="sm:max-w-[400px]">
       <DialogHeader>
         <DialogTitle>请选择您的操作</DialogTitle>
         <DialogDescription> 转换正在进行中，您希望如何处理？ </DialogDescription>
