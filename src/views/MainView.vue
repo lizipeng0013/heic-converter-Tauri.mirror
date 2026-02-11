@@ -134,9 +134,9 @@ onUnmounted(() => {
   <TooltipProvider>
     <div class="h-screen w-screen flex flex-col overflow-hidden bg-muted text-foreground relative">
       <TitleBar
-        app-name="HEIC Converter"
+        app-name="HEIC 图片格式转换器"
         :show-tray-button="true"
-        height="standard"
+        height="medium"
         @close-request="handleCloseRequest"
         @minimize-request="handleMinimizeRequest"
         @maximize-request="handleMaximizeRequest"

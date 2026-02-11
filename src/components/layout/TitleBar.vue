@@ -1,16 +1,8 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import {
-  Image as ImageIcon,
-  Sun,
-  Moon,
-  Minus,
-  X,
-  Maximize2,
-  Pin,
-  MonitorDown,
-} from "lucide-vue-next";
+import { Sun, Moon, Minus, X, Maximize2, Pin, MonitorDown } from "lucide-vue-next";
+import AppIcon from "@/assets/title.svg?url";
 import { Button } from "@/components/ui/button";
 import {
   ContextMenu,
@@ -44,8 +36,8 @@ interface TitleBarProps {
   showCloseButton?: boolean;
   /** 是否启用窗口拖拽 */
   enableDrag?: boolean;
-  /** 标题栏高度：'compact' | 'standard' | 'tall' */
-  height?: "compact" | "standard" | "tall";
+  /** 标题栏高度：'tiny' | 'small' | 'medium' | 'large' */
+  height?: "tiny" | "small" | "medium" | "large";
 }
 
 const props = withDefaults(defineProps<TitleBarProps>(), {
@@ -57,17 +49,40 @@ const props = withDefaults(defineProps<TitleBarProps>(), {
   showMaximizeButton: true,
   showCloseButton: true,
   enableDrag: true,
-  height: "standard",
+  height: "medium",
 });
 
 // 标题栏高度映射
 const heightClass = computed(() => {
   const heightMap = {
-    compact: "h-8", // 32px
-    standard: "h-10", // 40px
-    tall: "h-12", // 48px
+    tiny: "h-6", // 24px
+    small: "h-8", // 32px
+    medium: "h-10", // 40px
+    large: "h-12", // 48px
   };
   return heightMap[props.height];
+});
+
+// 图标尺寸映射 - 根据标题栏高度自适应
+const iconSizeClass = computed(() => {
+  const sizeMap = {
+    tiny: "w-3 h-3", // 12px
+    small: "w-4 h-4", // 16px
+    medium: "w-5 h-5", // 20px
+    large: "w-6 h-6", // 24px
+  };
+  return sizeMap[props.height];
+});
+
+// 文字大小映射 - 根据标题栏高度自适应
+const textSizeClass = computed(() => {
+  const sizeMap = {
+    tiny: "text-xs", // 12px
+    small: "text-sm", // 14px
+    medium: "text-base", // 16px
+    large: "text-base", // 16px
+  };
+  return sizeMap[props.height];
 });
 
 // ============================================================
@@ -168,11 +183,12 @@ const onDoubleClick = () => {
       <slot name="logo">
         <div
           v-if="showLogo"
-          class="flex items-center gap-2 font-semibold text-base tracking-tight text-foreground"
+          :class="[
+            'flex items-center gap-2 font-medium tracking-tight text-foreground',
+            textSizeClass,
+          ]"
         >
-          <div class="bg-primary text-primary-foreground p-1.5 rounded-md">
-            <ImageIcon :size="18" />
-          </div>
+          <img :src="AppIcon" :class="iconSizeClass" alt="App Icon" />
           <span>{{ appName }}</span>
         </div>
       </slot>
