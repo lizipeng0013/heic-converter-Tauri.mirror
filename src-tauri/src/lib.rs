@@ -10,7 +10,7 @@ use mimalloc::MiMalloc;
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
-use commands::conversion::{convert_images, stop_conversion};
+use commands::conversion::{convert_images, force_exit, stop_conversion};
 use commands::tray::show_tray;
 use commands::window::{
     close_window, drag_window, hide_window, minimize_window, show_window, toggle_always_on_top,
@@ -33,7 +33,8 @@ pub fn run() {
             show_tray,
             // 业务逻辑类
             convert_images,
-            stop_conversion
+            stop_conversion,
+            force_exit
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

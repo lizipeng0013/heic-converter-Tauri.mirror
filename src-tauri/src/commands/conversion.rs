@@ -113,3 +113,9 @@ pub fn stop_conversion() -> Result<(), String> {
 pub fn should_stop() -> bool {
     SHOULD_STOP.load(Ordering::SeqCst)
 }
+
+/// 强制退出应用
+#[tauri::command]
+pub fn force_exit(app: AppHandle) {
+    app.exit(0);
+}

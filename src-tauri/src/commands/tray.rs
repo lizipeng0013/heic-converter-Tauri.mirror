@@ -1,7 +1,7 @@
 use tauri::{
     command,
     tray::{MouseButton, MouseButtonState, TrayIconEvent},
-    AppHandle, Manager,
+    AppHandle, Emitter, Manager,
 };
 use tauri_plugin_log::log::error;
 
@@ -45,7 +45,7 @@ pub fn show_tray(app_handle: AppHandle) -> Result<(), String> {
         .icon(app_handle.default_window_icon().unwrap().clone())
         .show_menu_on_left_click(false)
         .menu(&menu)
-        .on_menu_event(|app_handle, event| {
+        .on_menu_event(move |app_handle, event| {
             match event.id.as_ref() {
                 "show" => {
                     if let Some(window) = app_handle.get_webview_window("main") {
@@ -55,7 +55,8 @@ pub fn show_tray(app_handle: AppHandle) -> Result<(), String> {
                     }
                 }
                 "quit" => {
-                    app_handle.exit(0);
+                    // 发送退出请求事件给前端，让前端检查转换状态并决定是否确认
+                    let _ = app_handle.emit("tray-quit-request", serde_json::json!({}));
                 }
                 _ => {}
             }

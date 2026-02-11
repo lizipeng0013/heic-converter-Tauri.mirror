@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { ask } from "@tauri-apps/plugin-dialog";
 import { debug, error } from "@tauri-apps/plugin-log";
 import TitleBar from "@/components/layout/TitleBar.vue";
 import FileListArea from "@/views/file/FileListArea.vue";
@@ -67,6 +69,23 @@ const handlePendingCloseConfirm = async () => {
   }
 };
 
+// 处理托盘退出请求
+const handleTrayQuitRequest = async () => {
+  if (conversionStore.isConverting || conversionStore.isPreparing) {
+    // 转换进行中，使用原生对话框确认
+    const confirmed = await ask("转换正在进行中，确认要停止转换并退出吗？", {
+      title: "确认退出",
+      kind: "warning",
+    });
+    if (confirmed) {
+      void invoke("force_exit");
+    }
+  } else {
+    // 直接退出
+    void invoke("force_exit");
+  }
+};
+
 // 处理最小化请求
 const handleMinimizeRequest = async () => {
   await invoke("minimize_window");
@@ -94,6 +113,21 @@ const handleMinimizeToTray = async () => {
     void error(`最小化到托盘失败: ${e}`);
   }
 };
+
+// 监听托盘退出请求事件
+let unlistenTrayQuitRequest: (() => void) | null = null;
+
+onMounted(async () => {
+  unlistenTrayQuitRequest = await listen("tray-quit-request", () => {
+    handleTrayQuitRequest();
+  });
+});
+
+onUnmounted(() => {
+  if (unlistenTrayQuitRequest) {
+    unlistenTrayQuitRequest();
+  }
+});
 </script>
 
 <template>
