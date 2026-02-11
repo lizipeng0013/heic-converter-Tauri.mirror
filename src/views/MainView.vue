@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 import { debug, error } from "@tauri-apps/plugin-log";
 import TitleBar from "@/components/layout/TitleBar.vue";
@@ -8,25 +8,35 @@ import SettingsPanel from "@/views/settings/SettingsPanel.vue";
 import StatusBar from "@/views/status/StatusBar.vue";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useConversionStore } from "@/stores/conversionStore";
-import CloseConfirmDialog from "@/components/dialog/CloseConfirmDialog.vue";
+import ConvertingCloseConfirmDialog from "@/components/dialog/ConvertingCloseConfirmDialog.vue";
+import PendingFilesCloseConfirmDialog from "@/components/dialog/PendingFilesCloseConfirmDialog.vue";
 import { CloseAction } from "@/types";
 
 const conversionStore = useConversionStore();
 
 // 关闭确认对话框状态
 const showCloseDialog = ref(false);
+const showPendingCloseDialog = ref(false);
 const isClosing = ref(false);
+
+// 是否有待转换文件
+const hasPendingFiles = computed(() => conversionStore.files.length > 0);
 
 // 处理关闭请求
 const handleCloseRequest = async () => {
   if (conversionStore.isConverting || conversionStore.isPreparing) {
+    // 转换进行中，显示转换中确认对话框
     showCloseDialog.value = true;
+  } else if (hasPendingFiles.value) {
+    // 有待转换文件，显示待转换确认对话框
+    showPendingCloseDialog.value = true;
   } else {
+    // 直接关闭
     await invoke("close_window");
   }
 };
 
-// 处理关闭确认
+// 处理关闭确认（转换中）
 const handleCloseConfirm = async (action: CloseAction) => {
   isClosing.value = true;
 
@@ -37,6 +47,19 @@ const handleCloseConfirm = async (action: CloseAction) => {
     } else if (action === "exit") {
       await invoke("close_window");
     }
+  } catch (e) {
+    void error(`处理关闭请求失败: ${e}`);
+  } finally {
+    isClosing.value = false;
+  }
+};
+
+// 处理待转换文件关闭确认
+const handlePendingCloseConfirm = async () => {
+  isClosing.value = true;
+
+  try {
+    await invoke("close_window");
   } catch (e) {
     void error(`处理关闭请求失败: ${e}`);
   } finally {
@@ -95,10 +118,18 @@ const handleMinimizeToTray = async () => {
     </div>
   </TooltipProvider>
 
-  <!-- 关闭确认对话框 -->
-  <CloseConfirmDialog
+  <!-- 关闭确认对话框（转换中） -->
+  <ConvertingCloseConfirmDialog
     v-model:open="showCloseDialog"
     :is-closing="isClosing"
     @confirm="handleCloseConfirm"
+  />
+
+  <!-- 关闭确认对话框（有待转换文件） -->
+  <PendingFilesCloseConfirmDialog
+    v-model:open="showPendingCloseDialog"
+    :is-closing="isClosing"
+    @confirm="handlePendingCloseConfirm"
+    @cancel="() => (showPendingCloseDialog.value = false)"
   />
 </template>
