@@ -1,12 +1,27 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- 
+  HEIC Converter 应用图标
+  ============================================
+  尺寸: 256x256 像素
+  设计风格: 现代简约，圆角卡片式设计
+  
+  图标元素:
+  1. 渐变背景 - 紫色系 (#7272CC → #6363C6 → #7272CC)
+  2. 山形剪影 - 白色半透明，带投影效果
+  3. 太阳 - 浅紫色圆圈，带投影效果
+  4. 螺旋装饰 - 右侧装饰性元素
+  5. 文字标签 - "HEIC" 品牌文字
+  
+  创建工具: Inkscape 1.4.2
+-->
 <svg
-   width="224.39999"
-   height="224.39999"
-   viewBox="0 0 224.39999 224.39999"
+   width="256"
+   height="256"
+   viewBox="0 0 256 256"
    fill="none"
    version="1.1"
    id="svg4"
-   sodipodi:docname="title5.svg"
+   sodipodi:docname="title4.svg"
    inkscape:version="1.4.2 (ebf0e94, 2025-05-08)"
    inkscape:export-filename="title4.png"
    inkscape:export-xdpi="96"
@@ -16,6 +31,8 @@
    xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
+  
+  <!-- Inkscape 视图设置（编辑器元数据，不影响渲染） -->
   <sodipodi:namedview
      id="namedview4"
      pagecolor="#ffffff"
@@ -26,44 +43,83 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
-     inkscape:zoom="2.027126"
-     inkscape:cx="123.08066"
-     inkscape:cy="167.9718"
-     inkscape:window-width="1920"
-     inkscape:window-height="1000"
-     inkscape:window-x="0"
-     inkscape:window-y="0"
-     inkscape:window-maximized="1"
+     inkscape:zoom="1.4346702"
+     inkscape:cx="101.41704"
+     inkscape:cy="109.78133"
+     inkscape:window-width="1280"
+     inkscape:window-height="656"
+     inkscape:window-x="668"
+     inkscape:window-y="57"
+     inkscape:window-maximized="0"
      inkscape:current-layer="svg4" />
-  <!-- 背景 -->
+
+  <!-- ========== 主要视觉元素 ========== -->
+  
+  <!-- 圆角矩形背景：紫色渐变，带投影 -->
   <rect
-     x="7.2000003"
-     y="7.2000003"
+     x="26"
+     y="26"
      width="204"
      height="204"
      rx="39.84375"
      fill="url(#bgGradient)"
      id="rect1"
      style="fill:url(#bgGradient);stroke-width:0.398437;filter:url(#filter31)" />
-  <!-- 山形 -->
+
+  <!-- 山形：白色半透明剪影，带投影 -->
   <path
-     d="m 39.075,134.6375 q 35.85937,-51.79688 71.71875,-31.875 31.875,-35.85938 68.53125,31.875 z"
+     d="m 57.875,153.4375 q 35.85937,-51.79688 71.71875,-31.875 31.875,-35.85938 68.53125,31.875 z"
      fill="#ffffff"
      opacity="0.9"
      id="path1"
      style="filter:url(#filter23)" />
-  <!-- 太阳 -->
+
+  <!-- 太阳：浅紫色圆圈，带投影 -->
   <circle
-     cx="70.215622"
-     cy="69.80938"
+     cx="89.015625"
+     cy="88.609383"
      fill="#FFC131"
      id="circle1"
      style="opacity:0.9;fill:#f4effe;fill-opacity:1;filter:url(#filter25)"
      r="13.945312" />
+
+  <!-- ========== 装饰性元素 ========== -->
   
-  <!-- 渐变定义 -->
+  <!-- 螺旋曲线装饰：右上角装饰元素 -->
+  <path
+     sodipodi:type="spiral"
+     style="fill:none;fill-rule:evenodd;stroke:url(#linearGradient5);stroke-width:11.3386;stroke-linecap:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker-end:url(#RoundedArrow);paint-order:normal;filter:url(#filter27)"
+     id="path4"
+     sodipodi:cx="375.86511"
+     sodipodi:cy="193.24513"
+     sodipodi:expansion="1"
+     sodipodi:revolution="2.9614573"
+     sodipodi:radius="43.126423"
+     sodipodi:argument="-20.079372"
+     sodipodi:t0="0.88844764"
+     d="m 340.6657,208.38066 c -9.91697,-19.69286 -0.84844,-44.00002 18.62575,-53.67949 6.43138,-3.19666 13.65604,-4.69591 20.82799,-4.37211"
+     transform="matrix(0.3984375,0,0,0.3984375,35.728909,1.975607)" />
+
+  <!-- 品牌文字：HEIC -->
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:58.5755px;font-family:'思源宋体';-inkscape-font-specification:'思源宋体, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;white-space:pre;opacity:0.9;fill:#f4f0fe;fill-opacity:1;stroke:#6d28d9;stroke-width:0;stroke-linecap:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:normal;filter:url(#filter29)"
+     x="50.130127"
+     y="215.50583"
+     id="text19"
+     transform="scale(1.0753902,0.92989501)"><tspan
+       id="tspan19"
+       x="50.130127"
+       y="215.50583"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:58.5755px;font-family:'霞鹜文楷';-inkscape-font-specification:'霞鹜文楷 Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#ffffff;fill-opacity:1;stroke:#6d28d9;stroke-width:0;stroke-dasharray:none;stroke-opacity:1">HEIC</tspan></text>
+
+  <!-- ========== 资源定义：渐变、滤镜、标记 ========== -->
   <defs
      id="defs4">
+    
+    <!-- 渐变定义 -->
+    
+    <!-- 基础线性渐变：淡紫色到透明，用于螺旋装饰 -->
     <linearGradient
        id="linearGradient1"
        inkscape:collect="always">
@@ -76,6 +132,45 @@
          offset="1"
          id="stop5" />
     </linearGradient>
+
+    <!-- 背景渐变：紫色系三段渐变，营造立体感 -->
+    <!-- 颜色：#7272CC → #6363C6 → #7272CC -->
+    <linearGradient
+       id="bgGradient"
+       x1="0"
+       y1="0"
+       x2="512"
+       y2="512"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(0.3984375,0,0,0.3984375,26,26)">
+      <stop
+         offset="0%"
+         stop-color="#7272CC"
+         id="stop2" />
+      <stop
+         offset="50%"
+         stop-color="#6363C6"
+         id="stop3" />
+      <stop
+         offset="100%"
+         stop-color="#7272CC"
+         id="stop4" />
+    </linearGradient>
+
+    <!-- 螺旋装饰渐变：引用基础渐变 linearGradient1 -->
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient1"
+       id="linearGradient5"
+       x1="352.65219"
+       y1="134.57733"
+       x2="416.14786"
+       y2="238.81886"
+       gradientUnits="userSpaceOnUse" />
+
+    <!-- 标记定义 -->
+    
+    <!-- 圆角箭头标记：用于螺旋曲线末端 -->
     <marker
        style="overflow:visible"
        id="RoundedArrow"
@@ -95,38 +190,13 @@
          style="fill:context-stroke;fill-rule:evenodd;stroke:none"
          id="path8" />
     </marker>
-    <linearGradient
-       id="bgGradient"
-       x1="0"
-       y1="0"
-       x2="512"
-       y2="512"
-       gradientUnits="userSpaceOnUse"
-       gradientTransform="matrix(0.3984375,0,0,0.3984375,7.2000003,7.2000003)">
-      <stop
-         offset="0%"
-         stop-color="#7272CC"
-         id="stop2" />
-      <stop
-         offset="50%"
-         stop-color="#6363C6"
-         id="stop3" />
-      <stop
-         offset="100%"
-         stop-color="#7272CC"
-         id="stop4" />
-    </linearGradient>
-    <linearGradient
-       inkscape:collect="always"
-       xlink:href="#linearGradient1"
-       id="linearGradient5"
-       x1="352.65219"
-       y1="134.57733"
-       x2="416.14786"
-       y2="238.81886"
-       gradientUnits="userSpaceOnUse" />
+
+    <!-- 滤镜定义：统一投影效果 -->
+    <!-- 所有滤镜都使用相同的参数：标准差 3px，偏移 (6, 6)，黑色半透明 -->
+
+    <!-- 滤镜 #23：用于山形元素 -->
     <filter
-       style="color-interpolation-filters:sRGB"
+       style="color-interpolation-filters:sRGB;"
        inkscape:label="Drop Shadow"
        id="filter23"
        x="-0.059858834"
@@ -163,8 +233,10 @@
          in2="comp1"
          id="feComposite23" />
     </filter>
+
+    <!-- 滤镜 #25：用于太阳元素 -->
     <filter
-       style="color-interpolation-filters:sRGB"
+       style="color-interpolation-filters:sRGB;"
        inkscape:label="Drop Shadow"
        id="filter25"
        x="-0.30100833"
@@ -201,6 +273,8 @@
          in2="comp1"
          id="feComposite25" />
     </filter>
+
+    <!-- 滤镜 #27：用于螺旋装饰 -->
     <filter
        style="color-interpolation-filters:sRGB"
        inkscape:label="Drop Shadow"
@@ -239,8 +313,10 @@
          in2="comp1"
          id="feComposite27" />
     </filter>
+
+    <!-- 滤镜 #29：用于 HEIC 文字 -->
     <filter
-       style="color-interpolation-filters:sRGB"
+       style="color-interpolation-filters:sRGB;"
        inkscape:label="Drop Shadow"
        id="filter29"
        x="-0.054340689"
@@ -277,8 +353,10 @@
          in2="comp1"
          id="feComposite29" />
     </filter>
+
+    <!-- 滤镜 #31：用于背景圆角矩形 -->
     <filter
-       style="color-interpolation-filters:sRGB"
+       style="color-interpolation-filters:sRGB;"
        inkscape:label="Drop Shadow"
        id="filter31"
        x="-0.035294118"
@@ -315,6 +393,7 @@
          in2="comp1"
          id="feComposite31" />
     </filter>
+
   </defs>
   <path
      sodipodi:type="spiral"
@@ -328,14 +407,14 @@
      sodipodi:argument="-20.079372"
      sodipodi:t0="0.88844764"
      d="m 340.6657,208.38066 c -9.91697,-19.69286 -0.84844,-44.00002 18.62575,-53.67949 6.43138,-3.19666 13.65604,-4.69591 20.82799,-4.37211"
-     transform="matrix(0.3984375,0,0,0.3984375,16.928909,-16.824393)" />
+     transform="matrix(0.3984375,0,0,0.3984375,35.728909,1.975607)" />
   <text
      xml:space="preserve"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:58.5755px;font-family:'思源宋体';-inkscape-font-specification:'思源宋体, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;writing-mode:lr-tb;direction:ltr;text-anchor:start;white-space:pre;opacity:0.9;fill:#f4f0fe;fill-opacity:1;stroke:#6d28d9;stroke-width:0;stroke-linecap:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;paint-order:normal;filter:url(#filter29)"
      x="50.130127"
      y="215.50583"
      id="text19"
-     transform="matrix(1.0753902,0,0,0.92989501,-18.8,-18.8)"><tspan
+     transform="scale(1.0753902,0.92989501)"><tspan
        id="tspan19"
        x="50.130127"
        y="215.50583"
