@@ -66,10 +66,10 @@ const heightClass = computed(() => {
 // 图标尺寸映射 - 根据标题栏高度自适应
 const iconSizeClass = computed(() => {
   const sizeMap = {
-    tiny: "w-3 h-3", // 12px
-    small: "w-4 h-4", // 16px
-    medium: "w-5 h-5", // 20px
-    large: "w-6 h-6", // 24px
+    tiny: "w-5 h-5", // 20px
+    small: "w-6 h-6", // 24px
+    medium: "w-7 h-7", // 28px
+    large: "w-8 h-8", // 32px
   };
   return sizeMap[props.height];
 });
