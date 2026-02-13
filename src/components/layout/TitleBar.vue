@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Sun, Moon, Minus, X, Maximize2, Pin, MonitorDown } from "lucide-vue-next";
 import AppIcon from "@/assets/64x64.png?url";
 import { Button } from "@/components/ui/button";
@@ -90,15 +90,9 @@ const textSizeClass = computed(() => {
 // ============================================================
 
 interface TitleBarEmits {
-  /** 关闭窗口请求 */
+  /** 关闭窗口请求 - 需要业务逻辑处理（确认对话框等） */
   "close-request": [];
-  /** 最小化窗口请求 */
-  "minimize-request": [];
-  /** 最大化窗口请求 */
-  "maximize-request": [];
-  /** 置顶窗口请求 */
-  "toggle-top-request": [];
-  /** 最小化到托盘请求 */
+  /** 最小化到托盘请求 - 需要业务逻辑处理（托盘功能） */
   "minimize-to-tray": [];
 }
 
@@ -118,8 +112,54 @@ const isDark = useDark({
 });
 const toggleDark = useToggle(isDark);
 
-// 窗口拖拽函数
-const dragWindow = () => invoke("drag_window");
+// 获取当前窗口实例
+const appWindow = getCurrentWindow();
+
+// 本地状态跟踪窗口置顶状态（因为 isAlwaysOnTop() 在某些情况下返回不可靠）
+const isAlwaysOnTopLocal = ref(false);
+
+// 窗口拖拽函数 - 使用 Tauri 2 前端 API
+const dragWindow = () => appWindow.startDragging();
+
+// 窗口操作函数 - 直接调用 Tauri 2 前端 API
+const handleMinimize = async () => {
+  console.log("[TitleBar] minimize called");
+  try {
+    await appWindow.minimize();
+    console.log("[TitleBar] minimize success");
+  } catch (e) {
+    console.error("[TitleBar] minimize error:", e);
+  }
+};
+
+const handleMaximize = async () => {
+  console.log("[TitleBar] toggleMaximize called");
+  try {
+    await appWindow.toggleMaximize();
+    console.log("[TitleBar] toggleMaximize success");
+  } catch (e) {
+    console.error("[TitleBar] toggleMaximize error:", e);
+  }
+};
+
+const handleToggleTop = async () => {
+  console.log("[TitleBar] toggleAlwaysOnTop called");
+  try {
+    // 使用本地状态来切换，而不是依赖 isAlwaysOnTop() 的返回值
+    const newState = !isAlwaysOnTopLocal.value;
+    console.log(
+      "[TitleBar] local state before:",
+      isAlwaysOnTopLocal.value,
+      ", setting to:",
+      newState
+    );
+    await appWindow.setAlwaysOnTop(newState);
+    isAlwaysOnTopLocal.value = newState;
+    console.log("[TitleBar] setAlwaysOnTop to:", newState, "success");
+  } catch (e) {
+    console.error("[TitleBar] toggleAlwaysOnTop error:", e);
+  }
+};
 
 // 窗口拖拽逻辑
 const mouseDownPosition = ref<{ x: number; y: number } | null>(null);
@@ -156,10 +196,10 @@ const handleMouseLeave = () => {
   isTitleDragging.value = false;
 };
 
-const onDoubleClick = () => {
+const onDoubleClick = async () => {
   if (!props.enableDrag) return;
   if (isTitleDragging.value) return;
-  emit("maximize-request");
+  await handleMaximize();
 };
 </script>
 
@@ -200,13 +240,13 @@ const onDoubleClick = () => {
             <div class="w-full h-full"></div>
           </ContextMenuTrigger>
           <ContextMenuContent class="w-48">
-            <ContextMenuItem v-if="showMaximizeButton" @click="emit('maximize-request')">
+            <ContextMenuItem v-if="showMaximizeButton" @click="handleMaximize()">
               <Maximize2 class="mr-2 h-4 w-4" /> 最大化/还原
             </ContextMenuItem>
-            <ContextMenuItem v-if="showMinimizeButton" @click="emit('minimize-request')">
+            <ContextMenuItem v-if="showMinimizeButton" @click="handleMinimize()">
               <Minus class="mr-2 h-4 w-4" /> 最小化
             </ContextMenuItem>
-            <ContextMenuItem @click="emit('toggle-top-request')">
+            <ContextMenuItem @click="handleToggleTop()">
               <Pin class="mr-2 h-4 w-4" /> 置顶窗口
             </ContextMenuItem>
             <ContextMenuSeparator v-if="showCloseButton" />
@@ -274,7 +314,7 @@ const onDoubleClick = () => {
         variant="ghost"
         size="icon"
         class="h-8 w-8 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-        @click="emit('minimize-request')"
+        @click="handleMinimize()"
       >
         <Minus :size="16" />
       </Button>
@@ -285,12 +325,12 @@ const onDoubleClick = () => {
         variant="ghost"
         size="icon"
         class="h-8 w-8 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-        @click="emit('maximize-request')"
+        @click="handleMaximize()"
       >
         <Maximize2 :size="16" />
       </Button>
 
-      <!-- 关闭按钮 -->
+      <!-- 关闭按钮 - 保留 emit，需要业务逻辑处理 -->
       <Button
         v-if="showCloseButton"
         variant="ghost"

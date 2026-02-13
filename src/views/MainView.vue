@@ -13,6 +13,7 @@ import { useConversionStore } from "@/stores/conversionStore";
 import ConvertingCloseConfirmDialog from "@/components/dialog/ConvertingCloseConfirmDialog.vue";
 import PendingFilesCloseConfirmDialog from "@/components/dialog/PendingFilesCloseConfirmDialog.vue";
 import { CloseAction } from "@/types";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 const conversionStore = useConversionStore();
 
@@ -24,6 +25,9 @@ const isClosing = ref(false);
 // 是否有待转换文件
 const hasPendingFiles = computed(() => conversionStore.files.length > 0);
 
+// 获取当前窗口实例
+const appWindow = getCurrentWindow();
+
 // 处理关闭请求
 const handleCloseRequest = async () => {
   if (conversionStore.isConverting || conversionStore.isPreparing) {
@@ -33,8 +37,8 @@ const handleCloseRequest = async () => {
     // 有待转换文件，显示待转换确认对话框
     showPendingCloseDialog.value = true;
   } else {
-    // 直接关闭
-    await invoke("close_window");
+    // 直接关闭 - 使用 Tauri 2 前端 API
+    await appWindow.close();
   }
 };
 
@@ -47,7 +51,8 @@ const handleCloseConfirm = async (action: CloseAction) => {
       await invoke("show_tray");
       await invoke("hide_window");
     } else if (action === "exit") {
-      await invoke("close_window");
+      // 使用 Tauri 2 前端 API
+      await appWindow.close();
     }
   } catch (e) {
     void error(`处理关闭请求失败: ${e}`);
@@ -61,7 +66,8 @@ const handlePendingCloseConfirm = async () => {
   isClosing.value = true;
 
   try {
-    await invoke("close_window");
+    // 使用 Tauri 2 前端 API
+    await appWindow.close();
   } catch (e) {
     void error(`处理关闭请求失败: ${e}`);
   } finally {
@@ -84,21 +90,6 @@ const handleTrayQuitRequest = async () => {
     // 直接退出
     void invoke("force_exit");
   }
-};
-
-// 处理最小化请求
-const handleMinimizeRequest = async () => {
-  await invoke("minimize_window");
-};
-
-// 处理最大化请求
-const handleMaximizeRequest = async () => {
-  await invoke("toggle_maximize_window");
-};
-
-// 处理置顶请求
-const handleToggleTopRequest = async () => {
-  await invoke("toggle_always_on_top");
 };
 
 // 处理最小化到托盘
@@ -138,9 +129,6 @@ onUnmounted(() => {
         :show-tray-button="true"
         height="medium"
         @close-request="handleCloseRequest"
-        @minimize-request="handleMinimizeRequest"
-        @maximize-request="handleMaximizeRequest"
-        @toggle-top-request="handleToggleTopRequest"
         @minimize-to-tray="handleMinimizeToTray"
       />
       <main class="flex-1 flex overflow-hidden pointer-events-auto p-2 gap-2">
