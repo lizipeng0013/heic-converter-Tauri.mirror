@@ -33,4 +33,4 @@ export interface ConverterSettings {
 }
 
 // --- 关闭窗口操作类型 ---
-export type CloseAction = "minimize" | "exit" | "cancel";
+export type CloseAction = "hideToTray" | "exit" | "cancel";

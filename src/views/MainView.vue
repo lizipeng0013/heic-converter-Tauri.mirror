@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { ref, computed, onUnmounted } from "vue";
 import { ask } from "@tauri-apps/plugin-dialog";
 import { debug, error } from "@tauri-apps/plugin-log";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { TrayIcon } from "@tauri-apps/api/tray";
+import { Menu, MenuItem } from "@tauri-apps/api/menu";
 import TitleBar from "@/components/layout/TitleBar.vue";
 import FileListArea from "@/views/file/FileListArea.vue";
 import SettingsPanel from "@/views/settings/SettingsPanel.vue";
@@ -13,7 +14,7 @@ import { useConversionStore } from "@/stores/conversionStore";
 import ConvertingCloseConfirmDialog from "@/components/dialog/ConvertingCloseConfirmDialog.vue";
 import PendingFilesCloseConfirmDialog from "@/components/dialog/PendingFilesCloseConfirmDialog.vue";
 import { CloseAction } from "@/types";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { defaultWindowIcon } from "@tauri-apps/api/app";
 
 const conversionStore = useConversionStore();
 
@@ -27,6 +28,88 @@ const hasPendingFiles = computed(() => conversionStore.files.length > 0);
 
 // 获取当前窗口实例
 const appWindow = getCurrentWindow();
+
+// 托盘实例
+let trayInstance: TrayIcon | null = null;
+
+// 创建托盘
+const createTray = async () => {
+  try {
+    // 检查托盘是否已存在
+    if (trayInstance != null) {
+      return;
+    }
+
+    // 创建托盘菜单
+    const menu = await Menu.new();
+
+    // 显示窗口菜单项
+    const showItem = await MenuItem.new({
+      id: "show",
+      text: "显示窗口",
+      action: async () => {
+        await appWindow.show();
+        await appWindow.unminimize();
+        await appWindow.setFocus();
+      },
+    });
+
+    // 退出菜单项
+    const quitItem = await MenuItem.new({
+      id: "quit",
+      text: "退出",
+      action: () => {
+        handleTrayQuitRequest();
+      },
+    });
+
+    await menu.append(showItem);
+    await menu.append(quitItem);
+
+    const appIcon = await defaultWindowIcon();
+
+    // 创建托盘图标（使用应用图标）
+    trayInstance = await TrayIcon.new({
+      id: "main-tray",
+      ...(appIcon && { icon: appIcon }),
+      menu: menu,
+      menuOnLeftClick: false,
+      tooltip: "HEIC 图片格式转换器",
+      action: async (event) => {
+        switch (event.type) {
+          case "Click":
+            if (event.button == "Left" && event.buttonState == "Up") {
+              await appWindow.show();
+              await appWindow.unminimize();
+              await appWindow.setFocus();
+            }
+            break;
+        }
+      },
+    });
+
+    void debug("托盘创建成功");
+  } catch (e) {
+    void error(`创建托盘失败: ${e}`);
+  }
+};
+
+// 处理最小化到托盘
+const handleHideToTray = async () => {
+  void debug("点击最小化到托盘按钮");
+  try {
+    // 检查托盘是否已存在（直接查询后端状态）
+    const existingTray = await TrayIcon.getById("main-tray");
+    if (!existingTray) {
+      await createTray();
+    }
+    // 隐藏窗口
+    await appWindow.hide();
+    void debug("窗口隐藏成功");
+  } catch (e) {
+    void error(`最小化到托盘失败: ${e}`);
+  }
+};
 
 // 处理关闭请求
 const handleCloseRequest = async () => {
@@ -47,11 +130,11 @@ const handleCloseConfirm = async (action: CloseAction) => {
   isClosing.value = true;
 
   try {
-    if (action === "minimize") {
-      await invoke("show_tray");
-      await invoke("hide_window");
+    if (action === "hideToTray") {
+      // 最小化到托盘：隐藏窗口
+      await handleHideToTray();
     } else if (action === "exit") {
-      // 使用 Tauri 2 前端 API
+      // 退出应用：关闭主窗口
       await appWindow.close();
     }
   } catch (e) {
@@ -84,40 +167,16 @@ const handleTrayQuitRequest = async () => {
       kind: "warning",
     });
     if (confirmed) {
-      void invoke("force_exit");
+      await appWindow.close();
     }
   } else {
     // 直接退出
-    void invoke("force_exit");
+    await appWindow.close();
   }
 };
-
-// 处理最小化到托盘
-const handleMinimizeToTray = async () => {
-  void debug("点击最小化到托盘按钮");
-  try {
-    await invoke("show_tray");
-    void debug("托盘显示成功");
-    await invoke("hide_window");
-    void debug("窗口隐藏成功");
-  } catch (e) {
-    void error(`最小化到托盘失败: ${e}`);
-  }
-};
-
-// 监听托盘退出请求事件
-let unlistenTrayQuitRequest: (() => void) | null = null;
-
-onMounted(async () => {
-  unlistenTrayQuitRequest = await listen("tray-quit-request", () => {
-    handleTrayQuitRequest();
-  });
-});
 
 onUnmounted(() => {
-  if (unlistenTrayQuitRequest) {
-    unlistenTrayQuitRequest();
-  }
+  // 托盘会在应用关闭时自动清理，无需手动清理
 });
 </script>
 
@@ -129,7 +188,7 @@ onUnmounted(() => {
         :show-tray-button="true"
         height="medium"
         @close-request="handleCloseRequest"
-        @minimize-to-tray="handleMinimizeToTray"
+        @minimize-to-tray="handleHideToTray"
       />
       <main class="flex-1 flex overflow-hidden pointer-events-auto p-2 gap-2">
         <FileListArea />

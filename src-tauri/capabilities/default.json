@@ -17,6 +17,10 @@
     "core:window:allow-unmaximize",
     "core:window:allow-unminimize",
     "core:window:allow-toggle-maximize",
+    "core:window:allow-hide",
+    "core:window:allow-show",
+    "core:window:allow-set-focus",
+    "core:app:allow-default-window-icon",
     "dialog:default",
     "fs:default",
     { "identifier": "fs:allow-stat" },
@@ -25,6 +29,16 @@
       "identifier": "fs:allow-write-file",
       "allow": [{ "path": "$HOME/**" }, { "path": "/media/$USER/**" }, { "path": "/mnt/**" }]
     },
-    "notification:default"
+    "notification:default",
+    "core:tray:default",
+    "core:tray:allow-new",
+    "core:tray:allow-set-icon",
+    "core:tray:allow-set-menu",
+    "core:tray:allow-set-tooltip",
+    "core:tray:allow-set-visible",
+    "core:menu:default",
+    "core:menu:allow-new",
+    "core:menu:allow-append",
+    "core:menu:allow-remove"
   ]
 }

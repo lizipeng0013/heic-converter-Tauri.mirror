@@ -26,7 +26,7 @@ withDefaults(defineProps<Props>(), {
 });
 const emit = defineEmits<Emits>();
 
-const selectedAction = ref<CloseAction>("minimize");
+const selectedAction = ref<CloseAction>("hideToTray");
 
 const handleConfirm = () => {
   emit("confirm", selectedAction.value);
@@ -52,7 +52,7 @@ const handleCancel = () => {
             <input
               v-model="selectedAction"
               type="radio"
-              value="minimize"
+              value="hideToTray"
               :disabled="isClosing"
               class="h-4 w-4 cursor-pointer"
             />
