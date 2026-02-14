@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { ref, shallowRef, computed } from "vue";
 import type { FileItem, ConverterSettings } from "@/types";
-import { debug, warn } from "@tauri-apps/plugin-log";
+import { debug, warn, error } from "@tauri-apps/plugin-log";
 import { invoke } from "@tauri-apps/api/core";
 import { stat } from "@tauri-apps/plugin-fs";
 import { alertSevere } from "@/utils/useError";
@@ -175,11 +175,13 @@ export const useConversionStore = defineStore("conversion", () => {
     }
   };
 
-  const updateFileError = (path: string, error: string) => {
+  const updateFileError = (path: string, errorMessage: string) => {
+    void error(`文件转换失败: ${path}, 错误: ${errorMessage}`);
+
     const fileIndex = files.value.findIndex((f) => f.path === path);
     if (fileIndex !== -1) {
       const file = files.value[fileIndex];
-      const updatedFile = { ...file, error };
+      const updatedFile = { ...file, errorMessage };
 
       // 从待转换列表移除，添加到错误列表
       const newFiles = [...files.value];

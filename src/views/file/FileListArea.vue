@@ -10,7 +10,7 @@ import FileCard from "@/components/FileCard.vue";
 import { listen, TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
 import { info } from "@tauri-apps/plugin-log";
 import { alertSevere } from "@/utils/useError.ts";
-import type { ConversionUpdateEvent } from "@/types";
+import type { ConversionUpdateEvent, ConversionFailedEvent } from "@/types";
 
 const conversionStore = useConversionStore();
 const isFileDragging = ref(false);
@@ -70,6 +70,7 @@ let unlistenConversion: UnlistenFn | null = null;
 let unlistenBatchFinished: UnlistenFn | null = null;
 let unlistenConversionStarted: UnlistenFn | null = null;
 let unlistenConversionStopped: UnlistenFn | null = null;
+let unlistenConversionFailed: UnlistenFn | null = null;
 
 onMounted(async () => {
   // 监听：文件悬停在窗口任意位置
@@ -100,7 +101,7 @@ onMounted(async () => {
       if (payload.status === "done") {
         conversionStore.updateFileSuccess(payload.path, payload.output_path);
       } else {
-        conversionStore.updateFileError(payload.path, payload.error);
+        conversionStore.updateFileError(payload.path, payload.errorMessage);
       }
       return;
     }
@@ -109,7 +110,7 @@ onMounted(async () => {
     if (payload.status === "done") {
       conversionStore.updateFileSuccess(payload.path, payload.output_path);
     } else {
-      conversionStore.updateFileError(payload.path, payload.error);
+      conversionStore.updateFileError(payload.path, payload.errorMessage);
     }
   });
 
@@ -127,6 +128,22 @@ onMounted(async () => {
     void info(`收到停止完成事件`);
     conversionStore.handleStopped();
   });
+
+  unlistenConversionFailed = await listen<ConversionFailedEvent>("conversion-failed", (event) => {
+    const payload = event.payload;
+
+    void info(`收到转换失败事件: ${payload.errorMessage}`);
+
+    alertSevere(payload.errorMessage);
+
+    // 重置转换状态
+
+    conversionStore.isConverting = false;
+
+    conversionStore.isStopping = false;
+
+    conversionStore.isPreparing = false;
+  });
 });
 
 onUnmounted(() => {
@@ -137,6 +154,7 @@ onUnmounted(() => {
   unlistenBatchFinished?.();
   unlistenConversionStarted?.();
   unlistenConversionStopped?.();
+  unlistenConversionFailed?.();
 });
 
 // 新的文件选择函数

@@ -79,7 +79,7 @@ const handleOpenFileDir = async () => {
         </Badge>
 
         <!-- 错误徽章（错误文件） -->
-        <Tooltip v-if="isErrorFile && file.error">
+        <Tooltip v-if="isErrorFile && file.errorMessage">
           <TooltipTrigger as-child>
             <Badge
               variant="destructive"
@@ -89,7 +89,7 @@ const handleOpenFileDir = async () => {
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
-            <p class="max-w-xs break-words">{{ file.error }}</p>
+            <p class="max-w-xs break-words">{{ file.errorMessage }}</p>
           </TooltipContent>
         </Tooltip>
 

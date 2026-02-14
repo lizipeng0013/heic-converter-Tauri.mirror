@@ -13,7 +13,7 @@ export interface FileItem {
   /**
    * 转换错误信息
    */
-  error?: string;
+  errorMessage?: string;
 }
 
 // --- 支持的输出格式类型 ---
@@ -49,5 +49,12 @@ export type ConversionUpdateEvent =
   | {
       path: string;
       status: "error";
-      error: string;
+      errorMessage: string;
     };
+
+/**
+ * 转换失败事件
+ */
+export interface ConversionFailedEvent {
+  errorMessage: string;
+}

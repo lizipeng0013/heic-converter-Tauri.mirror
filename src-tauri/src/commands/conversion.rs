@@ -2,7 +2,7 @@ use crate::services::conversion::batch_convert;
 use notify_rust::Notification;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Emitter, Manager};
-use tauri_plugin_log::log::{debug, info};
+use tauri_plugin_log::log::{debug, error, info};
 use tracing::instrument;
 
 // 全局停止标志
@@ -70,9 +70,21 @@ pub async fn convert_images(
             file_pairs.push((path, target_path));
         }
 
-        let was_stopped = batch_convert(&app_clone, file_pairs, format_clone, quality)
-            .await
-            .expect("批量转换出现严重错误");
+        // 处理批量转换结果
+        let was_stopped = match batch_convert(&app_clone, file_pairs, format_clone, quality).await {
+            Ok(result) => result,
+            Err(e) => {
+                error!("批量转换失败: {}", e);
+                // 发送错误事件到前端
+                let _ = app_clone.emit(
+                    "conversion-failed",
+                    serde_json::json!({
+                        "errorMessage": "转换任务执行失败，请检查日志"
+                    }),
+                );
+                return; // 退出任务，不继续处理
+            },
+        };
 
         // 根据是否被停止，发送不同的完成事件
         if was_stopped {
@@ -84,15 +96,16 @@ pub async fn convert_images(
 
             // 正常完成时，检查窗口状态并发送系统通知（仅当窗口最小化或隐藏时）
             if let Some(window) = app_clone.get_webview_window("main") {
-                let is_minimized = window.is_minimized().unwrap_or(false);
-                let is_visible = window.is_visible().unwrap_or(true);
-
-                if is_minimized || !is_visible {
-                    debug!("窗口最小化或隐藏，发送系统通知");
-                    let _ = Notification::new()
-                        .summary("转换完成")
-                        .body("图片转换已完成")
-                        .show();
+                if let (Ok(is_minimized), Ok(is_visible)) =
+                    (window.is_minimized(), window.is_visible())
+                {
+                    if is_minimized || !is_visible {
+                        debug!("窗口最小化或隐藏，发送系统通知");
+                        let _ = Notification::new()
+                            .summary("转换完成")
+                            .body("图片转换已完成")
+                            .show();
+                    }
                 }
             }
         }

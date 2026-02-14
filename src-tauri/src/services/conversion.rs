@@ -150,7 +150,7 @@ fn batch_convert_images(
                             json!({
                                 "path": input,
                                 "status": "error",
-                                "error": e.user_message(),
+                                "errorMessage": e.user_message(),
                             }),
                         );
                     },
