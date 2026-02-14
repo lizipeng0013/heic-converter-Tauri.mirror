@@ -101,10 +101,23 @@ pub async fn convert_images(
                 {
                     if is_minimized || !is_visible {
                         debug!("窗口最小化或隐藏，发送系统通知");
-                        let _ = Notification::new()
-                            .summary("转换完成")
-                            .body("图片转换已完成")
-                            .show();
+
+                        #[cfg(target_os = "windows")]
+                        {
+                            let _ = Notification::new()
+                                .app_id("tech.hotime.heic-converter")
+                                .summary("转换完成")
+                                .body("图片转换已完成")
+                                .show();
+                        }
+
+                        #[cfg(not(target_os = "windows"))]
+                        {
+                            let _ = Notification::new()
+                                .summary("转换完成")
+                                .body("图片转换已完成")
+                                .show();
+                        }
                     }
                 }
             }
