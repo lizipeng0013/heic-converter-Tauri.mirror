@@ -137,8 +137,6 @@ fn batch_convert_images(
                                 "path": input,
                                 "status": "done",
                                 "output_path": output,
-                                "current": current,
-                                "total": total
                             }),
                         );
                     },
@@ -153,8 +151,6 @@ fn batch_convert_images(
                                 "path": input,
                                 "status": "error",
                                 "error": e.user_message(),
-                                "current": current,
-                                "total": total
                             }),
                         );
                     },

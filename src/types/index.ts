@@ -34,3 +34,20 @@ export interface ConverterSettings {
 
 // --- 关闭窗口操作类型 ---
 export type CloseAction = "hideToTray" | "exit" | "cancel";
+
+// --- Tauri 事件类型定义 ---
+
+/**
+ * 转换更新事件
+ */
+export type ConversionUpdateEvent =
+  | {
+      path: string;
+      status: "done";
+      output_path: string;
+    }
+  | {
+      path: string;
+      status: "error";
+      error: string;
+    };

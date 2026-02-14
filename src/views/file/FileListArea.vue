@@ -10,6 +10,7 @@ import FileCard from "@/components/FileCard.vue";
 import { listen, TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
 import { info } from "@tauri-apps/plugin-log";
 import { alertSevere } from "@/utils/useError.ts";
+import type { ConversionUpdateEvent } from "@/types";
 
 const conversionStore = useConversionStore();
 const isFileDragging = ref(false);
@@ -91,19 +92,8 @@ onMounted(async () => {
     isFileDragging.value = false;
   });
 
-  unlistenConversion = await listen("conversion-update", (event) => {
-    type ConversionUpdatePayload =
-      | {
-          path: string;
-          status: "done";
-          output_path: string;
-        }
-      | {
-          path: string;
-          status: "error";
-          error: string;
-        };
-    const payload = event.payload as ConversionUpdatePayload;
+  unlistenConversion = await listen<ConversionUpdateEvent>("conversion-update", (event) => {
+    const payload = event.payload;
 
     // 如果正在停止转换，只处理 done 状态的更新（让正在转换的文件可以完成）
     if (conversionStore.isStopping) {
