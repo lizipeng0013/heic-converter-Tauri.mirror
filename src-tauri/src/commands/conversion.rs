@@ -1,5 +1,5 @@
 use crate::services::conversion::batch_convert;
-use notify_rust::Notification;
+use notify_rust::{Hint, Notification};
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_log::log::{debug, error, info};
@@ -111,12 +111,26 @@ pub async fn convert_images(
                                 .show();
                         }
 
-                        #[cfg(not(target_os = "windows"))]
+                        #[cfg(all(unix, not(target_os = "macos")))]
                         {
-                            let _ = Notification::new()
+                            // Linux 平台支持交互式通知：点击通知本身即可打开窗口
+                            let window_clone = window.clone();
+                            if let Ok(handle) = Notification::new()
                                 .summary("转换完成")
                                 .body("图片转换已完成")
-                                .show();
+                                .action("default", "")  // default action 捕获通知本身的点击
+                                .hint(Hint::Resident(true))
+                                .show()
+                            {
+                                handle.wait_for_action(move |action| {
+                                    if action == "default" {
+                                        debug!("用户点击通知，打开窗口");
+                                        let _ = window_clone.show();
+                                        let _ = window_clone.unminimize();
+                                        let _ = window_clone.set_focus();
+                                    }
+                                });
+                            }
                         }
                     }
                 }
