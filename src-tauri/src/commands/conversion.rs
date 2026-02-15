@@ -1,5 +1,7 @@
 use crate::services::conversion::batch_convert;
-use notify_rust::{Hint, Notification};
+#[cfg(all(unix, not(target_os = "macos")))]
+use notify_rust::Hint;
+use notify_rust::Notification;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_log::log::{debug, error, info};
