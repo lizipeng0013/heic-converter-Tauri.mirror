@@ -21,3 +21,4 @@ dist-ssr
 *.sln
 *.sw?
 .vscode/workspace.json
+.atomcode

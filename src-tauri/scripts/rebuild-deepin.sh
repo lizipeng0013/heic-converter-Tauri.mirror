@@ -9,7 +9,7 @@ set -e
 # ============================================
 APPID="tech.hotime.heic-converter"
 APPNAME="heic-converter"
-VERSION="0.3.0"
+VERSION="0.4.0"
 ARCH="amd64"
 
 # 安装前缀（相对于根目录的路径）

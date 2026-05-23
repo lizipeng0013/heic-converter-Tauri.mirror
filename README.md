@@ -1,23 +1,26 @@
 # HEIC 格式转换器 (Tauri 版)
 
 ![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri)
-![Vue](https://img.shields.io/badge/Vue-3.4-4FC08D?logo=vue.js)
+![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
+![Version](https://img.shields.io/badge/version-0.4.0-blue)
 
 一款基于 **Tauri 2** 和 **Vue 3** 构建的轻量级跨平台 HEIC 图片转换工具。它可以将 HEIC/HEIF 格式的高清图片快速转换为通用的 JPG 或 PNG 格式。
 
-### ✨ v0.3.0 重大更新
+### ✨ v0.4.0 更新亮点
 
-本版本实现了从 WebAssembly 到 Rust 原生实现的重大架构升级，性能和功能全面提升。
+本版本聚焦**桌面深度集成**和**性能极致优化**，添加了系统托盘、系统通知、关闭保护等桌面级功能，并重写了 JPEG 编码引擎，转换性能大幅提升。
 
-- 🚀 **Rust 原生实现**：移除前端 Wasm 方案，采用 Rust 的 `libheif-rs` 库实现原生转换，性能大幅提升，不再受浏览器内存限制。
-- ⚡ **并行批量处理**：引入 `rayon` 并行处理库，支持批量转换并行执行，处理速度显著提升。
-- 📦 **扩展输出格式**：支持 JPG、PNG、WebP、BMP、TIFF、ICO 六种主流格式，满足多样化需求。
-- 🎛️ **自定义质量控制**：新增 JPEG 质量滑块（0-100），用户可灵活控制输出画质与文件大小。
-- ⏸️ **转换控制功能**：支持停止和继续转换，提供更灵活的批量处理体验。
-- 📁 **智能文件管理**：重构文件列表 UI，实现双标签页和状态分组显示，支持拖拽导入，一键定位转换文件。
-- 🎨 **UI/UX 精细化优化**：优化标题栏样式、禁用默认右键菜单、引入 Tooltip 组件，界面更加专业精致。
-- 🛠️ **完善日志系统**：统一日志管理，区分开发和生产环境，便于调试和问题排查。
+- 🔔 **系统通知**：转换完成后窗口最小化时发送系统通知；Linux 下点击通知可打开窗口。
+- 🖥️ **系统托盘**：完整托盘支持，右键菜单可控制窗口显示/退出，托盘图标实时展示转换状态。
+- 🛡️ **关闭保护**：转换中关闭窗口弹出确认对话框；有待转换文件时提示确认；托盘退出时检查转换状态。
+- ⚡ **JPEG 编码性能飞跃**：将 JPEG 编码器从 `image` crate 替换为 `turbojpeg`，编码速度提升 30-50%。
+- 📜 **虚拟滚动**：引入 `@tanstack/vue-virtual`，文件列表支持虚拟滚动，流畅处理数千个文件。
+- ❌ **失败标签页**：新增独立的转换失败文件标签页，方便集中处理异常。
+- 🧹 **优雅停止**：使用任务队列实现真正的可控停止，停止后转换即时中断，无残留任务。
+- 🎨 **UI 全面进化**：无边现代风格、SVG 自适应标题栏（高度可配置）、ScrollArea 优化滚动体验。
+- 🐧 **Deepin/UOS 适配**：完整的 Deepin Linux 打包规范（deb 依赖、desktop 模板、构建脚本）。
+- 🔧 **大规模重构**：窗口/托盘操作迁移至 Tauri 2 前端 API；mimalloc 全局内存分配器；原子操作替代 Mutex 减少锁竞争。
 
 ---
 
@@ -45,17 +48,21 @@
 - **Frontend**: Vue 3 (Composition API + TypeScript)
 - **Build**: Vite
 - **Styling**: Shadcn-vue (Zinc Theme) + Tailwind CSS
-- **Converter**: libheif-rs (Rust Native) + image (Rust Image Processing)
+- **Converter**: libheif-rs (Rust Native) + turbojpeg (JPEG 编码) + image (通用编码)
 - **Parallel**: rayon (Rust Parallel Processing)
+- **Memory**: mimalloc (全局内存分配器)
+- **Tray**: Tauri 2 内置 tray-icon
+- **Notification**: notify-rust / tauri-plugin-notification
 
-#### 项目结构 (v0.3.0)
+#### 项目结构 (v0.4.0)
 
 ```
 src/                          # 前端代码
 ├── assets/                   # 静态资源
 ├── components/               # 通用组件
+│   ├── dialog/              # 对话框组件 (关闭确认等)
 │   ├── layout/              # 布局相关组件 (如 TitleBar)
-│   └── ui/                  # UI 组件库 (Button, Card, Tabs, Tooltip 等)
+│   └── ui/                  # UI 组件库 (Button, Card, Dialog, ScrollArea 等)
 ├── views/                    # 页面级组件
 │   ├── MainView.vue         # 主视图
 │   ├── file/                # 文件相关视图
@@ -68,17 +75,18 @@ src/                          # 前端代码
 └── App.vue                   # 应用根组件
 
 src-tauri/                    # Rust 后端代码
+├── scripts/                 # 构建脚本 (Deepin 打包)
 ├── src/
 │   ├── commands/            # Tauri 命令
-│   │   ├── conversion.rs    # 转换命令
-│   │   └── window.rs        # 窗口命令
+│   │   └── conversion.rs    # 转换命令 (窗口命令已迁移至前端 API)
 │   ├── converters/          # 转换器模块
 │   │   ├── dispatcher.rs    # 转换调度器
 │   │   ├── heic.rs          # HEIC 专用转换器
 │   │   ├── generic.rs       # 通用转换器
 │   │   └── common.rs        # 通用工具
 │   ├── services/            # 业务服务
-│   │   └── conversion.rs    # 转换服务
+│   │   └── conversion.rs    # 转换服务 (任务队列实现优雅停止)
+│   ├── setup/               # Tauri 插件初始化
 │   └── utils/               # 工具函数
 └── Cargo.toml               # Rust 依赖配置
 ```
@@ -96,11 +104,14 @@ src-tauri/                    # Rust 后端代码
 
 本项目采用 **Rust 原生实现**，提供卓越的转换性能和稳定性。
 
-- **技术实现**：使用 Rust 的 `libheif-rs` 库进行原生 HEIC 解码，结合 `image` 库进行多格式编码，完全脱离浏览器 Wasm 限制。
+- **技术实现**：使用 Rust 的 `libheif-rs` 库进行原生 HEIC 解码，结合 `turbojpeg` 进行高速 JPEG 编码，`image` 库支持多格式输出，完全脱离浏览器 Wasm 限制。
 - **并行处理**：利用 `rayon` 库实现批量转换的并行处理，充分利用多核 CPU 性能，大幅提升批量转换速度。
 - **无内存限制**：原生 Rust 实现，不受浏览器内存沙箱限制，可稳定处理大量高清图片。
+- **全局内存分配器**：采用 `mimalloc` 替代系统默认分配器，减少内存碎片，提升整体性能。
+- **JPEG 编码优化**：使用 `turbojpeg` 替代 `image` 内置编码器，JPEG 编码速度提升 30-50%。
+- **锁优化**：使用原子操作替代 Mutex，减少多线程下的锁竞争和上下文切换开销。
 - **性能表现**：单张图片转换速度极快，批量并行处理效率极高，适合处理任意数量的图片。
-- **优化配置**：Release 版本启用 LTO（链接时优化）、代码生成单元化等高级优化，确保最佳性能。
+- **优化配置**：Release 版本启用 LTO（链接时优化）、代码生成单元化、strip 瘦身等高级优化，确保最佳性能。
 
 ---
 
@@ -150,6 +161,7 @@ pnpm tauri build
 #### 1. 选择格式与质量
 
 在右侧设置面板中，选择目标格式：
+
 - **JPG / JPEG**：最常用的图片格式，支持压缩，适合日常使用和分享
 - **PNG**：无损压缩格式，适合需要保留透明度或高质量的场景
 - **WebP**：现代图片格式，压缩率更高，文件更小
@@ -167,6 +179,7 @@ JPG 和 WebP 格式下可调整图片质量（0-100），数值越高画质越�
 - **点击选择**：点击底部的"选择文件"按钮，从文件管理器中选取。
 
 文件列表支持双标签页切换：
+
 - **全部**：显示所有文件
 - **转换中/已完成/失败**：按状态分组显示，方便管理
 
@@ -205,6 +218,6 @@ JPG 和 WebP 格式下可调整图片质量（0-100），数值越高画质越�
 
 ### 🤖 AI 辅助声明
 
-本项目的 v0.3.0 版本重构、架构设计优化、UI 组件迁移以及技术文档编写过程中，使用了 iflow + GLM-4.7 进行辅助生成。
+本项目的 v0.3.0 版本重构、架构设计优化、UI 组件迁移以及技术文档编写，v0.4.0 的托盘、通知、关闭保护等桌面集成功能，以及性能优化工作，使用了 iflow + GLM-4.7 进行辅助生成。
 
 **注意**: 本工具仅用于个人学习和合法用途，请勿用于侵犯他人版权的图片转换。

@@ -1,7 +1,7 @@
 {
   "appid": "tech.hotime.heic-converter",
   "name": "heic-converter",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "arch": [
     "amd64"
   ],
