@@ -1,14 +1,14 @@
 {
-  "name": "tech.hotime.heic-converter",
+  "name": "top.hotime.heic-converter",
   "private": true,
   "version": "0.4.0",
+  "license": "GPL-3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "build:deepin": "pnpm tauri build --bundles deb && bash src-tauri/scripts/rebuild-deepin.sh",
     "lint": "eslint . --ext .vue,.ts,.tsx --fix",
     "format": "prettier --write src/",
     "lint:rust": "cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings",

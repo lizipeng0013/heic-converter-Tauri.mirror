@@ -2,7 +2,7 @@
 
 ![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri)
 ![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js)
-![License](https://img.shields.io/badge/License-MIT-green.svg)
+![License](https://img.shields.io/badge/License-GPL--3.0-blue.svg)
 ![Version](https://img.shields.io/badge/version-0.4.0-blue)
 
 一款基于 **Tauri 2** 和 **Vue 3** 构建的轻量级跨平台 HEIC 图片转换工具。它可以将 HEIC/HEIF 格式的高清图片快速转换为通用的 JPG 或 PNG 格式。
@@ -19,7 +19,7 @@
 - ❌ **失败标签页**：新增独立的转换失败文件标签页，方便集中处理异常。
 - 🧹 **优雅停止**：使用任务队列实现真正的可控停止，停止后转换即时中断，无残留任务。
 - 🎨 **UI 全面进化**：无边现代风格、SVG 自适应标题栏（高度可配置）、ScrollArea 优化滚动体验。
-- 🐧 **Deepin/UOS 适配**：完整的 Deepin Linux 打包规范（deb 依赖、desktop 模板、构建脚本）。
+- 🐧 **Deepin/UOS 适配**：deb 打包声明 libheif/libde265/libx265 运行时依赖，并定制桌面入口模板。
 - 🔧 **大规模重构**：窗口/托盘操作迁移至 Tauri 2 前端 API；mimalloc 全局内存分配器；原子操作替代 Mutex 减少锁竞争。
 
 ---
@@ -75,7 +75,7 @@ src/                          # 前端代码
 └── App.vue                   # 应用根组件
 
 src-tauri/                    # Rust 后端代码
-├── scripts/                 # 构建脚本 (Deepin 打包)
+├── desktop-template.desktop  # deb 打包桌面入口模板
 ├── src/
 │   ├── commands/            # Tauri 命令
 │   │   └── conversion.rs    # 转换命令 (窗口命令已迁移至前端 API)
@@ -212,7 +212,7 @@ JPG 和 WebP 格式下可调整图片质量（0-100），数值越高画质越�
 
 ### 📄 开源协议
 
-本项目采用 MIT 协议开源。
+本项目采用 GPL-3.0 协议开源。
 
 ---
 

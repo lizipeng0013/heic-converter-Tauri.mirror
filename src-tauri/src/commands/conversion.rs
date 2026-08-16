@@ -107,7 +107,7 @@ pub async fn convert_images(
                         #[cfg(target_os = "windows")]
                         {
                             let _ = Notification::new()
-                                .app_id("tech.hotime.heic-converter")
+                                .app_id("top.hotime.heic-converter")
                                 .summary("转换完成")
                                 .body("图片转换已完成")
                                 .show();
