@@ -31,6 +31,8 @@
     }
   },
   "bundle": {
+    "shortDescription": " HEIC 图片转换工具",
+    "longDescription": "一款基于 Tauri 2 和 Vue 3 构建的轻量级跨平台 HEIC 图片转换工具。\n 它可以将 HEIC/HEIF 格式的高清图片快速转换为通用的 JPG 或 PNG 格式。",
     "active": true,
     "targets": ["deb"],
     "icon": [
