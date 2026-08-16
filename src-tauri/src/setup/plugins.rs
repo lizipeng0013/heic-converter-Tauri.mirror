@@ -20,7 +20,6 @@ pub fn init_plugins(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
         // 日志插件
         .plugin(tauri_plugin_log::Builder::new()
