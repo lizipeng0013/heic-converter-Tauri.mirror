@@ -3,6 +3,22 @@ import { mount } from '@vue/test-utils'
 import TitleBar from '@/components/layout/TitleBar.vue'
 import { useDark } from '@vueuse/core'
 
+// Tooltip 组件 stub
+const tooltipStubs = {
+  Tooltip: {
+    template: '<div><slot /></div>',
+  },
+  TooltipContent: {
+    template: '<div><slot /></div>',
+  },
+  TooltipTrigger: {
+    template: '<div><slot /></div>',
+  },
+  TooltipProvider: {
+    template: '<div><slot /></div>',
+  },
+}
+
 // Mock vueuse core
 vi.mock('@vueuse/core', () => ({
   useDark: vi.fn(() => ({ value: false })),
@@ -39,13 +55,20 @@ describe('TitleBar', () => {
       props: {
         appName: 'Test App',
       },
+      global: {
+        stubs: tooltipStubs,
+      },
     })
     
     expect(wrapper.text()).toContain('Test App')
   })
 
   it('renders with default props', () => {
-    const wrapper = mount(TitleBar)
+    const wrapper = mount(TitleBar, {
+      global: {
+        stubs: tooltipStubs,
+      },
+    })
     
     expect(wrapper.find('header').exists()).toBe(true)
     expect(wrapper.find('img').exists()).toBe(true)
@@ -55,6 +78,9 @@ describe('TitleBar', () => {
     const wrapper = mount(TitleBar, {
       props: {
         showLogo: false,
+      },
+      global: {
+        stubs: tooltipStubs,
       },
     })
     
@@ -66,6 +92,9 @@ describe('TitleBar', () => {
       props: {
         showTrayButton: true,
       },
+      global: {
+        stubs: tooltipStubs,
+      },
     })
     
     expect(wrapper.find('[data-testid="tray-button"]').exists()).toBe(true)
@@ -75,6 +104,9 @@ describe('TitleBar', () => {
     const wrapper = mount(TitleBar, {
       props: {
         showMinimizeButton: false,
+      },
+      global: {
+        stubs: tooltipStubs,
       },
     })
     
@@ -88,6 +120,9 @@ describe('TitleBar', () => {
       props: {
         showMaximizeButton: false,
       },
+      global: {
+        stubs: tooltipStubs,
+      },
     })
     
     const buttons = wrapper.findAll('button')
@@ -100,6 +135,9 @@ describe('TitleBar', () => {
       props: {
         showCloseButton: false,
       },
+      global: {
+        stubs: tooltipStubs,
+      },
     })
     
     const buttons = wrapper.findAll('button')
@@ -108,7 +146,11 @@ describe('TitleBar', () => {
   })
 
   it('emits close-request event when close button clicked', async () => {
-    const wrapper = mount(TitleBar)
+    const wrapper = mount(TitleBar, {
+      global: {
+        stubs: tooltipStubs,
+      },
+    })
     
     const closeButton = wrapper.findAll('button').find(b => b.text().includes('Close'))
     await closeButton?.trigger('click')
@@ -120,6 +162,9 @@ describe('TitleBar', () => {
     const wrapper = mount(TitleBar, {
       props: {
         showTrayButton: true,
+      },
+      global: {
+        stubs: tooltipStubs,
       },
     })
     
@@ -134,6 +179,9 @@ describe('TitleBar', () => {
       props: {
         height: 'tiny',
       },
+      global: {
+        stubs: tooltipStubs,
+      },
     })
     
     expect(wrapper.find('header').classes()).toContain('h-6')
@@ -144,13 +192,20 @@ describe('TitleBar', () => {
       props: {
         height: 'large',
       },
+      global: {
+        stubs: tooltipStubs,
+      },
     })
     
     expect(wrapper.find('header').classes()).toContain('h-12')
   })
 
   it('toggles dark mode when theme button clicked', async () => {
-    const wrapper = mount(TitleBar)
+    const wrapper = mount(TitleBar, {
+      global: {
+        stubs: tooltipStubs,
+      },
+    })
     
     const themeButton = wrapper.findAll('button').find(b => b.text().includes('Theme'))
     await themeButton?.trigger('click')
@@ -163,6 +218,9 @@ describe('TitleBar', () => {
     const wrapper = mount(TitleBar, {
       props: {
         class: 'custom-titlebar',
+      },
+      global: {
+        stubs: tooltipStubs,
       },
     })
     
