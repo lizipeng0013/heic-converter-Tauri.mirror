@@ -110,9 +110,7 @@ describe('TitleBar', () => {
       },
     })
     
-    const buttons = wrapper.findAll('button')
-    const minimizeButton = buttons.find(b => b.text().includes('Minimize'))
-    expect(minimizeButton).toBeUndefined()
+    expect(wrapper.find('[data-testid="minimize-button"]').exists()).toBe(false)
   })
 
   it('hides maximize button when showMaximizeButton is false', () => {
@@ -125,9 +123,7 @@ describe('TitleBar', () => {
       },
     })
     
-    const buttons = wrapper.findAll('button')
-    const maximizeButton = buttons.find(b => b.text().includes('Maximize'))
-    expect(maximizeButton).toBeUndefined()
+    expect(wrapper.find('[data-testid="maximize-button"]').exists()).toBe(false)
   })
 
   it('hides close button when showCloseButton is false', () => {
@@ -140,9 +136,7 @@ describe('TitleBar', () => {
       },
     })
     
-    const buttons = wrapper.findAll('button')
-    const closeButton = buttons.find(b => b.text().includes('Close'))
-    expect(closeButton).toBeUndefined()
+    expect(wrapper.find('[data-testid="close-button"]').exists()).toBe(false)
   })
 
   it('emits close-request event when close button clicked', async () => {
@@ -152,8 +146,8 @@ describe('TitleBar', () => {
       },
     })
     
-    const closeButton = wrapper.findAll('button').find(b => b.text().includes('Close'))
-    await closeButton?.trigger('click')
+    const closeButton = wrapper.find('[data-testid="close-button"]')
+    await closeButton.trigger('click')
     
     expect(wrapper.emitted('close-request')).toHaveLength(1)
   })
@@ -168,8 +162,8 @@ describe('TitleBar', () => {
       },
     })
     
-    const trayButton = wrapper.findAll('button').find(b => b.text().includes('Tray'))
-    await trayButton?.trigger('click')
+    const trayButton = wrapper.find('[data-testid="tray-button"]')
+    await trayButton.trigger('click')
     
     expect(wrapper.emitted('minimize-to-tray')).toHaveLength(1)
   })
