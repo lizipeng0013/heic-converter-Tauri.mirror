@@ -25,3 +25,15 @@ dist-ssr
 
 # IDE/Tool configurations
 .codeartsdoer/
+
+# Coverage reports
+coverage/
+target/coverage/
+
+# Rust build artifacts
+target/
+
+# Environment files
+.env
+.env.local
+.env.*.local
