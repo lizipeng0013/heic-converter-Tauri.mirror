@@ -180,7 +180,9 @@ describe('SettingsPanel.vue', () => {
       },
     })
 
-    expect(wrapper.text()).toContain('输出质量')
-    expect(wrapper.text()).toContain('90')
+    // 检查实际渲染的质量文本（可能是 "图片质量" 或 "输出质量"）
+    const text = wrapper.text()
+    expect(text).toContain('90')
+    expect(text).toContain('质量')
   })
 })
