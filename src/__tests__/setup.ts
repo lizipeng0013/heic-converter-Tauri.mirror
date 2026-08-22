@@ -1,16 +1,20 @@
 import '@testing-library/jest-dom'
 import { vi } from 'vitest'
 
-vi.mock('@vueuse/core', () => ({
-  useDark: vi.fn(() => ({ value: false })),
-  useToggle: vi.fn(() => () => {
-    // Mock 实现
-  }),
-  reactiveOmit: vi.fn((obj: any, key: string) => {
-    const { [key]: _, ...rest } = obj;
-    return rest;
-  }),
-}))
+vi.mock('@vueuse/core', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    useDark: vi.fn(() => ({ value: false })),
+    useToggle: vi.fn(() => () => {
+      // Mock 实现
+    }),
+    reactiveOmit: vi.fn((obj: any, key: string) => {
+      const { [key]: _, ...rest } = obj
+      return rest
+    }),
+  }
+})
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(),
 }))
