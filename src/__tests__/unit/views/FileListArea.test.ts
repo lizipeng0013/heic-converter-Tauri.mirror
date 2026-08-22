@@ -176,9 +176,10 @@ describe('FileListArea.vue', () => {
       },
     })
 
-    // 检查实际渲染的按钮文本（可能是 "添加文件" 或其他）
+    // 检查实际渲染的空状态文本
     const text = wrapper.text()
-    expect(text).toContain('添加文件') || expect(text).toContain('文件')
+    expect(text).toContain('拖拽 HEIC 文件到此处')
+    expect(text).toContain('支持 .heic, .heif 格式')
   })
 
   it('displays conversion stats', () => {
