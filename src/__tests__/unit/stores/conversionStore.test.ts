@@ -92,9 +92,14 @@ describe('conversionStore', () => {
       expect(store.files).toHaveLength(0)
     })
 
-    it('should remove file from errorFiles list', () => {
+    it('should remove file from errorFiles list', async () => {
       const store = useConversionStore()
       
+      // 先添加文件
+      await store.addPaths(['/path/to/test.heic'])
+      expect(store.files).toHaveLength(1)
+      
+      // 然后标记为错误
       store.updateFileError('/path/to/test.heic', 'Test error')
       
       expect(store.errorFiles).toHaveLength(1)
