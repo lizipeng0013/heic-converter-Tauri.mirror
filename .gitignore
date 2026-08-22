@@ -22,3 +22,6 @@ dist-ssr
 *.sw?
 .vscode/workspace.json
 .atomcode
+
+# IDE/Tool configurations
+.codeartsdoer/

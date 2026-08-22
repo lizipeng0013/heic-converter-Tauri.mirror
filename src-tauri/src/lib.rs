@@ -1,8 +1,8 @@
-mod commands;
-mod converters;
+pub mod commands;
+pub mod converters;
 mod services;
 mod setup;
-mod utils;
+pub mod utils;
 
 // 使用 mimalloc 作为全局内存分配器，提升所有平台的性能
 use mimalloc::MiMalloc;

@@ -126,8 +126,8 @@ src-tauri/                    # Rust 后端代码
 #### 1. 克隆项目
 
 ```bash
-git clone https://github.com/your-username/your-heic-converter.git
-cd your-heic-converter
+git clone https://atomgit.com/hotime/heic-converter.git
+cd heic-converter
 ```
 
 #### 2. 安装依赖

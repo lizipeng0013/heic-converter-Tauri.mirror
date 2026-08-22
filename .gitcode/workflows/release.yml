@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  repository: write
+  contents: read
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  release:
+    name: 发布
+    runs-on: [ubuntu-latest, x64, medium]
+    steps:
+      - name: 检出代码
+        uses: checkout
+
+      - name: 设置 Rust
+        uses: setup-rust
+        with:
+          rust-version: stable
+
+      - name: 设置 Node.js
+        uses: setup-node
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: 安装前端依赖
+        run: pnpm install
+
+      - name: 构建应用
+        run: pnpm tauri build
+
+      - name: 上传构建产物
+        uses: upload-artifact
+        with:
+          name: heic-converter-${{ atomgit.ref_name }}
+          path: src-tauri/target/release/bundle/*/*
+          retention-days: 30
+
+      - name: 创建 Release
+        env:
+          ATOMGIT_TOKEN: ${{ secrets.ATOMGIT_TOKEN }}
+        run: |
+          # 获取版本标签
+          TAG_NAME="${{ atomgit.ref_name }}"
+          
+          # 创建 Release（使用 AtomGit API）
+          curl -X POST \
+            "${{ atomgit.api_url }}/repos/${{ atomgit.repository }}/releases" \
+            -H "Authorization: token $ATOMGIT_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "tag_name": "'"$TAG_NAME"'",
+              "name": "HEIC Converter '"$TAG_NAME"'",
+              "body": "HEIC 格式转换器 v'"$TAG_NAME"'\n\n## 更新内容\n- 性能优化\n- Bug 修复\n- 新功能",
+              "draft": false,
+              "prerelease": false
+            }'
+
+  post-process:
+    name: 发布后处理
+    runs-on: [ubuntu-latest, x64, small]
+    if: ${{ always() }}
+    needs: release
+    steps:
+      - name: 发布完成通知
+        run: |
+          echo "## 发布流程完成" >> $ATOMGIT_STEP_SUMMARY
+          echo "| 项目 | 值 |" >> $ATOMGIT_STEP_SUMMARY
+          echo "|------|----|" >> $ATOMGIT_STEP_SUMMARY
+          echo "| 版本 | ${{ atomgit.ref_name }} |" >> $ATOMGIT_STEP_SUMMARY
+          echo "| 状态 | ${{ job.status }} |" >> $ATOMGIT_STEP_SUMMARY

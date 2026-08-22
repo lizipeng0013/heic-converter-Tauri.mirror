@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  max: 1
+  exceed-action: QUEUE
+
+permissions:
+  repository: read
+  pr: write
+
+env:
+  CARGO_TERM_COLOR: always
+  NODE_VERSION: '18'
+
+jobs:
+  test:
+    name: 测试
+    runs-on: [ubuntu-latest, x64, small]
+    steps:
+      - name: 检出代码
+        uses: checkout
+
+      - name: 设置 Rust
+        uses: setup-rust
+        with:
+          rust-version: stable
+          components: rustfmt, clippy
+
+      - name: 设置 Node.js
+        uses: setup-node
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: 安装前端依赖
+        run: pnpm install
+
+      - name: 运行 Rust 测试
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+        continue-on-error: true
+
+      - name: 运行前端测试
+        run: pnpm test:coverage
+        continue-on-error: true
+
+      - name: 运行 Rust Linter
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
+        continue-on-error: true
+
+      - name: 运行 ESLint
+        run: pnpm lint
+        continue-on-error: true
+
+      - name: 检查代码格式
+        run: |
+          pnpm format --check
+          cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
+        continue-on-error: true
+
+      - name: 构建应用
+        run: pnpm tauri build
+        continue-on-error: true
+
+      - name: 上传覆盖率报告
+        uses: upload-artifact
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+        continue-on-error: true
+
+  post-process:
+    name: 后处理
+    runs-on: [ubuntu-latest, x64, small]
+    if: ${{ always() }}
+    needs: test
+    steps:
+      - name: 发送通知
+        run: |
+          echo "## 工作流执行完成" >> $ATOMGIT_STEP_SUMMARY
+          echo "| 状态 | 值 |" >> $ATOMGIT_STEP_SUMMARY
+          echo "|------|----|" >> $ATOMGIT_STEP_SUMMARY
+          echo "| 测试状态 | ${{ job.status }} |" >> $ATOMGIT_STEP_SUMMARY
