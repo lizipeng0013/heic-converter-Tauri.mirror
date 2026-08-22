@@ -56,6 +56,9 @@ describe('SettingsPanel.vue', () => {
           TooltipTrigger: {
             template: '<div><slot /></div>',
           },
+          TooltipProvider: {
+            template: '<div><slot /></div>',
+          },
         },
       },
     })
@@ -83,6 +86,18 @@ describe('SettingsPanel.vue', () => {
           Slider: {
             template: '<div class="slider"><slot /></div>',
           },
+          Tooltip: {
+            template: '<div><slot /></div>',
+          },
+          TooltipContent: {
+            template: '<div><slot /></div>',
+          },
+          TooltipTrigger: {
+            template: '<div><slot /></div>',
+          },
+          TooltipProvider: {
+            template: '<div><slot /></div>',
+          },
         },
       },
     })
@@ -108,6 +123,18 @@ describe('SettingsPanel.vue', () => {
           },
           Slider: {
             template: '<div class="slider"><slot /></div>',
+          },
+          Tooltip: {
+            template: '<div><slot /></div>',
+          },
+          TooltipContent: {
+            template: '<div><slot /></div>',
+          },
+          TooltipTrigger: {
+            template: '<div><slot /></div>',
+          },
+          TooltipProvider: {
+            template: '<div><slot /></div>',
           },
         },
       },
@@ -136,6 +163,18 @@ describe('SettingsPanel.vue', () => {
           },
           Slider: {
             template: '<div class="slider"><slot /></div>',
+          },
+          Tooltip: {
+            template: '<div><slot /></div>',
+          },
+          TooltipContent: {
+            template: '<div><slot /></div>',
+          },
+          TooltipTrigger: {
+            template: '<div><slot /></div>',
+          },
+          TooltipProvider: {
+            template: '<div><slot /></div>',
           },
         },
       },

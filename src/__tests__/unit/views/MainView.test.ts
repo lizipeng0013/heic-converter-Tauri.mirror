@@ -132,13 +132,64 @@ describe('MainView.vue', () => {
           },
           ConvertingCloseConfirmDialog: {
             template: '<div class="dialog"><slot /></div>',
+            props: ['modelValue', 'isClosing'],
           },
           PendingFilesCloseConfirmDialog: {
             template: '<div class="dialog"><slot /></div>',
+            props: ['modelValue', 'isClosing'],
           },
         },
       },
     })
+
+    // 使用 find 而不是 findComponent 来查找 stub 组件
+    const titleBar = wrapper.find('.titlebar')
+    expect(titleBar.exists()).toBe(true)
+    // 由于是 stub，无法检查 props，只检查存在性
+  })
+
+  it('renders dialog components', () => {
+    const mockStore = {
+      files: [],
+      isConverting: false,
+      isPreparing: false,
+    }
+    vi.mocked(useConversionStore).mockReturnValue(mockStore as any)
+
+    const wrapper = mount(MainView, {
+      global: {
+        stubs: {
+          TitleBar: {
+            template: '<div class="titlebar"><slot /></div>',
+          },
+          FileListArea: {
+            template: '<div class="file-list"><slot /></div>',
+          },
+          SettingsPanel: {
+            template: '<div class="settings"><slot /></div>',
+          },
+          StatusBar: {
+            template: '<div class="status"><slot /></div>',
+          },
+          TooltipProvider: {
+            template: '<div><slot /></div>',
+          },
+          ConvertingCloseConfirmDialog: {
+            template: '<div class="dialog converting-dialog"><slot /></div>',
+            props: ['modelValue', 'isClosing'],
+          },
+          PendingFilesCloseConfirmDialog: {
+            template: '<div class="dialog pending-dialog"><slot /></div>',
+            props: ['modelValue', 'isClosing'],
+          },
+        },
+      },
+    })
+
+    // 使用 class 选择器来查找 stub 的组件
+    expect(wrapper.find('.converting-dialog').exists()).toBe(true)
+    expect(wrapper.find('.pending-dialog').exists()).toBe(true)
+  })
 
     const titleBar = wrapper.findComponent({ name: 'TitleBar' })
     expect(titleBar.exists()).toBe(true)

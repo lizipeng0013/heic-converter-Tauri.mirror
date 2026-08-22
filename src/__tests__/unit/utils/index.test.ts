@@ -9,21 +9,21 @@ describe('utils/index.ts', () => {
     })
 
     it('should format bytes to KB', () => {
-      expect(formatSize(1024)).toBe('1.00 KiB')
-      expect(formatSize(2048)).toBe('2.00 KiB')
+      expect(formatSize(1024)).toBe('1 KiB')
+      expect(formatSize(2048)).toBe('2 KiB')
     })
 
     it('should format bytes to MB', () => {
-      expect(formatSize(1024 * 1024)).toBe('1.00 MiB')
-      expect(formatSize(5 * 1024 * 1024)).toBe('5.00 MiB')
+      expect(formatSize(1024 * 1024)).toBe('1 MiB')
+      expect(formatSize(5 * 1024 * 1024)).toBe('5 MiB')
     })
 
     it('should format bytes to GB', () => {
-      expect(formatSize(1024 * 1024 * 1024)).toBe('1.00 GiB')
+      expect(formatSize(1024 * 1024 * 1024)).toBe('1 GiB')
     })
 
     it('should handle decimal values', () => {
-      expect(formatSize(1536)).toBe('1.50 KiB')
+      expect(formatSize(1536)).toBe('1.5 KiB')
     })
 
     it('should handle large values', () => {

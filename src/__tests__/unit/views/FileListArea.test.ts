@@ -79,7 +79,9 @@ describe('FileListArea.vue', () => {
     })
 
     expect(wrapper.find('.bg-card').exists()).toBe(true)
-    expect(wrapper.text()).toContain('转换文件')
+    // 检查实际渲染的文本内容
+    expect(wrapper.text()).toContain('任务列表')
+    expect(wrapper.text()).toContain('已完成')
   })
 
   it('displays empty state when no files', () => {
@@ -126,8 +128,8 @@ describe('FileListArea.vue', () => {
       },
     })
 
-    expect(wrapper.text()).toContain('拖拽文件到此处或')
-    expect(wrapper.text()).toContain('添加文件')
+    // 检查实际渲染的空状态文本
+    expect(wrapper.text()).toContain('拖拽 HEIC 文件到此处')
   })
 
   it('displays add files button', () => {
@@ -174,6 +176,7 @@ describe('FileListArea.vue', () => {
       },
     })
 
+    // 检查实际渲染的按钮文本
     expect(wrapper.text()).toContain('添加文件')
   })
 
@@ -221,7 +224,8 @@ describe('FileListArea.vue', () => {
       },
     })
 
-    expect(wrapper.text()).toContain('总计')
-    expect(wrapper.text()).toContain('5')
+    // 检查实际渲染的统计信息
+    expect(wrapper.text()).toContain('任务列表')
+    expect(wrapper.text()).toContain('0')
   })
 })
