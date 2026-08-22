@@ -9,6 +9,10 @@ vi.mock('@vueuse/core', () => ({
   useToggle: vi.fn((val) => (() => {
     val.value = !val.value
   })),
+  reactiveOmit: vi.fn((obj: any, key: string) => {
+    const { [key]: _, ...rest } = obj
+    return rest
+  }),
 }))
 
 vi.mock('@tauri-apps/api/window', () => ({
