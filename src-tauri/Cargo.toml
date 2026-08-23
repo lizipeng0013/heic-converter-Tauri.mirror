@@ -5,6 +5,7 @@ description = "一款基于 Tauri 2 和 Vue 3 构建的轻量级跨平台 HEIC �
 authors = ["hotime <xiaoyqde@126.com>"]
 license = "GPL-3.0"
 edition = "2021"
+default-run = "heic-converter"
 
 [lib]
 name = "heic_converter_lib"
@@ -31,6 +32,7 @@ turbojpeg = { version = "1.4", features = ["image"] }
 mimalloc = { version = "0.1", features = ["v3"] }
 chrono = "0.4"
 notify-rust = "4"
+once_cell = "1"
 
 [target.'cfg(windows)'.dependencies]
 turbojpeg-sys = { version = "1.1", default-features = false, features = ["cmake", "require-simd"] }
@@ -49,8 +51,3 @@ opt-level = 3
 [dev-dependencies]
 tempfile = "3.10"
 rstest = "0.21"
-criterion = { version = "0.5", features = ["html_reports"] }
-
-[[bench]]
-name = "converter_benchmark"
-harness = false

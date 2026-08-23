@@ -1,8 +1,8 @@
 use crate::commands::conversion::should_stop;
 use crate::converters::common::OutputFormat;
 use crate::converters::dispatcher::convert_image_auto;
+use crate::CONVERSION_POOL;
 use rayon::prelude::*;
-use rayon::ThreadPoolBuilder;
 use serde_json::json;
 use std::sync::{
     atomic::{AtomicBool, AtomicUsize, Ordering},
@@ -62,41 +62,22 @@ fn batch_convert_images(
     let next_index = Arc::new(AtomicUsize::new(0)); // 下一个要处理的文件索引
     let app_arc = Arc::new(app.clone()); // Arc 包装 AppHandle，避免 Clone 开销
 
-    // 根据 CPU 核心数动态调整线程池大小
-    // 少量文件时使用文件数，大量文件时保留 25% 给 UI
-    let num_cpus = std::thread::available_parallelism()
-        .map(|n| n.get())
-        .unwrap_or(4);
-    let pool_size = if total < 10 {
-        total // 少量文件时使用文件数
-    } else {
-        (num_cpus * 3 / 4).max(2) // 大量文件时保留 25% 给 UI
-    };
-
+    // 使用全局线程池
     trace!(
-        "CPU 核心数: {}, 文件数: {}, 线程池大小: {}",
-        num_cpus,
-        total,
-        pool_size
+        "使用全局线程池，线程数: {}",
+        CONVERSION_POOL.current_num_threads()
     );
 
-    // 创建自定义线程池，优化并发性能
-    let pool = ThreadPoolBuilder::new()
-        .num_threads(pool_size)
-        .thread_name(|index| format!("converter-{}", index))
-        .build()
-        .map_err(|e| format!("创建线程池失败: {}", e))?;
-
-    debug!("线程池创建成功，准备开始转换");
+    debug!("全局线程池已准备就绪，准备开始转换");
 
     // 发送转换开始事件，通知前端线程池已创建完成，开始处理
     let _ = app.emit("conversion-started", serde_json::json!({}));
 
     debug!("开始并行处理，停止标志状态: {}", should_stop());
 
-    // 使用 par_bridge 并行处理
-    pool.install(|| {
-        (0..pool_size).into_par_iter().for_each(|_| {
+    // 使用全局线程池进行并行处理
+    CONVERSION_POOL.install(|| {
+        (0..CONVERSION_POOL.current_num_threads()).into_par_iter().for_each(|_| {
             loop {
                 // 检查停止标志
                 if should_stop() {
@@ -121,7 +102,7 @@ fn batch_convert_images(
                 let (input, output) = files_arc[index].clone();
 
                 let current = index + 1;
-                trace!("处理文件 {}/{}: {}", current, total, input);
+                trace!("处理文件 {}/{}", current, total);
 
                 let result = convert_image_auto(&app_arc, &input, &output, format);
 
@@ -130,7 +111,7 @@ fn batch_convert_images(
                         // 使用原子操作更新计数器
                         success_count.fetch_add(1, Ordering::Relaxed);
                         processed_count.fetch_add(1, Ordering::Relaxed);
-                        debug!("✓ 转换成功 {}/{}: {} -> {}", current, total, input, output);
+                        debug!("✓ 转换成功 {}/{}", current, total);
                         let _ = app_arc.emit(
                             "conversion-update",
                             json!({
@@ -144,7 +125,7 @@ fn batch_convert_images(
                         // 使用原子操作更新计数器
                         error_count.fetch_add(1, Ordering::Relaxed);
                         processed_count.fetch_add(1, Ordering::Relaxed);
-                        error!("✗ 转换失败 {}/{}: {} - {}", current, total, input, e);
+                        error!("✗ 转换失败 {}/{}", current, total);
                         let _ = app_arc.emit(
                             "conversion-update",
                             json!({
@@ -159,14 +140,7 @@ fn batch_convert_images(
         });
     });
 
-    // 显式释放线程池，确保线程被正确回收
-    drop(pool);
-
-    // 检查是否在准备阶段就被停止
-    if should_stop() {
-        stopped_flag.store(true, Ordering::Release);
-    }
-
+    // 获取统计信息
     let success = success_count.load(Ordering::Relaxed);
     let error = error_count.load(Ordering::Relaxed);
     let processed = processed_count.load(Ordering::Relaxed);
@@ -185,6 +159,8 @@ fn batch_convert_images(
     drop(stopped_flag);
     drop(processed_count);
     drop(next_index);
+
+    // 不需要显式 drop 线程池，它是全局的
 
     // 返回是否被停止
     Ok(was_stopped)

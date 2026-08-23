@@ -37,3 +37,7 @@ target/
 .env
 .env.local
 .env.*.local
+-e 
+# Test data
+-e 
+# Test data
