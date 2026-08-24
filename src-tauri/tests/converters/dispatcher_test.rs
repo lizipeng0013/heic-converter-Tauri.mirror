@@ -1,21 +1,5 @@
-use heic_converter_lib::converters::dispatcher::convert_image_auto;
 use heic_converter_lib::converters::common::OutputFormat;
-use tauri::AppHandle;
 use tempfile::TempDir;
-
-// 测试辅助函数：创建测试 Tauri 应用
-fn create_test_app_handle() -> AppHandle {
-    // 注意：这需要一个实际的 Tauri 应用上下文
-    // 在实际测试中，我们可能需要 mock 或使用 tauri-test 库
-    // 这里我们只是设置测试框架
-    
-    // 对于 dispatcher 测试，我们主要测试逻辑分支
-    // 实际的转换测试需要有效的图像文件
-    
-    // 由于无法在测试环境中创建完整的 Tauri 应用，
-    // 这些测试将在集成测试中执行
-    unimplemented!("需要 Tauri 测试环境")
-}
 
 #[test]
 #[ignore = "需要 Tauri 测试环境"]

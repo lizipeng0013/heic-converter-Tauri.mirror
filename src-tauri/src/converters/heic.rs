@@ -18,7 +18,7 @@ pub fn is_heic_format(input_path: &str) -> bool {
 
     // 然后尝试用 libheif 打开（更准确）
     match HeifContext::read_from_file(input_path) {
-        Ok(ctx) => ctx.number_of_top_level_images() > 0,
+        Ok(ctx) => !ctx.image_ids().is_empty(),
         Err(_) => false,
     }
 }
@@ -128,7 +128,7 @@ pub fn convert_heic_image(
                 let y_row_data = &y.data[y_row_start..];
                 
                 // 按行处理像素
-                let mut dst_offset = y_pos as usize * row_bytes;
+                let mut dst_offset = y_pos * row_bytes;
                 for x_pos in 0..width_usize {
                     let y_idx = x_pos;
                     let uv_x = x_pos / 2;
