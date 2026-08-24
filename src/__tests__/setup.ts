@@ -1,8 +1,8 @@
-import '@testing-library/jest-dom'
-import { vi } from 'vitest'
+import "@testing-library/jest-dom";
+import { vi } from "vitest";
 
-vi.mock('@vueuse/core', async (importOriginal) => {
-  const actual = await importOriginal()
+vi.mock("@vueuse/core", async (importOriginal) => {
+  const actual = await importOriginal();
   return {
     ...actual,
     useDark: vi.fn(() => ({ value: false })),
@@ -10,16 +10,16 @@ vi.mock('@vueuse/core', async (importOriginal) => {
       // Mock 实现
     }),
     reactiveOmit: vi.fn((obj: any, key: string) => {
-      const { [key]: _, ...rest } = obj
-      return rest
+      const { [key]: _, ...rest } = obj;
+      return rest;
     }),
-  }
-})
-vi.mock('@tauri-apps/api/core', () => ({
+  };
+});
+vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
-}))
+}));
 
-vi.mock('@tauri-apps/api/window', () => ({
+vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: vi.fn(() => ({
     show: vi.fn(),
     hide: vi.fn(),
@@ -31,35 +31,35 @@ vi.mock('@tauri-apps/api/window', () => ({
     setAlwaysOnTop: vi.fn(),
     startDragging: vi.fn(),
   })),
-}))
+}));
 
-vi.mock('@tauri-apps/api/tray', () => ({
+vi.mock("@tauri-apps/api/tray", () => ({
   TrayIcon: {
     new: vi.fn(),
     getById: vi.fn(),
   },
-}))
+}));
 
-vi.mock('@tauri-apps/api/menu', () => ({
+vi.mock("@tauri-apps/api/menu", () => ({
   Menu: {
     new: vi.fn(),
   },
   MenuItem: {
     new: vi.fn(),
   },
-}))
+}));
 
-vi.mock('@tauri-apps/plugin-dialog', () => ({
+vi.mock("@tauri-apps/plugin-dialog", () => ({
   ask: vi.fn(),
-}))
+}));
 
-vi.mock('@tauri-apps/plugin-fs', () => ({
+vi.mock("@tauri-apps/plugin-fs", () => ({
   stat: vi.fn(),
-}))
+}));
 
-vi.mock('@tauri-apps/plugin-log', () => ({
+vi.mock("@tauri-apps/plugin-log", () => ({
   debug: vi.fn(),
   info: vi.fn(),
   warn: vi.fn(),
   error: vi.fn(),
-}))
+}));

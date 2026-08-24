@@ -1,38 +1,38 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
-import SettingsPanel from '@/views/settings/SettingsPanel.vue'
-import { useConversionStore } from '@/stores/conversionStore'
-import { createPinia, setActivePinia } from 'pinia'
-import { open as openDialog } from '@tauri-apps/plugin-dialog'
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { mount } from "@vue/test-utils";
+import SettingsPanel from "@/views/settings/SettingsPanel.vue";
+import { useConversionStore } from "@/stores/conversionStore";
+import { createPinia, setActivePinia } from "pinia";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
 
-vi.mock('@/stores/conversionStore', () => ({
+vi.mock("@/stores/conversionStore", () => ({
   useConversionStore: vi.fn(),
-}))
+}));
 
-vi.mock('@tauri-apps/plugin-dialog', () => ({
+vi.mock("@tauri-apps/plugin-dialog", () => ({
   open: vi.fn(),
-}))
+}));
 
-vi.mock('@tauri-apps/api/path', () => ({
+vi.mock("@tauri-apps/api/path", () => ({
   downloadDir: vi.fn(),
-}))
+}));
 
-describe('SettingsPanel.vue', () => {
+describe("SettingsPanel.vue", () => {
   beforeEach(() => {
-    setActivePinia(createPinia())
-    vi.clearAllMocks()
-  })
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+  });
 
-  it('renders settings panel', async () => {
+  it("renders settings panel", async () => {
     const mockStore = {
-      outputFolder: '/test/output',
-      settings: { format: 'jpeg', quality: [90] },
+      outputFolder: "/test/output",
+      settings: { format: "jpeg", quality: [90] },
       stats: { total: 0, completed: 0, failed: 0 },
       updateSettings: vi.fn(),
       setOutputFolder: vi.fn(),
-    }
-    vi.mocked(useConversionStore).mockReturnValue(mockStore as any)
-    vi.mocked(openDialog).mockResolvedValue('/new/output')
+    };
+    vi.mocked(useConversionStore).mockReturnValue(mockStore as any);
+    vi.mocked(openDialog).mockResolvedValue("/new/output");
 
     const wrapper = mount(SettingsPanel, {
       global: {
@@ -42,147 +42,147 @@ describe('SettingsPanel.vue', () => {
           ChevronDown: true,
           Square: true,
           Button: {
-            template: '<button><slot /></button>',
+            template: "<button><slot /></button>",
           },
           Slider: {
             template: '<div class="slider"><slot /></div>',
           },
           Tooltip: {
-            template: '<div><slot /></div>',
+            template: "<div><slot /></div>",
           },
           TooltipContent: {
-            template: '<div><slot /></div>',
+            template: "<div><slot /></div>",
           },
           TooltipTrigger: {
-            template: '<div><slot /></div>',
+            template: "<div><slot /></div>",
           },
           TooltipProvider: {
-            template: '<div><slot /></div>',
+            template: "<div><slot /></div>",
           },
         },
       },
-    })
+    });
 
-    expect(wrapper.find('.bg-card').exists()).toBe(true)
-    expect(wrapper.text()).toContain('转换设置')
-  })
+    expect(wrapper.find(".bg-card").exists()).toBe(true);
+    expect(wrapper.text()).toContain("转换设置");
+  });
 
-  it('displays output folder', async () => {
+  it("displays output folder", async () => {
     const mockStore = {
-      outputFolder: '/test/output',
-      settings: { format: 'jpeg', quality: [90] },
+      outputFolder: "/test/output",
+      settings: { format: "jpeg", quality: [90] },
       stats: { total: 0, completed: 0, failed: 0 },
       updateSettings: vi.fn(),
       setOutputFolder: vi.fn(),
-    }
-    vi.mocked(useConversionStore).mockReturnValue(mockStore as any)
+    };
+    vi.mocked(useConversionStore).mockReturnValue(mockStore as any);
 
     const wrapper = mount(SettingsPanel, {
       global: {
         stubs: {
           Button: {
-            template: '<button><slot /></button>',
+            template: "<button><slot /></button>",
           },
           Slider: {
             template: '<div class="slider"><slot /></div>',
           },
           Tooltip: {
-            template: '<div><slot /></div>',
+            template: "<div><slot /></div>",
           },
           TooltipContent: {
-            template: '<div><slot /></div>',
+            template: "<div><slot /></div>",
           },
           TooltipTrigger: {
-            template: '<div><slot /></div>',
+            template: "<div><slot /></div>",
           },
           TooltipProvider: {
-            template: '<div><slot /></div>',
+            template: "<div><slot /></div>",
           },
         },
       },
-    })
+    });
 
-    expect(wrapper.text()).toContain('/test/output')
-  })
+    expect(wrapper.text()).toContain("/test/output");
+  });
 
-  it('displays format options', async () => {
+  it("displays format options", async () => {
     const mockStore = {
-      outputFolder: '/test/output',
-      settings: { format: 'jpeg', quality: [90] },
+      outputFolder: "/test/output",
+      settings: { format: "jpeg", quality: [90] },
       stats: { total: 0, completed: 0, failed: 0 },
       updateSettings: vi.fn(),
       setOutputFolder: vi.fn(),
-    }
-    vi.mocked(useConversionStore).mockReturnValue(mockStore as any)
+    };
+    vi.mocked(useConversionStore).mockReturnValue(mockStore as any);
 
     const wrapper = mount(SettingsPanel, {
       global: {
         stubs: {
           Button: {
-            template: '<button><slot /></button>',
+            template: "<button><slot /></button>",
           },
           Slider: {
             template: '<div class="slider"><slot /></div>',
           },
           Tooltip: {
-            template: '<div><slot /></div>',
+            template: "<div><slot /></div>",
           },
           TooltipContent: {
-            template: '<div><slot /></div>',
+            template: "<div><slot /></div>",
           },
           TooltipTrigger: {
-            template: '<div><slot /></div>',
+            template: "<div><slot /></div>",
           },
           TooltipProvider: {
-            template: '<div><slot /></div>',
+            template: "<div><slot /></div>",
           },
         },
       },
-    })
+    });
 
-    expect(wrapper.text()).toContain('JPEG')
-    expect(wrapper.text()).toContain('PNG')
-    expect(wrapper.text()).toContain('WebP')
-  })
+    expect(wrapper.text()).toContain("JPEG");
+    expect(wrapper.text()).toContain("PNG");
+    expect(wrapper.text()).toContain("WebP");
+  });
 
-  it('displays quality slider', async () => {
+  it("displays quality slider", async () => {
     const mockStore = {
-      outputFolder: '/test/output',
-      settings: { format: 'jpeg', quality: [90] },
+      outputFolder: "/test/output",
+      settings: { format: "jpeg", quality: [90] },
       stats: { total: 0, completed: 0, failed: 0 },
       updateSettings: vi.fn(),
       setOutputFolder: vi.fn(),
-    }
-    vi.mocked(useConversionStore).mockReturnValue(mockStore as any)
+    };
+    vi.mocked(useConversionStore).mockReturnValue(mockStore as any);
 
     const wrapper = mount(SettingsPanel, {
       global: {
         stubs: {
           Button: {
-            template: '<button><slot /></button>',
+            template: "<button><slot /></button>",
           },
           Slider: {
             template: '<div class="slider"><slot /></div>',
           },
           Tooltip: {
-            template: '<div><slot /></div>',
+            template: "<div><slot /></div>",
           },
           TooltipContent: {
-            template: '<div><slot /></div>',
+            template: "<div><slot /></div>",
           },
           TooltipTrigger: {
-            template: '<div><slot /></div>',
+            template: "<div><slot /></div>",
           },
           TooltipProvider: {
-            template: '<div><slot /></div>',
+            template: "<div><slot /></div>",
           },
         },
       },
-    })
+    });
 
     // 检查实际渲染的质量文本（可能是 "图片质量" 或 "输出质量"）
-    const text = wrapper.text()
-    expect(text).toContain('90')
-    expect(text).toContain('质量')
-  })
-})
+    const text = wrapper.text();
+    expect(text).toContain("90");
+    expect(text).toContain("质量");
+  });
+});

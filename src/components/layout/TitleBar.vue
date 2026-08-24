@@ -311,8 +311,8 @@ const onDoubleClick = async () => {
 
       <!-- 最小化按钮 -->
       <Button
-        data-testid="minimize-button"
         v-if="showMinimizeButton"
+        data-testid="minimize-button"
         variant="ghost"
         size="icon"
         class="h-8 w-8 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
@@ -323,8 +323,8 @@ const onDoubleClick = async () => {
 
       <!-- 最大化按钮 -->
       <Button
-        data-testid="maximize-button"
         v-if="showMaximizeButton"
+        data-testid="maximize-button"
         variant="ghost"
         size="icon"
         class="h-8 w-8 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
@@ -335,8 +335,8 @@ const onDoubleClick = async () => {
 
       <!-- 关闭按钮 - 保留 emit，需要业务逻辑处理 -->
       <Button
-        data-testid="close-button"
         v-if="showCloseButton"
+        data-testid="close-button"
         variant="ghost"
         size="icon"
         class="h-8 w-8 text-slate-500 hover:bg-red-500 hover:text-white transition-colors"
