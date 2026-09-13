@@ -1,0 +1,86 @@
+name: Build Windows Executable
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: 20
+  VCPKG_ROOT: C:\vcpkg
+  VCPKG_DEFAULT_TRIPLET: x64-windows-static-md
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Create pnpm workspace file
+        shell: bash
+        run: |
+          echo 'packages: []' > pnpm-workspace.yaml
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+          cache: false
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Install vcpkg dependencies
+        run: |
+          echo "C:\vcpkg" | Out-File -FilePath $env:GITHUB_PATH -Append
+          vcpkg install libheif libpng --triplet x64-windows-static-md
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Setup Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Build Tauri application
+        run: pnpm tauri build
+        env:
+          VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
+          VCPKG_DEFAULT_TRIPLET: ${{ env.VCPKG_DEFAULT_TRIPLET }}
+          LIBHEIF_SYS_VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
+          LIBHEIF_SYS_VCPKG_TRIPLET: ${{ env.VCPKG_DEFAULT_TRIPLET }}
+
+      # 诊断：列出构建产物
+      - name: List build output
+        shell: bash
+        run: |
+          echo "=== src-tauri/target/release/ ==="
+          ls -R src-tauri/target/release/ || echo "No such directory"
+          echo "=== src-tauri/target/release/bundle/ ==="
+          if [ -d "src-tauri/target/release/bundle" ]; then
+            ls -R src-tauri/target/release/bundle/
+          else
+            echo "bundle directory does not exist"
+          fi
+
+      # 上传所有可能的产物
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: heic-converter-build
+          path: |
+            src-tauri/target/release/bundle/
+            src-tauri/target/release/*.exe
+          if-no-files-found: error
