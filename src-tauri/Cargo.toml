@@ -1,7 +1,7 @@
 [package]
 name = "heic-converter"
 version = "0.4.1"
-description = "一款基于 Tauri 2 和 Vue 3 构建的轻量级跨平台 HEIC 图片转换工具。它可以将 HEIC/HEIF 格式的高清图片快速转换为通用的 JPG 或 PNG 格式。"
+description = "HEIC 图片转换工具。\n一款基于 Tauri 2 和 Vue 3 构建的轻量级跨平台 HEIC 图片转换工具。它可以将 HEIC/HEIF 格式的高清图片快速转换为通用的 JPG 或 PNG 格式。"
 authors = ["hotime <xiaoyqde@126.com>"]
 license = "GPL-3.0"
 edition = "2021"
@@ -36,6 +36,52 @@ once_cell = "1"
 
 [target.'cfg(windows)'.dependencies]
 turbojpeg-sys = { version = "1.1", default-features = false, features = ["cmake", "require-simd"] }
+
+# deb 打包由 cargo-deb 承担（tauri build 只产二进制，见 package.json 的 deb:*）。
+# 构建: pnpm tauri build 后运行 `cargo deb --no-build --variant=<name>`
+#  - dsg:    UOS/DSG 规范，仅 /opt/apps/${appid}/ 布局（info + entries/applications + entries/icons + files/bin）
+#  - debian: 标准 Debian 布局（/usr/bin + /usr/share/applications + /usr/share/icons）
+# assets 自定义后完全替换 cargo-deb 默认行为（binary→/usr/bin、readme→usr/share/doc），
+# 因此两个变体互不残留。
+[package.metadata.deb]
+name = "heic-converter"
+# 我们即上游软件包（非 Debian 打包方），无 Debian 修订号概念，去掉默认追加的 "-1"。
+revision = "0"
+maintainer = "hotime <xiaoyqde@126.com>"
+copyright = "2024-2026, hotime"
+license-file = "../LICENSE"
+# $auto：cargo-deb 3.8+ 用 dpkg-shlibdeps 自动解析二进制的直接依赖（GTK/WebKit 栈、
+# libheif1 等，带正确版本下限）。手动补充仅用于自动解析给不出的约束：
+# libheif1 下限按 libheif-rs 的 v1_18 feature 收紧到 1.18（shlibs 只给 1.13.0）。
+# 不再手写 libde265-0/libx265-199：libde265 经 libheif1 传递保证，x265 根本不在链接树（只转 JPG/PNG）。
+depends = "$auto, libheif1 (>= 1.18)"
+section = "graphics"
+priority = "optional"
+
+[package.metadata.deb.variants.dsg]
+# DSG 规范：全部应用文件位于 /opt/apps/top.hotime.heic-converter/。
+# 包名直接使用反转域名 appid；与 debian 变体包名不同，互不覆盖。
+name = "top.hotime.heic-converter"
+assets = [
+  ["info", "opt/apps/top.hotime.heic-converter/info", "644"],
+  ["heic-converter-dsg.desktop", "opt/apps/top.hotime.heic-converter/entries/applications/top.hotime.heic-converter.desktop", "644"],
+  # DSG 支持 SVG 图标：直接打包源文件，无需按尺寸生成多档 PNG。
+  ["../src/assets/app-icon.svg", "opt/apps/top.hotime.heic-converter/entries/icons/hicolor/scalable/apps/top.hotime.heic-converter.svg", "644"],
+  # DSG 应用在 /opt/apps/{appid}/ 内无命名冲突，二进制用应用名 heic-converter。
+  ["target/release/heic-converter", "opt/apps/top.hotime.heic-converter/files/bin/", "755"],
+]
+
+[package.metadata.deb.variants.debian]
+# 标准 Debian 布局：/usr/bin 二进制 + 桌面入口 + 图标，非 UOS 平台安装后可直接进菜单。
+# 包名沿用基础包名 heic-converter（与 dsg 变体的反转域名包名区分，避免 deb 包互相覆盖）。
+name = "heic-converter"
+assets = [
+  # 包名即 heic-converter，二进制同名。
+  ["target/release/heic-converter", "usr/bin/", "755"],
+  ["heic-converter-debian.desktop", "usr/share/applications/heic-converter.desktop", "644"],
+  # 图标与 dsg 变体共用同一份源文件（scalable SVG）。
+  ["../src/assets/app-icon.svg", "usr/share/icons/hicolor/scalable/apps/heic-converter.svg", "644"],
+]
 
 [profile.release]
 lto = "fat"

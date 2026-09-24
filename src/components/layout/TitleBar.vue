@@ -2,7 +2,7 @@
 import { ref, computed } from "vue";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Sun, Moon, Minus, X, Maximize2, Pin, MonitorDown } from "lucide-vue-next";
-import AppIcon from "@/assets/64x64.png";
+import AppIcon from "@/assets/app-icon.svg";
 import { Button } from "@/components/ui/button";
 import {
   ContextMenu,

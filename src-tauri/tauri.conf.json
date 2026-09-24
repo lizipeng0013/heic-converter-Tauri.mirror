@@ -3,7 +3,6 @@
   "productName": "heic-converter",
   "version": "0.4.1",
   "identifier": "top.hotime.heic-converter",
-  "mainBinaryName": "top.hotime.heic-converter",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -31,28 +30,7 @@
     }
   },
   "bundle": {
-    "shortDescription": " HEIC 图片转换工具",
-    "longDescription": "一款基于 Tauri 2 和 Vue 3 构建的轻量级跨平台 HEIC 图片转换工具。\n 它可以将 HEIC/HEIF 格式的高清图片快速转换为通用的 JPG 或 PNG 格式。",
-    "active": true,
-    "targets": ["deb"],
-    "icon": [
-      "icons/32x32.png",
-      "icons/64x64.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
-    ],
-    "linux": {
-      "deb": {
-        "desktopTemplate": "desktop-template.desktop",
-        "files": {},
-        "depends": ["libheif1 (>= 1.18)", "libde265-0 (>= 1.0)", "libx265-199 (>= 2.5)"]
-      },
-      "rpm": {
-        "epoch": 0,
-        "files": {}
-      }
-    }
+    "active": false,
+    "icon": ["icons/32x32.png"]
   }
 }

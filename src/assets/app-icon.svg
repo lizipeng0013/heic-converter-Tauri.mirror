@@ -1,0 +1,425 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- 
+  HEIC Converter 应用图标
+  ============================================
+  尺寸: 256x256 像素
+  设计风格: 现代简约，圆角卡片式设计
+  
+  图标元素:
+  1. 渐变背景 - 紫色系 (#7272CC → #6363C6 → #7272CC)
+  2. 山形剪影 - 白色半透明，带投影效果
+  3. 太阳 - 浅紫色圆圈，带投影效果
+  4. 螺旋装饰 - 右侧装饰性元素
+  5. 文字标签 - "HEIC" 品牌文字
+  
+  创建工具: Inkscape 1.4.2
+-->
+
+<svg
+   width="256"
+   height="256"
+   viewBox="0 0 256 256"
+   fill="none"
+   version="1.1"
+   id="svg4"
+   sodipodi:docname="app-icon.svg"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
+   inkscape:export-filename="title4.png"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <!-- Inkscape 视图设置（编辑器元数据，不影响渲染） -->
+  <sodipodi:namedview
+     id="namedview4"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="1.9917888"
+     inkscape:cx="166.68434"
+     inkscape:cy="130.03387"
+     inkscape:window-width="1920"
+     inkscape:window-height="998"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg4" />
+  <!-- ========== 主要视觉元素 ========== -->
+  <!-- 圆角矩形背景：紫色渐变，带投影 -->
+  <!-- 山形：白色半透明剪影，带投影 -->
+  <!-- 太阳：浅紫色圆圈，带投影 -->
+  <!-- ========== 装饰性元素 ========== -->
+  <!-- 螺旋曲线装饰：右上角装饰元素 -->
+  <!-- 品牌文字：HEIC -->
+  <!-- ========== 资源定义：渐变、滤镜、标记 ========== -->
+  <defs
+     id="defs4">
+    <!-- 渐变定义 -->
+    <!-- 基础线性渐变：淡紫色到透明，用于螺旋装饰 -->
+    <linearGradient
+       id="linearGradient1"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#f6f4ff;stop-opacity:1;"
+         offset="0"
+         id="stop1" />
+      <stop
+         style="stop-color:#f6f4ff;stop-opacity:0;"
+         offset="1"
+         id="stop5" />
+    </linearGradient>
+    <!-- 背景渐变：紫色系三段渐变，营造立体感 -->
+    <!-- 颜色：#7272CC → #6363C6 → #7272CC -->
+    <linearGradient
+       id="bgGradient"
+       x1="0"
+       y1="0"
+       x2="512"
+       y2="512"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(0.3984375,0,0,0.3984375,26,26)">
+      <stop
+         offset="0%"
+         stop-color="#7272CC"
+         id="stop2" />
+      <stop
+         offset="50%"
+         stop-color="#6363C6"
+         id="stop3" />
+      <stop
+         offset="100%"
+         stop-color="#7272CC"
+         id="stop4" />
+    </linearGradient>
+    <!-- 螺旋装饰渐变：引用基础渐变 linearGradient1 -->
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient1"
+       id="linearGradient5"
+       x1="352.65219"
+       y1="134.57733"
+       x2="416.14786"
+       y2="238.81886"
+       gradientUnits="userSpaceOnUse" />
+    <!-- 标记定义 -->
+    <!-- 圆角箭头标记：用于螺旋曲线末端 -->
+    <marker
+       style="overflow:visible"
+       id="RoundedArrow"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Rounded arrow"
+       markerWidth="0.5"
+       markerHeight="0.5"
+       viewBox="0 0 1 1"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.7)"
+         d="m -0.21114562,-4.1055728 6.42229122,3.21114561 a 1,1 90 0 1 0,1.78885438 L -0.21114562,4.1055728 A 1.236068,1.236068 31.717474 0 1 -2,3 v -6 a 1.236068,1.236068 148.28253 0 1 1.78885438,-1.1055728 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         id="path8" />
+    </marker>
+    <!-- 滤镜定义：统一投影效果 -->
+    <!-- 所有滤镜都使用相同的参数：标准差 3px，偏移 (6, 6)，黑色半透明 -->
+    <!-- 滤镜 #23：用于山形元素 -->
+    <filter
+       style="color-interpolation-filters:sRGB;"
+       inkscape:label="Drop Shadow"
+       id="filter23"
+       x="-0.051336898"
+       y="-0.16257276"
+       width="1.1454545"
+       height="1.4606228">
+      <feFlood
+         result="flood"
+         in="SourceGraphic"
+         flood-opacity="0.498039"
+         flood-color="rgb(0,0,0)"
+         id="feFlood22" />
+      <feGaussianBlur
+         result="blur"
+         in="SourceGraphic"
+         stdDeviation="3.000000"
+         id="feGaussianBlur22" />
+      <feOffset
+         result="offset"
+         in="blur"
+         dx="6.000000"
+         dy="6.000000"
+         id="feOffset22" />
+      <feComposite
+         result="comp1"
+         operator="in"
+         in="flood"
+         in2="offset"
+         id="feComposite22" />
+      <feComposite
+         result="comp2"
+         operator="over"
+         in="SourceGraphic"
+         in2="comp1"
+         id="feComposite23" />
+    </filter>
+    <!-- 滤镜 #25：用于太阳元素 -->
+    <filter
+       style="color-interpolation-filters:sRGB;"
+       inkscape:label="Drop Shadow"
+       id="filter25"
+       x="-0.25815128"
+       y="-0.25815128"
+       width="1.7314286"
+       height="1.7314286">
+      <feFlood
+         result="flood"
+         in="SourceGraphic"
+         flood-opacity="0.498039"
+         flood-color="rgb(0,0,0)"
+         id="feFlood23" />
+      <feGaussianBlur
+         result="blur"
+         in="SourceGraphic"
+         stdDeviation="3.000000"
+         id="feGaussianBlur23" />
+      <feOffset
+         result="offset"
+         in="blur"
+         dx="6.000000"
+         dy="6.000000"
+         id="feOffset23" />
+      <feComposite
+         result="comp1"
+         operator="in"
+         in="flood"
+         in2="offset"
+         id="feComposite24" />
+      <feComposite
+         result="comp2"
+         operator="over"
+         in="SourceGraphic"
+         in2="comp1"
+         id="feComposite25" />
+    </filter>
+    <!-- 滤镜 #27：用于螺旋装饰 -->
+    <filter
+       style="color-interpolation-filters:sRGB"
+       inkscape:label="Drop Shadow"
+       id="filter27"
+       x="-0.29613025"
+       y="-0.41470612"
+       width="2.215969"
+       height="1.7395079">
+      <feFlood
+         result="flood"
+         in="SourceGraphic"
+         flood-opacity="0.498039"
+         flood-color="rgb(0,0,0)"
+         id="feFlood25" />
+      <feGaussianBlur
+         result="blur"
+         in="SourceGraphic"
+         stdDeviation="3.000000"
+         id="feGaussianBlur25" />
+      <feOffset
+         result="offset"
+         in="blur"
+         dx="6.000000"
+         dy="6.000000"
+         id="feOffset25" />
+      <feComposite
+         result="comp1"
+         operator="in"
+         in="flood"
+         in2="offset"
+         id="feComposite26" />
+      <feComposite
+         result="comp2"
+         operator="over"
+         in="SourceGraphic"
+         in2="comp1"
+         id="feComposite27" />
+    </filter>
+    <!-- 滤镜 #29：用于 HEIC 文字 -->
+    <filter
+       style="color-interpolation-filters:sRGB;"
+       inkscape:label="Drop Shadow"
+       id="filter29"
+       x="-0.054340483"
+       y="-0.16543509"
+       width="1.1539647"
+       height="1.4687328">
+      <feFlood
+         result="flood"
+         in="SourceGraphic"
+         flood-opacity="0.498039"
+         flood-color="rgb(0,0,0)"
+         id="feFlood27" />
+      <feGaussianBlur
+         result="blur"
+         in="SourceGraphic"
+         stdDeviation="3.000000"
+         id="feGaussianBlur27" />
+      <feOffset
+         result="offset"
+         in="blur"
+         dx="6.000000"
+         dy="6.000000"
+         id="feOffset27" />
+      <feComposite
+         result="comp1"
+         operator="in"
+         in="flood"
+         in2="offset"
+         id="feComposite28" />
+      <feComposite
+         result="comp2"
+         operator="over"
+         in="SourceGraphic"
+         in2="comp1"
+         id="feComposite29" />
+    </filter>
+    <!-- 滤镜 #31：用于背景圆角矩形 -->
+    <filter
+       style="color-interpolation-filters:sRGB;"
+       inkscape:label="Drop Shadow"
+       id="filter31"
+       x="-0.035294118"
+       y="-0.035294118"
+       width="1.1"
+       height="1.1">
+      <feFlood
+         result="flood"
+         in="SourceGraphic"
+         flood-opacity="0.498039"
+         flood-color="rgb(0,0,0)"
+         id="feFlood30" />
+      <feGaussianBlur
+         result="blur"
+         in="SourceGraphic"
+         stdDeviation="3.000000"
+         id="feGaussianBlur30" />
+      <feOffset
+         result="offset"
+         in="blur"
+         dx="6.000000"
+         dy="6.000000"
+         id="feOffset30" />
+      <feComposite
+         result="comp1"
+         operator="in"
+         in="flood"
+         in2="offset"
+         id="feComposite30" />
+      <feComposite
+         result="comp2"
+         operator="over"
+         in="SourceGraphic"
+         in2="comp1"
+         id="feComposite31" />
+    </filter>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient1"
+       id="linearGradient2"
+       gradientUnits="userSpaceOnUse"
+       x1="352.65219"
+       y1="134.57733"
+       x2="416.14786"
+       y2="238.81886" />
+  </defs>
+  <g
+     id="g2"
+     inkscape:label="icon">
+    <rect
+       style="fill:none"
+       id="rect2"
+       width="256"
+       height="256"
+       x="0"
+       y="0"
+       inkscape:label="画幅框" />
+    <rect
+       style="fill:none;stroke:none;stroke-width:0.875406;stroke-dasharray:none;stroke-opacity:1"
+       id="rect2-6"
+       width="224"
+       height="224"
+       x="15.998298"
+       y="15.998298"
+       inkscape:label="内容框" />
+    <g
+       id="g1"
+       transform="matrix(1.0962567,0,0,1.0962567,-12.609625,-12.609625)"
+       inkscape:label="内容物">
+      <rect
+         x="26"
+         y="26"
+         width="204"
+         height="204"
+         rx="39.84375"
+         fill="url(#bgGradient)"
+         id="rect1"
+         style="fill:url(#bgGradient);stroke-width:0.398437;filter:url(#filter31)" />
+      <path
+         d="m 57.875,153.4375 q 35.85937,-51.79688 71.71875,-31.875 31.875,-35.85938 68.53125,31.875 z"
+         fill="#ffffff"
+         opacity="0.9"
+         id="path1"
+         style="filter:url(#filter23)" />
+      <circle
+         cx="89.015625"
+         cy="88.609383"
+         fill="#FFC131"
+         id="circle1"
+         style="opacity:0.9;fill:#f4effe;fill-opacity:1;filter:url(#filter25)"
+         r="13.945312" />
+      <path
+         sodipodi:type="spiral"
+         style="fill:none;fill-rule:evenodd;stroke:url(#linearGradient2);stroke-width:11.3386;stroke-linecap:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker-end:url(#RoundedArrow);paint-order:normal;filter:url(#filter27)"
+         id="path4"
+         sodipodi:cx="375.86511"
+         sodipodi:cy="193.24513"
+         sodipodi:expansion="1"
+         sodipodi:revolution="2.9614573"
+         sodipodi:radius="43.126423"
+         sodipodi:argument="-20.079372"
+         sodipodi:t0="0.88844764"
+         d="m 340.6657,208.38066 c -9.91697,-19.69286 -0.84844,-44.00002 18.62575,-53.67949 6.43138,-3.19666 13.65604,-4.69591 20.82799,-4.37211"
+         transform="matrix(0.3984375,0,0,0.3984375,35.728909,1.975607)" />
+      <path
+         style="opacity:0.9;fill:#ffffff;stroke:#6d28d9;stroke-width:0;stroke-linecap:round;filter:url(#filter29)"
+         d="m 59.560783,216.50161 q -1.17151,0 -2.460171,-0.52718 -1.230086,-0.4686 -1.230086,-1.46438 0.117151,-5.21322 0.117151,-18.45129 l 0.117151,-0.0586 h -0.175726 q -1.05436,0 -1.69869,-1.23009 -0.585755,-1.23008 -0.585755,-2.22587 0,-1.28866 0.995783,-1.28866 l 1.347237,0.0586 q 0,-10.30929 -0.175726,-16.51829 0,-0.93721 1.464387,-0.93721 1.17151,0 2.401596,0.52718 1.230085,0.4686 1.230085,1.46439 -0.117151,5.21321 -0.117151,15.46393 17.806952,-1.05436 19.505642,-1.34724 1.230085,0 1.230085,-0.17573 0,-8.66917 -0.175726,-14.99532 0,-0.93721 1.464387,-0.93721 1.17151,0 2.401596,0.52718 1.230085,0.4686 1.230085,1.46439 l -0.117151,5.21321 q 0,28.2334 0.175727,34.4424 0,0.93721 -1.405812,0.93721 -1.17151,0 -2.460171,-0.52718 -1.230086,-0.46861 -1.230086,-1.46439 0.117151,-5.21322 0.117151,-19.73994 l -4.68604,-0.17573 -16.049687,0.93721 q 0,13.88239 0.175727,20.09139 0,0.93721 -1.405812,0.93721 z m 39.88996,-0.0586 q -1.054359,0 -1.991567,-1.11294 -0.878632,-1.17151 -0.878632,-1.99156 l 0.410028,-2.75305 v -14.99533 q -0.585755,-0.35145 -1.112934,-1.34724 -0.468604,-1.05436 -0.468604,-1.75726 0,-0.99579 0.937208,-0.99579 l 0.64433,0.11715 v -13.23806 l -0.234302,-2.98735 q 0,-1.17151 1.17151,-1.17151 0.878633,0 2.050143,0.35145 l 1.171507,0.41003 q 16.51829,-1.11293 18.56844,-1.34723 1.52296,-0.17573 2.22587,-0.17573 0.82005,0 1.46438,1.17151 0.70291,1.11293 0.70291,2.10872 0,1.28866 -1.11294,1.28866 -5.15464,0 -21.32148,1.11293 v 12.41801 q 12.71089,-0.82006 14.8196,-1.05436 1.52297,-0.17573 2.22587,-0.17573 0.82006,0 1.46439,1.17151 0.70291,1.11294 0.70291,2.1673 0,1.28866 -1.11294,1.28866 -4.97892,0 -18.09983,0.76148 v 15.99111 q 20.0914,-0.35145 21.96582,-0.4686 1.05435,0 1.64011,1.23008 0.64433,1.23009 0.64433,2.22587 0,1.28866 -1.05436,1.28866 -1.40581,-0.17572 -6.03328,-0.17572 -17.22119,0.2343 -17.86552,0.41002 -0.64433,0.23431 -1.522967,0.23431 z m 39.187037,0 q -1.23008,0 -2.57732,-0.52718 -1.28866,-0.46861 -1.28866,-1.46439 l 0.11715,-5.21322 q 0,-28.23339 -0.17573,-34.44239 0,-0.93721 1.52297,-0.93721 1.17151,0 2.46017,0.52718 1.34723,0.4686 1.34723,1.46439 l -0.11715,5.21321 q 0,28.2334 0.17573,34.4424 0,0.93721 -1.46439,0.93721 z m 28.58489,0.4686 q -5.15464,0 -9.3135,-1.87442 -4.15886,-1.93299 -6.56046,-6.03327 -2.40159,-4.10029 -2.40159,-10.01641 0,-11.12935 6.09185,-18.33413 6.09185,-7.26337 15.17105,-7.26337 8.90348,0 13.17949,5.09607 0.2343,0.35146 0.2343,1.05436 0,0.76148 -0.87863,1.87442 -0.82006,1.11293 -1.64011,1.11293 -0.87864,0 -1.34724,-0.7029 -2.57732,-3.98314 -9.43066,-3.98314 -6.91191,0 -11.53937,5.68183 -4.92034,5.79897 -4.92034,15.0539 0,9.19635 6.56045,12.41801 3.04593,1.52296 6.44331,1.52296 3.3388,0 6.26758,-0.99579 2.92877,-0.99578 5.62325,-2.81162 2.75304,-1.87442 4.51031,-4.27601 0.82006,-0.99578 1.75726,-0.99578 1.11294,0 1.11294,1.11293 0,0.87863 -0.87863,2.34302 -1.99157,3.51453 -6.20901,6.32615 -5.27179,3.69026 -11.83225,3.69026 z"
+         id="text19"
+         transform="scale(1.0753902,0.92989501)"
+         aria-label="HEIC" />
+      <path
+         sodipodi:type="spiral"
+         style="fill:none;fill-rule:evenodd;stroke:url(#linearGradient5);stroke-width:11.3386;stroke-linecap:round;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;marker-end:url(#RoundedArrow);paint-order:normal;filter:url(#filter27)"
+         id="path2"
+         sodipodi:cx="375.86511"
+         sodipodi:cy="193.24513"
+         sodipodi:expansion="1"
+         sodipodi:revolution="2.9614573"
+         sodipodi:radius="43.126423"
+         sodipodi:argument="-20.079372"
+         sodipodi:t0="0.88844764"
+         d="m 340.6657,208.38066 c -9.91697,-19.69286 -0.84844,-44.00002 18.62575,-53.67949 6.43138,-3.19666 13.65604,-4.69591 20.82799,-4.37211"
+         transform="matrix(0.3984375,0,0,0.3984375,35.728909,1.975607)" />
+      <path
+         style="opacity:0.9;fill:#ffffff;stroke:#6d28d9;stroke-width:0;stroke-linecap:round;filter:url(#filter29)"
+         d="m 59.560783,216.50161 q -1.17151,0 -2.460171,-0.52718 -1.230086,-0.4686 -1.230086,-1.46438 0.117151,-5.21322 0.117151,-18.45129 l 0.117151,-0.0586 h -0.175726 q -1.05436,0 -1.69869,-1.23009 -0.585755,-1.23008 -0.585755,-2.22587 0,-1.28866 0.995783,-1.28866 l 1.347237,0.0586 q 0,-10.30929 -0.175726,-16.51829 0,-0.93721 1.464387,-0.93721 1.17151,0 2.401596,0.52718 1.230085,0.4686 1.230085,1.46439 -0.117151,5.21321 -0.117151,15.46393 17.806952,-1.05436 19.505642,-1.34724 1.230085,0 1.230085,-0.17573 0,-8.66917 -0.175726,-14.99532 0,-0.93721 1.464387,-0.93721 1.17151,0 2.401596,0.52718 1.230085,0.4686 1.230085,1.46439 l -0.117151,5.21321 q 0,28.2334 0.175727,34.4424 0,0.93721 -1.405812,0.93721 -1.17151,0 -2.460171,-0.52718 -1.230086,-0.46861 -1.230086,-1.46439 0.117151,-5.21322 0.117151,-19.73994 l -4.68604,-0.17573 -16.049687,0.93721 q 0,13.88239 0.175727,20.09139 0,0.93721 -1.405812,0.93721 z m 39.88996,-0.0586 q -1.054359,0 -1.991567,-1.11294 -0.878632,-1.17151 -0.878632,-1.99156 l 0.410028,-2.75305 v -14.99533 q -0.585755,-0.35145 -1.112934,-1.34724 -0.468604,-1.05436 -0.468604,-1.75726 0,-0.99579 0.937208,-0.99579 l 0.64433,0.11715 v -13.23806 l -0.234302,-2.98735 q 0,-1.17151 1.17151,-1.17151 0.878633,0 2.050143,0.35145 l 1.171507,0.41003 q 16.51829,-1.11293 18.56844,-1.34723 1.52296,-0.17573 2.22587,-0.17573 0.82005,0 1.46438,1.17151 0.70291,1.11293 0.70291,2.10872 0,1.28866 -1.11294,1.28866 -5.15464,0 -21.32148,1.11293 v 12.41801 q 12.71089,-0.82006 14.8196,-1.05436 1.52297,-0.17573 2.22587,-0.17573 0.82006,0 1.46439,1.17151 0.70291,1.11294 0.70291,2.1673 0,1.28866 -1.11294,1.28866 -4.97892,0 -18.09983,0.76148 v 15.99111 q 20.0914,-0.35145 21.96582,-0.4686 1.05435,0 1.64011,1.23008 0.64433,1.23009 0.64433,2.22587 0,1.28866 -1.05436,1.28866 -1.40581,-0.17572 -6.03328,-0.17572 -17.22119,0.2343 -17.86552,0.41002 -0.64433,0.23431 -1.522967,0.23431 z m 39.187037,0 q -1.23008,0 -2.57732,-0.52718 -1.28866,-0.46861 -1.28866,-1.46439 l 0.11715,-5.21322 q 0,-28.23339 -0.17573,-34.44239 0,-0.93721 1.52297,-0.93721 1.17151,0 2.46017,0.52718 1.34723,0.4686 1.34723,1.46439 l -0.11715,5.21321 q 0,28.2334 0.17573,34.4424 0,0.93721 -1.46439,0.93721 z m 28.58489,0.4686 q -5.15464,0 -9.3135,-1.87442 -4.15886,-1.93299 -6.56046,-6.03327 -2.40159,-4.10029 -2.40159,-10.01641 0,-11.12935 6.09185,-18.33413 6.09185,-7.26337 15.17105,-7.26337 8.90348,0 13.17949,5.09607 0.2343,0.35146 0.2343,1.05436 0,0.76148 -0.87863,1.87442 -0.82006,1.11293 -1.64011,1.11293 -0.87864,0 -1.34724,-0.7029 -2.57732,-3.98314 -9.43066,-3.98314 -6.91191,0 -11.53937,5.68183 -4.92034,5.79897 -4.92034,15.0539 0,9.19635 6.56045,12.41801 3.04593,1.52296 6.44331,1.52296 3.3388,0 6.26758,-0.99579 2.92877,-0.99578 5.62325,-2.81162 2.75304,-1.87442 4.51031,-4.27601 0.82006,-0.99578 1.75726,-0.99578 1.11294,0 1.11294,1.11293 0,0.87863 -0.87863,2.34302 -1.99157,3.51453 -6.20901,6.32615 -5.27179,3.69026 -11.83225,3.69026 z"
+         id="text2"
+         transform="scale(1.0753902,0.92989501)"
+         aria-label="HEIC" />
+    </g>
+  </g>
+</svg>

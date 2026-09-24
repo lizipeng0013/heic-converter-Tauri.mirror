@@ -1,0 +1,17 @@
+{
+  "appid": "top.hotime.heic-converter",
+  "name": "HEIC 图片格式转换器",
+  "version": "0.4.1",
+  "arch": ["amd64", "arm64"],
+  "permissions": {
+    "notification": true,
+    "trayicon": true,
+    "autostart": false,
+    "clipboard": false,
+    "account": false,
+    "bluetooth": false,
+    "camera": false,
+    "audio_record": false,
+    "installed_apps": false
+  }
+}

@@ -19,7 +19,7 @@
 - ❌ **失败标签页**：新增独立的转换失败文件标签页，方便集中处理异常。
 - 🧹 **优雅停止**：使用任务队列实现真正的可控停止，停止后转换即时中断，无残留任务。
 - 🎨 **UI 全面进化**：无边现代风格、SVG 自适应标题栏（高度可配置）、ScrollArea 优化滚动体验。
-- 🐧 **Deepin/UOS 适配**：deb 打包声明 libheif/libde265/libx265 运行时依赖，并定制桌面入口模板。
+- 🐧 **Deepin/UOS 适配**：deb 打包运行时依赖由 `dpkg-shlibdeps` 自动解析（cargo-deb `$auto`），仅手动收紧 libheif1 版本下限，并定制桌面入口模板。
 - 🔧 **大规模重构**：窗口/托盘操作迁移至 Tauri 2 前端 API；mimalloc 全局内存分配器；原子操作替代 Mutex 减少锁竞争。
 
 ---
@@ -75,7 +75,9 @@ src/                          # 前端代码
 └── App.vue                   # 应用根组件
 
 src-tauri/                    # Rust 后端代码
-├── desktop-template.desktop  # deb 打包桌面入口模板
+├── heic-converter-dsg.desktop    # DSG 变体桌面入口（绝对路径 Exec）
+├── heic-converter-debian.desktop # Debian 变体桌面入口
+├── info                 # DSG 打包源文件 (info)
 ├── src/
 │   ├── commands/            # Tauri 命令
 │   │   └── conversion.rs    # 转换命令 (窗口命令已迁移至前端 API)
@@ -153,6 +155,22 @@ pnpm tauri build
 ```
 
 构建完成后，可执行文件位于 `src-tauri/target/release/bundle/` 目录下。
+
+#### 5. UOS/DSG 规范打包（可选）
+
+tauri-bundler 的安装路径（`/usr/bin`、`/usr/share/applications` 等）是硬编码的，无法产出纯 DSG 布局，因此 deb 打包改由 `cargo-deb` 承担：`tauri build` 只产二进制，deb 元数据全部写在 `src-tauri/Cargo.toml` 的 `[package.metadata.deb]`（`dsg` 与 `debian` 两个变体）：
+
+```bash
+pnpm deb          # 一次构建两种包（CI 用）：tauri build 一次 + dsg + debian
+pnpm deb:dsg      # UOS/DSG 规范：仅 /opt/apps/top.hotime.heic-converter/ 布局
+pnpm deb:debian   # 标准 Debian 布局：/usr/bin + 桌面入口 + hicolor 图标
+```
+
+- DSG 安装布局：`/opt/apps/top.hotime.heic-converter/`（`info` + `entries/applications` + `entries/icons` + `files/bin`），无 postinst 钩子。
+- 两个变体的主程序二进制均命名为 `heic-converter`（DSG 位于 `/opt/apps/{appid}/files/bin/` 内无命名冲突；Debian 变体与包名一致）。
+- DSG 源文件：`src-tauri/info`（appid 为倒置域名，**上架前必须换成已拥有的域名**）。两个变体的桌面入口分别由 `heic-converter-dsg.desktop`（DSG，绝对路径 `Exec`）与 `heic-converter-debian.desktop`（Debian）生成，图标为 scalable SVG（`src/assets/app-icon.svg`），两个 deb 变体直接打包该源文件，无需多档 PNG。
+- 两个变体包名分别为 `top.hotime.heic-converter`（DSG，反转域名）与 `heic-converter`（Debian），产物在 `src-tauri/target/debian/`。
+- cargo-deb 无条件生成 `usr/share/doc/<pkg>/copyright`（Debian 政策要求，debian 变体保留）；DSG 变体由 `src-tauri/scripts/fixup-dsg-deb.sh` 重打包后移到 `entries/doc/<appid>/copyright`，包内无 `/usr` 文件。
 
 ---
 

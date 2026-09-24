@@ -18,7 +18,10 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:unit": "vitest run src/__tests__/unit",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "deb": "tauri build && cargo deb --no-build --variant=dsg --manifest-path src-tauri/Cargo.toml && src-tauri/scripts/fixup-dsg-deb.sh && cargo deb --no-build --variant=debian --manifest-path src-tauri/Cargo.toml",
+    "deb:dsg": "tauri build && cargo deb --no-build --variant=dsg --manifest-path src-tauri/Cargo.toml && src-tauri/scripts/fixup-dsg-deb.sh",
+    "deb:debian": "tauri build && cargo deb --no-build --variant=debian --manifest-path src-tauri/Cargo.toml"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
