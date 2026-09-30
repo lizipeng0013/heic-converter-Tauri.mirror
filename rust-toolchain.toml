@@ -1,0 +1,13 @@
+# 固定 Rust 工具链版本。
+#
+# 放在仓库根目录而非 src-tauri/：rustup 按「当前工作目录」向上查找本文件，
+# 而 package.json 里的脚本（lint:rust / deb 等）都在仓库根执行
+# `cargo --manifest-path src-tauri/Cargo.toml`，rustup 不会跟随 --manifest-path。
+#
+# 为什么不用系统包管理器自带的 Rust：deepin 25 的 cargo/rustc 是 1.81，
+# 解析不了依赖树中 rav1e → v_frame → av-scenechange → aligned 0.4.3 使用的
+# edition2024；依赖树中最高的 MSRV 是 1.89.0（notify-rust 4.18.0）。
+[toolchain]
+channel = "1.98.1"
+profile = "minimal"
+components = ["clippy", "rustfmt"]

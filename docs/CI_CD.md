@@ -1,303 +1,77 @@
 # CI/CD 工作流
 
-本文档描述了 HEIC 转换器的 AtomGit Action CI/CD 配置。
+CI 跑在 **CNB**（`.cnb.yml`），目标平台是 **deepin 25 / amd64 + arm64**，
+产出 DSG 与标准 Debian 两套 `.deb`。
 
-## 工作流概览
+> 历史文档描述的 `.gitcode/workflows/*.yml`（AtomGit Action，Node 18）从未提交到仓库，
+> 已随本次改造一并删除。
 
-| 工作流 | 触发条件 | 主要任务 |
-|--------|----------|----------|
-| CI | Push/PR | 测试、检查、构建 |
-| Release | Tag | 发布、打包 |
+## 组成
 
-## CI 工作流
-
-`.gitcode/workflows/ci.yml`:
-
-```yaml
-name: CI
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
-concurrency:
-  max: 1
-  exceed-action: QUEUE
-
-permissions:
-  repository: read
-  pr: write
-
-env:
-  CARGO_TERM_COLOR: always
-  NODE_VERSION: '18'
-
-jobs:
-  test:
-    name: 测试
-    runs-on: [ubuntu-latest, x64, small]
-    steps:
-      - name: 检出代码
-        uses: checkout
-      
-      - name: 设置 Rust
-        uses: setup-rust
-        with:
-          rust-version: stable
-          components: rustfmt, clippy
-      
-      - name: 设置 Node.js
-        uses: setup-node
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-      
-      - name: 安装前端依赖
-        run: pnpm install
-      
-      - name: 运行 Rust 测试
-        run: cargo test --manifest-path src-tauri/Cargo.toml
-      
-      - name: 运行前端测试
-        run: pnpm test:coverage
-      
-      - name: 运行 Rust Linter
-        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
-      
-      - name: 运行 ESLint
-        run: pnpm lint
-      
-      - name: 检查代码格式
-        run: |
-          pnpm format --check
-          cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
-      
-      - name: 构建应用
-        run: pnpm tauri build
-      
-      - name: 上传覆盖率报告
-        uses: upload-artifact
-        with:
-          name: coverage-report
-          path: coverage/
-          retention-days: 7
-
-  post-process:
-    name: 后处理
-    runs-on: [ubuntu-latest, x64, small]
-    if: ${{ always() }}
-    needs: test
-    steps:
-      - name: 发送通知
-        run: |
-          echo "## 工作流执行完成" >> $ATOMGIT_STEP_SUMMARY
-          echo "| 状态 | 值 |" >> $ATOMGIT_STEP_SUMMARY
-          echo "|------|----|" >> $ATOMGIT_STEP_SUMMARY
-          echo "| 测试状态 | ${{ job.status }} |" >> $ATOMGIT_STEP_SUMMARY
-```
-
-## Release 工作流
-
-`.gitcode/workflows/release.yml`:
-
-```yaml
-name: Release
-
-on:
-  push:
-    tags:
-      - 'v*'
-
-permissions:
-  repository: write
-  contents: read
-
-env:
-  NODE_VERSION: '18'
-
-jobs:
-  release:
-    name: 发布
-    runs-on: [ubuntu-latest, x64, medium]
-    steps:
-      - name: 检出代码
-        uses: checkout
-      
-      - name: 设置 Rust
-        uses: setup-rust
-        with:
-          rust-version: stable
-      
-      - name: 设置 Node.js
-        uses: setup-node
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-      
-      - name: 安装前端依赖
-        run: pnpm install
-      
-      - name: 构建应用
-        run: pnpm tauri build
-      
-      - name: 上传构建产物
-        uses: upload-artifact
-        with:
-          name: heic-converter-${{ atomgit.ref_name }}
-          path: src-tauri/target/release/bundle/*/*
-          retention-days: 30
-      
-      - name: 创建 Release
-        env:
-          ATOMGIT_TOKEN: ${{ secrets.ATOMGIT_TOKEN }}
-        run: |
-          TAG_NAME="${{ atomgit.ref_name }}"
-          curl -X POST \
-            "${{ atomgit.api_url }}/repos/${{ atomgit.repository }}/releases" \
-            -H "Authorization: token $ATOMGIT_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "tag_name": "'"$TAG_NAME"'",
-              "name": "HEIC Converter '"$TAG_NAME"'",
-              "body": "HEIC 格式转换器 v'"$TAG_NAME"'",
-              "draft": false,
-              "prerelease": false
-            }'
-
-  post-process:
-    name: 发布后处理
-    runs-on: [ubuntu-latest, x64, small]
-    if: ${{ always() }}
-    needs: release
-    steps:
-      - name: 发布完成通知
-        run: |
-          echo "## 发布流程完成" >> $ATOMGIT_STEP_SUMMARY
-          echo "| 项目 | 值 |" >> $ATOMGIT_STEP_SUMMARY
-          echo "|------|----|" >> $ATOMGIT_STEP_SUMMARY
-          echo "| 版本 | ${{ atomgit.ref_name }} |" >> $ATOMGIT_STEP_SUMMARY
-          echo "| 状态 | ${{ job.status }} |" >> $ATOMGIT_STEP_SUMMARY
-```
-
-## 配置说明
-
-### 工作流文件位置
-
-AtomGit Action 的 workflow 文件存放目录为：
-
-```
-.gitcode/workflows/<workflow-name>.yml
-```
-
-### Runner 标签体系
-
-AtomGit 托管资源池使用**三段式标签**格式：`{os-version},{arch},{flavor}`
-
-常用标签：
-- `[ubuntu-latest, x64, small]` - Ubuntu 24.04 / x64 / 2核8G
-- `[ubuntu-latest, x64, medium]` - Ubuntu 24.04 / x64 / 4核16G
-
-### 预装工具
-
-**构建工具**：Make, CMake, Maven, Gradle, npm, pip, yarn, **pnpm 8.x**
-
-**语言运行时**：
-- Node.js: 18, 20, 22, 24
-- Rust: latest stable (via rustup)
-- Python: 3.10, 3.11, 3.12
-- Go: 1.21, 1.22, 1.23
-
-### 上下文变量
-
-| 变量 | 说明 |
+| 文件 | 作用 |
 |------|------|
-| `atomgit.ref` | 触发分支或标签引用 |
-| `atomgit.sha` | 触发提交的 SHA |
-| `atomgit.repository` | 仓库全名 |
-| `atomgit.event_name` | 触发事件类型 |
-| `atomgit.actor` | 触发者用户名 |
+| `.cnb.yml` | 流水线定义：触发条件、架构矩阵、产物上传 |
+| `ci/deepin-build.Dockerfile` | 构建环境镜像：系统依赖 + Rust + Node + pnpm + cargo-deb |
+| `debian/control` | 仅声明 `Build-Depends`，供 `apt-get build-dep .` 预装系统依赖 |
+| `rust-toolchain.toml` | 固定 Rust 版本（仓库根，见下） |
 
-### 权限控制
+## 触发分层
 
-```yaml
-permissions:
-  repository: read  # 仓库读取权限
-  pr: write         # PR 写入权限
-  issue: write      # Issue 写入权限
-```
+| 事件 | 任务 |
+|------|------|
+| PR | `pr-gate`：amd64 跑 clippy + vitest + cargo test |
+| push `main` | 门禁（amd64）+ 门禁（arm64）+ amd64 打包冒烟 |
+| tag push | amd64 / arm64 打包 → SHA256 → 上传 CNB Release 附件 |
 
-快捷语法：
-- `read-all`：所有权限设为 read
-- `write-all`：所有权限设为 write
-- `permissions: {}`：所有权限设为 none
+打包用 `pnpm deb`（`tauri build` + `cargo deb --variant=dsg` + `fixup-dsg-deb.sh` + `--variant=debian`），
+产物留在 `src-tauri/target/debian/`，流水线直接对该目录做 SHA256 并作为附件上传。
+不另建 `dist/`：那个路径是 vite 的 `build.outDir`，混装会分不清前端产物和安装包。
 
-### 并发控制
+## 环境镜像与缓存
 
-```yaml
-concurrency:
-  max: 1              # 最大并发数
-  exceed-action: QUEUE # 超出时的策略：QUEUE（排队）或 IGNORE（忽略）
-```
+CNB **不会**为 rustup / crates.io / npm 提供透明代理，Dockerfile 里显式配置了
+`RUSTUP_DIST_SERVER=https://rsproxy.cn` 与 `NPM_CONFIG_REGISTRY=https://registry.npmmirror.com`，
+这两个 `ENV` 会随镜像保留，流水线内的 cargo / npm 也复用。
 
-### 制品管理
+工具链全部烤进镜像层，靠 `docker.build.versionBy` 判定是否重建：
+**只有** `ci/deepin-build.Dockerfile`、`debian/control`、`rust-toolchain.toml` 任一变化才重建镜像，
+改源码不会。版本号只在这三个文件里出现，Dockerfile 通过 `COPY rust-toolchain.toml` + `rustup show`
+读取工具链版本，不重复抄写。
 
-```yaml
-- name: 上传制品
-  uses: upload-artifact
-  with:
-    name: artifact-name
-    path: path/to/artifact
-    retention-days: 7
-```
+架构通过 `buildArgs.BASE_IMG` 切换：`linuxdeepin/deepin`（amd64）、`linuxdeepin/deepin:arm64`（arm64），
+分别跑在 `cnb:arch:amd64` / `cnb:arch:arm64:v8` 原生节点上，不走 QEMU。
 
-## 本地验证
+## 工具链版本
 
-在推送之前，可以在本地运行完整的 CI 检查：
+| 工具 | 版本 | 说明 |
+|------|------|------|
+| Rust | 1.98.1 | 见 `rust-toolchain.toml` |
+| Node | 22.23.3 | deepin 源只有 20.15，低于 `@vitejs/plugin-vue@6` 要求的 `>=22.12` |
+| pnpm | 10.15.0 | 随 Node 一起 `npm i -g` |
+| cargo-deb | 3.8.0 | apt 源无此包，镜像内 `cargo install --locked` |
 
-```bash
-# Rust 测试
-cargo test --manifest-path src-tauri/Cargo.toml
+`rust-toolchain.toml` 放**仓库根**而不是 `src-tauri/`：rustup 按当前工作目录向上查找该文件，
+而 `package.json` 的脚本都在仓库根执行 `cargo --manifest-path src-tauri/Cargo.toml`，
+rustup 不会跟随 `--manifest-path`。
 
-# 前端测试
-pnpm test:coverage
+不用系统 apt 的 cargo/rustc：deepin 25 是 1.81，解析不了依赖树中
+`rav1e → v_frame → av-scenechange → aligned 0.4.3` 使用的 edition2024；
+依赖树最高 MSRV 是 1.89.0（`notify-rust 4.18.0`）。
 
-# Lint
-pnpm lint
-cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings
+## 依赖维护
 
-# 格式化检查
-pnpm format --check
-cargo fmt --all --manifest-path src-tauri/Cargo.toml -- --check
+系统依赖只写在 `debian/control` 一处，改完 Dockerfile 无需同步。当前刻意**未**列入的：
 
-# 构建
-pnpm tauri build
-```
+- `libayatana-appindicator3-dev`：托盘库由 `libappindicator-sys` 纯 dlopen 加载（无 build.rs），
+  构建期不需要；运行时库 `libayatana-appindicator3-1` 写在 `Cargo.toml` 的 deb `depends`。
+- `libturbojpeg0-dev`：`turbojpeg-sys` 启用 `cmake` + `require-simd`，从源码静态编出
+  `libturbojpeg.a`，二进制不链接 `libturbojpeg.so`。
+- `libssl-dev`：依赖树里没有 `openssl-sys` / `native-tls`。
+- `libxdo-dev` / `librsvg2-dev`：`ldd` 与链接命令里都没有 Xdo / rsvg。
+- `patchelf` / `fakeroot`：cargo-deb 用 `dpkg-deb` + `dpkg-shlibdeps` 打包，用不到。
 
-## 故障排除
+## 可移植性
 
-### 测试失败
-
-1. 检查测试输出日志
-2. 确保所有依赖已安装
-3. 在本地重现问题
-
-### 构建失败
-
-1. 检查 Rust 版本: `rustc --version`
-2. 检查 Node.js 版本: `node --version`
-3. 清理构建缓存: `cargo clean && rm -rf node_modules`
-
-### 覆盖率报告
-
-覆盖率报告会生成在以下位置：
-
-- Rust: `target/debug/coverage/`
-- 前端: `coverage/`
-
-## 参考资源
-
-- [AtomGit Action 文档](https://docs.atomgit.com/docs/help/home/org_project/pipeline/overview)
-- [Runner 镜像与预装工具](https://docs.atomgit.com/docs/help/home/org_project/pipeline/syntax-reference/runner-images-tools)
-- [Node.js 项目 CI 示例](https://docs.atomgit.com/docs/help/home/org_project/pipeline/examples/nodejs-ci)
+产物不设 `target-cpu=native`，保证通用 x86-64 也能跑。二进制里仍能搜到少量 AVX-512
+（EVEX / `zmm`）指令，来自 `rav1e`（`image` → `ravif` → `rav1e`）自带的手写
+`*.asm`，它通过 `is_x86_feature_detected!` 运行时派发，只在支持 AVX-512 的 CPU 上执行。

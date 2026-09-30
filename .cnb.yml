@@ -1,0 +1,155 @@
+# ============================================================
+# 多架构 CI：deepin 25 / amd64 + arm64
+#
+# 触发分层：
+#   PR  = 门禁（clippy + vitest + cargo test），只跑 amd64
+#   main = 门禁 + arm64 编译测试 + amd64 打包冒烟
+#   tag = amd64/arm64 打包 → SHA256 → 上传 CNB Release 附件
+#
+# 环境镜像：工具链全部烤进 ci/deepin-build.Dockerfile，由
+# docker.build.versionBy 决定何时重建镜像（只有 Dockerfile /
+# debian/control / rust-toolchain.toml 变了才重建，源码改动不重建）。
+# ============================================================
+
+# ── 移植参数 ──
+.base_img:  &baseimg    linuxdeepin/deepin
+.arm64_img: &arm64img   linuxdeepin/deepin:arm64
+
+# 代码改动触发编译/测试/打包
+.code_deps: &code-deps
+  - "src/**"
+  - "src-tauri/**"
+  - "package.json"
+  - "pnpm-lock.yaml"
+  - "index.html"
+  - "vite.config.ts"
+  - "vitest.config.ts"
+  - "tsconfig*.json"
+  - "debian/**"
+  - "ci/**"
+
+# 环境镜像重建触发文件（对应 Dockerfile 里 COPY / 版本来源）
+.env_deps: &env-deps
+  - "ci/deepin-build.Dockerfile"
+  - "debian/control"
+  - "rust-toolchain.toml"
+
+# amd64 环境
+.x-amd64-env: &amd64-env
+  runner:
+    tags: cnb:arch:amd64
+    cpus: 8
+  docker:
+    build:
+      dockerfile: ci/deepin-build.Dockerfile
+      by: *env-deps
+      versionBy: *env-deps
+      buildArgs:
+        BASE_IMG: *baseimg
+
+# arm64 环境
+.x-arm64-env: &arm64-env
+  runner:
+    tags: cnb:arch:arm64:v8
+    cpus: 8
+  docker:
+    build:
+      dockerfile: ci/deepin-build.Dockerfile
+      by: *env-deps
+      versionBy: *env-deps
+      buildArgs:
+        BASE_IMG: *arm64img
+
+# ── 门禁：clippy + vitest + cargo test ──
+.x-gate: &gate
+  env:
+    CI: "true"     # 非交互：pnpm install 遇 node_modules 冲突时不会挂起等输入
+  script: |
+    set -e
+    echo "== arch: $(uname -m) / rustc $(rustc --version) / node $(node --version) / pnpm $(pnpm --version) =="
+    pnpm install --frozen-lockfile
+    pnpm lint:rust
+    pnpm test
+    cargo test --manifest-path src-tauri/Cargo.toml
+
+# ── 打包：双变体 deb ──
+# 产物直接留在 src-tauri/target/debian/，不另建 dist/ —— 那个路径已被 vite 的
+# build.outDir 占用，混在一起会分不清前端产物和安装包。
+.x-deb: &deb
+  env:
+    CI: "true"
+  script: |
+    set -e
+    echo "== arch: $(uname -m) =="
+    pnpm install --frozen-lockfile
+    pnpm deb
+    echo "== debs =="
+    ls -la src-tauri/target/debian/*.deb
+
+# ── SHA256 ──
+.x-sha256: &sha256
+  name: gen sha256
+  script: |
+    set -e
+    cd src-tauri/target/debian
+    for f in *.deb; do sha256sum "$f" > "$f.sha256"; done
+    cat *.sha256
+
+# ── 上传 Release 附件 ──
+.x-upload: &upload
+  name: upload deb to release
+  image: cnbcool/attachments:latest
+  settings:
+    attachments:
+      - "src-tauri/target/debian/*.deb"
+      - "src-tauri/target/debian/*.deb.sha256"
+
+# ============================================================
+
+$:
+  pull_request:
+    - name: pr-gate
+      <<: *amd64-env
+      stages:
+        - name: clippy + tests (PR)
+          ifModify: *code-deps
+          <<: *gate
+
+  push:
+    - name: main-gate
+      <<: *amd64-env
+      stages:
+        - name: clippy + tests
+          ifModify: *code-deps
+          <<: *gate
+
+    - name: main-arm64-gate
+      <<: *arm64-env
+      stages:
+        - name: clippy + tests (arm64)
+          ifModify: *code-deps
+          <<: *gate
+
+    - name: main-amd64-deb
+      <<: *amd64-env
+      stages:
+        - name: build amd64 deb (smoke)
+          ifModify: *code-deps
+          <<: *deb
+
+  tag_push:
+    - name: build-amd64
+      <<: *amd64-env
+      stages:
+        - name: build amd64 deb
+          <<: *deb
+        - <<: *sha256
+        - <<: *upload
+
+    - name: build-arm64
+      <<: *arm64-env
+      stages:
+        - name: build arm64 deb
+          <<: *deb
+        - <<: *sha256
+        - <<: *upload

@@ -1,0 +1,33 @@
+Source: heic-converter
+Section: graphics
+Priority: optional
+Maintainer: hotime <xiaoyqde@126.com>
+Build-Depends:
+ cmake,
+ dpkg-dev,
+ libheif-dev (>= 1.18),
+ libwebkit2gtk-4.1-dev,
+ nasm,
+ pkg-config,
+ build-essential,
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+
+# 本文件仅提供 Build-Depends，供构建环境用 `apt-get build-dep .` 预装依赖
+# （见 ci/deepin-build.Dockerfile）。deb 打包由 cargo-deb 承担，不需要 debhelper，
+# 因此不提供 Package/debian.rules。
+#
+# 依赖取舍依据（均已用 ldd / readelf / build script 输出实测）：
+#  - libwebkit2gtk-4.1-dev 会传递拉入 libgtk-3-dev、libsoup-3.0-dev、
+#    libjavascriptcoregtk-4.1-dev，二进制实际链接的 gtk-3 / webkit2gtk-4.1 /
+#    javascriptcoregtk-4.1 / soup-3.0 均已覆盖，无需重复列出。
+#  - libayatana-appindicator3-dev 不在构建期需要：libappindicator-sys 0.9 是
+#    纯 dlopen（无 build.rs），托盘库只作为运行时依赖，写在 Cargo.toml 的
+#    deb depends 里。
+#  - 不需要 libssl-dev：依赖树中无 openssl-sys / native-tls。
+#  - 不需要 libxdo-dev / librsvg2-dev：ldd 与链接命令中均无 Xdo / rsvg。
+#  - 不需要 libturbojpeg0-dev：turbojpeg-sys 启用了 cmake + require-simd，
+#    从源码静态编译出 libturbojpeg.a，二进制无 libturbojpeg.so 依赖。
+#  - 不需要 patchelf / fakeroot：cargo-deb 用 dpkg-deb + dpkg-shlibdeps 打包。
+#  - nasm：turbojpeg-sys 的 require-simd 在 x86 上用 NASM 汇编；deepin 的
+#    amd64 与 arm64 源均有该包，无需按架构区分。
