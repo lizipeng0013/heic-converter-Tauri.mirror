@@ -54,7 +54,9 @@ license-file = "../LICENSE"
 # libheif1 等，带正确版本下限）。手动补充仅用于自动解析给不出的约束：
 # libheif1 下限按 libheif-rs 的 v1_18 feature 收紧到 1.18（shlibs 只给 1.13.0）。
 # 不再手写 libde265-0/libx265-199：libde265 经 libheif1 传递保证，x265 根本不在链接树（只转 JPG/PNG）。
-depends = "$auto, libheif1 (>= 1.18)"
+# libayatana-appindicator3-1：托盘库。libappindicator-sys 0.9 是纯 dlopen（无 build.rs、
+# 不在 NEEDED 里），dpkg-shlibdeps 看不到，必须手写，否则装完托盘图标不显示。
+depends = "$auto, libheif1 (>= 1.18), libayatana-appindicator3-1"
 section = "graphics"
 priority = "optional"
 
