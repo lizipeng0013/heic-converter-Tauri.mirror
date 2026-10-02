@@ -3,7 +3,7 @@
 ![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri)
 ![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js)
 ![License](https://img.shields.io/badge/License-GPL--3.0-blue.svg)
-![Version](https://img.shields.io/badge/version-0.4.1-blue)
+![Version](https://img.shields.io/badge/Version-0.4.2-blue)
 
 一款基于 **Tauri 2** 和 **Vue 3** 构建的轻量级跨平台 HEIC 图片转换工具。它可以将 HEIC/HEIF 格式的高清图片快速转换为通用的 JPG 或 PNG 格式。
 

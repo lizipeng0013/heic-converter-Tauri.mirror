@@ -1,3 +1,40 @@
+heic-converter (0.4.2) unstable; urgency=medium
+
+  * 性能：批量转换改用全局线程池，不再每次调用都新建 rayon 线程池；线程数取
+    CPU 核心数的 75%、至少 2，保留余量给界面响应。
+  * 性能：新增图像缓冲区内存池，转换路径复用已分配的缓冲区；YUV 转 RGB 由逐
+    像素写入改为按行批量拷贝。
+  * 打包：deb 打包从 tauri-bundler 改为 cargo-deb，产出 DSG 与 Debian 两个变体
+    （tauri-bundler 的安装路径硬编码，无法产出纯 DSG 布局）。
+  * 打包：应用图标统一为单份 scalable SVG，移除多档位 PNG。
+  * 打包：移除 target-cpu=native。该设置按构建机器的 CPU 生成指令集，产物无法在
+    其他机器上运行，对发布包是错误的默认值。
+  * 打包：补齐托盘库运行时依赖 libayatana-appindicator3-1，此前漏装导致装完托盘
+    图标不显示。
+  * 打包：changelog 改走 assets 声明，包内文件名为 changelog.gz。此前用
+    [metadata.deb] 的 changelog 字段会生成 changelog.Debian.gz，那是「Debian 打包侧
+    changelog」的语义，用于与上游 changelog 并存的场景；本项目自身即上游，只有
+    一份 changelog，该场景不成立。
+  * 打包：DSG 重打包脚本同时搬运 copyright 与 changelog.gz，并在重排后检查 /usr
+    残留，有残留即报错退出（原先 rmdir 静默失败会漏过）。
+  * 打包：libheif1 依赖下限交由 dpkg-shlibdeps 自动解析。此前手写 >= 1.18 会与自动
+    解析结果并存成两条 Depends；实测本二进制用到的 heif_* 符号最高只要求 1.13.0。
+  * 发版：打 tag 后自动建 Release，正文取自本 changelog 的当前版本块，并按 tag
+    语义区分预发布与正式版；amd64/arm64 产物同步回写 atomgit。
+  * 发版：新增 main 分支一键同步按钮，从 atomgit 权威源强制拉取到 CNB。
+  * CI：流水线迁移到 CNB，Rust / pnpm / cargo-deb 固化进 deepin 25 镜像；push
+    移除 arm64 门禁，arm64 只在打 tag 时出正式包。
+  * 依赖：Tauri 2.10 升至 2.11，libheif-rs 2.6.1 升至 2.7.0（替换已废弃的
+    number_of_top_level_images 接口）。
+  * 测试：建立测试体系 —— 前端 Vitest 单元测试与 Playwright E2E、Rust 侧集成测试，
+    并提供覆盖率生成脚本。
+  * 工具链：锁定 Node 24.21.0、pnpm 12.8.1、Rust 1.98.1，移除冗余的 playwright
+    直接依赖（@playwright/test 已自带，导致同一包被装出两份版本）。
+  * 文档：移除已失效的下载测试图片脚本与两份陈旧文档（性能优化计划、测试覆盖率
+    报告），其中引用的代码与命令均已不存在。
+
+ -- hotime <xiaoyqde@126.com>  Fri, 02 Oct 2026 19:00:00 +0800
+
 heic-converter (0.4.1) unstable; urgency=medium
 
   * 打包：桌面入口 Exec / Icon 改用 mainBinaryName 占位符 {{exec}} / {{icon}}，
