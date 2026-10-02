@@ -3,17 +3,33 @@
 #
 # 触发分层：
 #   PR  = 门禁（clippy + vitest + cargo test），只跑 amd64
-#   main = 门禁 + arm64 编译测试 + amd64 打包冒烟
-#   tag = amd64/arm64 打包 → SHA256 → 上传 CNB Release 附件
+#   main = 门禁 + amd64 打包冒烟
+#   tag = 生成 Release 正文 + 建 Release → amd64/arm64 打包 → SHA256 → 上传附件
 #
-# 环境镜像：工具链全部烤进 ci/deepin-build.Dockerfile，由
-# docker.build.versionBy 决定何时重建镜像（只有 Dockerfile /
-# debian/control / rust-toolchain.toml 变了才重建，源码改动不重建）。
+# 权威源是 atomgit，CNB 是镜像仓库：不在 CNB 上直接开发，发版前用
+# main 分支详情页的「同步 atomgit 上游」按钮（.cnb/web_trigger.yml）手动拉取。
+#
+# 环境镜像：Rust / pnpm / cargo-deb 烤进 ci/deepin-build.Dockerfile，由
+# docker.build.versionBy 决定何时重建镜像（只有 Dockerfile / debian/control /
+# rust-toolchain.toml 变了才重建，源码与 package.json 改动都不重建）。
+# 镜像里没有 Node.js 也没有 npm：Node 由 package.json 的 devEngines.runtime
+# 声明、pnpm install 时装成项目级依赖，所以改 Node 版本不必重建镜像。
+#
+# 注意：PATH 上没有 node。需要 node 的地方一律走 pnpm（pnpm test / pnpm exec /...），
+# 或显式用 ./node_modules/.bin/node。
 # ============================================================
 
 # ── 移植参数 ──
 .base_img:  &baseimg    linuxdeepin/deepin
 .arm64_img: &arm64img   linuxdeepin/deepin:arm64
+
+# 手动同步流水线读这两个值（atomgit 为权威源，CNB 为 origin）
+.proj-env: &projenviron
+  ATOMGIT_OWNER: hotime
+  ATOMGIT_REPO:  heic-converter
+
+# 存放 ATOMGIT_TOKEN 的 CNB 密钥仓库（imports 注入，不进仓库不进日志）
+.secrets_url: &secrets https://cnb.cool/hotime/token/-/blob/main/atomgit.yml
 
 # 代码改动触发编译/测试/打包
 .code_deps: &code-deps
@@ -28,7 +44,9 @@
   - "debian/**"
   - "ci/**"
 
-# 环境镜像重建触发文件（对应 Dockerfile 里 COPY / 版本来源）
+# 环境镜像重建触发文件（对应 Dockerfile 里 COPY 的版本来源）
+# 刻意不含 package.json：devEngines.runtime / packageManager 都在里面，
+# 但改依赖不该废掉整张镜像缓存；且镜像内无 node，改 Node 版本也无需重建。
 .env_deps: &env-deps
   - "ci/deepin-build.Dockerfile"
   - "debian/control"
@@ -66,8 +84,11 @@
     CI: "true"     # 非交互：pnpm install 遇 node_modules 冲突时不会挂起等输入
   script: |
     set -e
-    echo "== arch: $(uname -m) / rustc $(rustc --version) / node $(node --version) / pnpm $(pnpm --version) =="
+    echo "== arch: $(uname -m) / rustc $(rustc --version) / pnpm $(pnpm --version) =="
     pnpm install --frozen-lockfile
+    # node 不在 PATH，devEngines 装出来的项目级node 在这里
+    echo "== node $(./node_modules/.bin/node --version) (devEngines.runtime，项目级) =="
+    pnpm exec tsc --noEmit
     pnpm lint:rust
     pnpm test
     cargo test --manifest-path src-tauri/Cargo.toml
@@ -80,8 +101,9 @@
     CI: "true"
   script: |
     set -e
-    echo "== arch: $(uname -m) =="
+    echo "== arch: $(uname -m) / pnpm $(pnpm --version) =="
     pnpm install --frozen-lockfile
+    echo "== node $(./node_modules/.bin/node --version) =="
     pnpm deb
     echo "== debs =="
     ls -la src-tauri/target/debian/*.deb
@@ -95,6 +117,16 @@
     for f in *.deb; do sha256sum "$f" > "$f.sha256"; done
     cat *.sha256
 
+# ── 生成 Release 正文（从 debian/changelog 的当前版本块提取，* 转 -）──
+.x-gen-body: &gen-body
+  name: gen release body
+  image: alpine:3.20
+  env:
+    ARTIFACT_SUMMARY: 双架构构建产物（deepin25 amd64/arm64 .deb）
+  script: |
+    set -e
+    sh ci/gen-release-body.sh
+
 # ── 上传 Release 附件 ──
 .x-upload: &upload
   name: upload deb to release
@@ -104,7 +136,52 @@
       - "src-tauri/target/debian/*.deb"
       - "src-tauri/target/debian/*.deb.sha256"
 
+# ── 反向同步：把构建产物回写到 atomgit Release（闭环最后一步）──
+# ATOMGIT_TOKEN 未配置时脚本打印 skip 并 exit 0，不阻塞 CNB Release 发布。
+# RELEASE_STATUS 不显式给，脚本按 tag 语义自动判定（-rc/-beta 等 → pre，其余 → latest），
+# 与 ci/is-prerelease-tag.sh 同源判据。
+.x-publish-atomgit: &publish-atomgit
+  name: publish to atomgit release
+  image: alpine:3.20
+  imports:
+    - *secrets
+  env:
+    <<: *projenviron
+    ARTIFACT_SUMMARY: 双架构构建产物（deepin25 amd64/arm64 .deb）
+    # 本项目 cargo-deb 产物落在 src-tauri/target/debian/，不是 dist/
+    ARTIFACT_GLOB: src-tauri/target/debian/*.deb src-tauri/target/debian/*.deb.sha256
+  script: |
+    set -e
+    echo "== install tooling (curl/jq) =="
+    apk add --no-cache curl jq >/dev/null 2>&1
+    # 生成 Release 正文（供 atomgit Release 描述）；失败不阻塞同步（脚本有兜底）
+    sh ci/gen-release-body.sh || echo "warn: gen-release-body.sh 失败，使用兜底描述"
+    sh ci/release-atomgit.sh
+
 # ============================================================
+
+# ── 手动同步：atomgit（权威源）→ CNB ──
+# 由 .cnb/web_trigger.yml 在 main 分支详情页挂按钮触发。
+# 用 force reset 而非 merge：atomgit 侧改历史 / force push 时不冲突，CNB 始终是镜像。
+main:
+  web_trigger_sync_atomgit:
+    - name: manual sync from atomgit
+      env:
+        <<: *projenviron
+      stages:
+        - name: force sync main from atomgit
+          image: docker:25-git
+          script: |
+            set -e
+            echo "== force sync main: atomgit(authoritative) -> CNB(origin) =="
+            git remote remove atomgit 2>/dev/null || true
+            git remote add atomgit "https://atomgit.com/${ATOMGIT_OWNER}/${ATOMGIT_REPO}.git"
+            git remote set-url origin "https://${CNB_TOKEN_USER_NAME:-cnb}:${CNB_TOKEN}@cnb.cool/${ATOMGIT_OWNER}/${ATOMGIT_REPO}.git"
+            git fetch atomgit main --force --tags
+            git reset --hard atomgit/main
+            git push --force origin main
+            git push --force origin --tags
+            echo "== sync completed =="
 
 $:
   pull_request:
@@ -123,13 +200,6 @@ $:
           ifModify: *code-deps
           <<: *gate
 
-    - name: main-arm64-gate
-      <<: *arm64-env
-      stages:
-        - name: clippy + tests (arm64)
-          ifModify: *code-deps
-          <<: *gate
-
     - name: main-amd64-deb
       <<: *amd64-env
       stages:
@@ -138,6 +208,30 @@ $:
           <<: *deb
 
   tag_push:
+    # 先建Release，后续 build-* 的附件上传才有挂载目标。
+    # 正文来自 debian/changelog → bump version 时改 changelog 即可，无需两处维护。
+    - name: prepare-release
+      runner:
+        tags: cnb:arch:amd64
+      docker:
+        image: alpine:3.20
+      stages:
+        - <<: *gen-body
+        # Release 状态按 tag 语义二选一（判定与 ci/is-prerelease-tag.sh 同源）：
+        # 预发布 tag（-rc/-beta/-alpha 等后缀）→ pre-release，正式 tag → latest
+        - name: create pre-release for tag
+          type: git:release
+          if: 'sh ci/is-prerelease-tag.sh "$CNB_BRANCH"'
+          options:
+            descriptionFromFile: .stage/RELEASE_BODY.md
+            preRelease: true
+        - name: create release for tag
+          type: git:release
+          if: '! sh ci/is-prerelease-tag.sh "$CNB_BRANCH"'
+          options:
+            descriptionFromFile: .stage/RELEASE_BODY.md
+            latest: true
+
     - name: build-amd64
       <<: *amd64-env
       stages:
@@ -145,6 +239,7 @@ $:
           <<: *deb
         - <<: *sha256
         - <<: *upload
+        - <<: *publish-atomgit
 
     - name: build-arm64
       <<: *arm64-env
@@ -153,3 +248,4 @@ $:
           <<: *deb
         - <<: *sha256
         - <<: *upload
+        - <<: *publish-atomgit

@@ -33,11 +33,10 @@ target/coverage/
 # Rust build artifacts
 target/
 
+# CI 脚本副产物（ci/gen-release-body.sh 写出的 Release 正文）
+.stage/
+
 # Environment files
 .env
 .env.local
 .env.*.local
--e 
-# Test data
--e 
-# Test data
