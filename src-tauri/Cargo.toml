@@ -51,12 +51,25 @@ maintainer = "hotime <xiaoyqde@126.com>"
 copyright = "2024-2026, hotime"
 license-file = "../LICENSE"
 # $auto：cargo-deb 3.8+ 用 dpkg-shlibdeps 自动解析二进制的直接依赖（GTK/WebKit 栈、
-# libheif1 等，带正确版本下限）。手动补充仅用于自动解析给不出的约束：
-# libheif1 下限按 libheif-rs 的 v1_18 feature 收紧到 1.18（shlibs 只给 1.13.0）。
+# libheif1 等，带正确版本下限）。
+# libheif1 的下限交给 $auto，不要手写：libheif1 不做符号版本化（无 verdef 节，全部符号
+# 挂 @Base），dpkg-shlibdeps 改为逐符号查 libheif1:amd64.symbols 取引入版本的最大值。
+# 实测本二进制用到的 20 个 heif_* 符号最高为 heif_init/heif_deinit（1.13.0 引入），故
+# $auto 给出的 1.13.0 就是真实下限。libheif-rs 的 v1_18 只是编译期 FFI gate，不构成
+# 运行时依赖；手写 1.18 反而会与 $auto 产出重复（同包名两条 Depends）。
 # 不再手写 libde265-0/libx265-199：libde265 经 libheif1 传递保证，x265 根本不在链接树（只转 JPG/PNG）。
 # libayatana-appindicator3-1：托盘库。libappindicator-sys 0.9 是纯 dlopen（无 build.rs、
 # 不在 NEEDED 里），dpkg-shlibdeps 看不到，必须手写，否则装完托盘图标不显示。
-depends = "$auto, libheif1 (>= 1.18), libayatana-appindicator3-1"
+depends = "$auto, libayatana-appindicator3-1"
+# changelog 不用 [metadata.deb] 的 changelog 字段：那条路径（config.rs:790
+# add_changelog_asset）把文件名写死成 changelog.Debian.gz，语义是「Debian 打包侧
+# 维护的 changelog」，用于与上游 changelog 并存的双文件场景。
+# 我们自己就是上游，只有一份 changelog，双文件场景不成立，故改走 assets 声明
+# usr/share/doc/<包名>/changelog —— cargo-deb 的 compressed_assets()
+# （assets.rs:569，needs_compression 命中 usr/share/doc/*/changelog）会自动 gzip，
+# 最终得到 changelog.gz，与 dpkg-buildpackage（dh_installchangelogs，无上游
+# changelog 时装成 changelog.gz）的结果一致。
+# 注意 DSG 变体的 usr 路径同样由 fixup-dsg-deb.sh 重排到 entries/doc/<appid>/。
 section = "graphics"
 priority = "optional"
 
@@ -71,6 +84,12 @@ assets = [
   ["../src/assets/app-icon.svg", "opt/apps/top.hotime.heic-converter/entries/icons/hicolor/scalable/apps/top.hotime.heic-converter.svg", "644"],
   # DSG 应用在 /opt/apps/{appid}/ 内无命名冲突，二进制用应用名 heic-converter。
   ["target/release/heic-converter", "opt/apps/top.hotime.heic-converter/files/bin/", "755"],
+  # changelog 走 usr/share/doc 路径声明（而非直接指向 entries/doc/），有两个原因：
+  #   1) 只有 usr/ 开头的路径才会命中 compressed_assets() 的自动 gzip；
+  #   2) 放在 usr/share/doc/ 与 copyright 的生成位置一致，由 fixup-dsg-deb.sh
+  #      统一搬到 entries/doc/，和 copyright 保持同一套搬运逻辑。
+  # 目标文件名写 changelog（不带 .gz），cargo-deb 压缩后成为 changelog.gz。
+  ["../debian/changelog", "usr/share/doc/top.hotime.heic-converter/changelog", "644"],
 ]
 
 [package.metadata.deb.variants.debian]
@@ -83,6 +102,8 @@ assets = [
   ["heic-converter-debian.desktop", "usr/share/applications/heic-converter.desktop", "644"],
   # 图标与 dsg 变体共用同一份源文件（scalable SVG）。
   ["../src/assets/app-icon.svg", "usr/share/icons/hicolor/scalable/apps/heic-converter.svg", "644"],
+  # changelog：目标路径不带 .gz，cargo-deb 自动压缩成 changelog.gz（见基础段说明）。
+  ["../debian/changelog", "usr/share/doc/heic-converter/changelog", "644"],
 ]
 
 [profile.release]

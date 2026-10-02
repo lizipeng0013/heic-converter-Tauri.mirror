@@ -2,7 +2,7 @@ import "@testing-library/jest-dom";
 import { vi } from "vitest";
 
 vi.mock("@vueuse/core", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("@vueuse/core")>();
   return {
     ...actual,
     useDark: vi.fn(() => ({ value: false })),

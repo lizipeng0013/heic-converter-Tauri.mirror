@@ -56,16 +56,16 @@ pnpm test:unit
 
 ```bash
 # 安装 Playwright 浏览器
-npx playwright install
+pnpm exec playwright install
 
 # 运行 E2E 测试
 pnpm test:e2e
 
 # 运行特定测试
-npx playwright test src/__tests__/e2e/app.test.ts
+pnpm exec playwright test src/__tests__/e2e/app.test.ts
 
 # 运行带 UI 的测试
-npx playwright test --headed
+pnpm exec playwright test --headed
 ```
 
 ## 测试结构
@@ -153,7 +153,7 @@ src/__tests__/            # 前端测试
 ### E2E 测试失败
 
 1. 确保应用已构建: `pnpm tauri build`
-2. 安装浏览器: `npx playwright install`
+2. 安装浏览器: `pnpm exec playwright install`
 3. 检查端口是否被占用: `lsof -i :1420`
 
 ## 编写新测试

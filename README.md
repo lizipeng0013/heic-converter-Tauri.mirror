@@ -3,7 +3,7 @@
 ![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri)
 ![Vue](https://img.shields.io/badge/Vue-3.5-4FC08D?logo=vue.js)
 ![License](https://img.shields.io/badge/License-GPL--3.0-blue.svg)
-![Version](https://img.shields.io/badge/version-0.4.0-blue)
+![Version](https://img.shields.io/badge/version-0.4.1-blue)
 
 一款基于 **Tauri 2** 和 **Vue 3** 构建的轻量级跨平台 HEIC 图片转换工具。它可以将 HEIC/HEIF 格式的高清图片快速转换为通用的 JPG 或 PNG 格式。
 
@@ -19,7 +19,7 @@
 - ❌ **失败标签页**：新增独立的转换失败文件标签页，方便集中处理异常。
 - 🧹 **优雅停止**：使用任务队列实现真正的可控停止，停止后转换即时中断，无残留任务。
 - 🎨 **UI 全面进化**：无边现代风格、SVG 自适应标题栏（高度可配置）、ScrollArea 优化滚动体验。
-- 🐧 **Deepin/UOS 适配**：deb 打包运行时依赖由 `dpkg-shlibdeps` 自动解析（cargo-deb `$auto`），仅手动收紧 libheif1 版本下限，并定制桌面入口模板。
+- 🐧 **Deepin/UOS 适配**：只产出 DSG / Debian 两种 deb 安装包（移除全部 .exe/.dmg/.AppImage 打包目标）；运行时依赖由 `dpkg-shlibdeps` 自动解析（cargo-deb `$auto`），仅手动收紧 libheif1 下限并补托盘库，定制桌面入口模板。
 - 🔧 **大规模重构**：窗口/托盘操作迁移至 Tauri 2 前端 API；mimalloc 全局内存分配器；原子操作替代 Mutex 减少锁竞争。
 
 ---
@@ -34,7 +34,7 @@
 - ⏸️ **转换控制**：支持停止和继续转换，提供更灵活的批量处理体验。
 - 📁 **智能文件管理**：双标签页设计，状态分组显示，支持一键定位转换文件。
 - 🎨 **现代化界面**：基于 Shadcn-vue 构建的精致 UI，支持深色模式，视觉体验舒适。
-- 📦 **跨平台**：支持 Windows, macOS 和 Linux (Tauri 的强大特性)。
+- 📦 **跨平台内核**：代码基于 Tauri 2，理论上可在 Windows / macOS / Linux 编译；**本项目目前只提供 deepin/UOS 的 deb 安装包**。
 
 ---
 
@@ -121,9 +121,16 @@ src-tauri/                    # Rust 后端代码
 
 #### 环境要求
 
-- **Node.js**: v16.0 或更高版本
-- **包管理器**: pnpm (推荐), npm 或 yarn
-- **Rust**: 1.70+ (如果需要编译 Tauri 后端)
+| 工具 | 版本 | 来源 |
+|------|------|------|
+| Node.js | 24.21.0 | **无需自行安装**：`pnpm install` 会按 `package.json` 的 `devEngines.runtime` 把它装成项目级依赖 |
+| pnpm | 12.8.1 | 需独立安装（不依赖 Node.js）；版本由 `packageManager` 字段锁定，装别的版本会被自动纠正 |
+| Rust | 1.98.1 | 由仓库根的 `rust-toolchain.toml` 锁定，rustup 自动安装该版本 |
+| cargo-deb | 3.8.0 | **仅打包时需要**，见下文第 5 步 |
+
+Node 装在 `node_modules/.bin/node`，**不在 PATH 里**。所有前端命令都通过 `pnpm` 执行
+（`pnpm tauri dev`、`pnpm test`、`pnpm exec tsc` 等）；确需直接调用 node 时用
+`./node_modules/.bin/node`。`@types/node` 已对齐 Node 24。
 
 #### 1. 克隆项目
 
@@ -138,6 +145,8 @@ cd heic-converter
 pnpm install
 ```
 
+这一步会一并把 Node 24.21.0 装进 `node_modules/.bin/`。
+
 #### 3. 开发模式运行
 
 此命令将启动 Vite 开发服务器和 Tauri 窗口。
@@ -146,19 +155,34 @@ pnpm install
 pnpm tauri dev
 ```
 
-#### 4. 构建生产版本
-
-编译打包生成适用于您操作系统的可执行文件（.exe, .dmg, .AppImage 等）。
+#### 4. 构建二进制
 
 ```bash
 pnpm tauri build
 ```
 
-构建完成后，可执行文件位于 `src-tauri/target/release/bundle/` 目录下。
+**只编译二进制主程序，不产出任何安装包。** `.exe` / `.dmg` / `.AppImage` 等打包目标已全部
+移除（`src-tauri/tauri.conf.json` 中 `bundle.active = false`），产物是单个可执行文件：
 
-#### 5. UOS/DSG 规范打包（可选）
+```
+src-tauri/target/release/heic-converter
+```
 
-tauri-bundler 的安装路径（`/usr/bin`、`/usr/share/applications` 等）是硬编码的，无法产出纯 DSG 布局，因此 deb 打包改由 `cargo-deb` 承担：`tauri build` 只产二进制，deb 元数据全部写在 `src-tauri/Cargo.toml` 的 `[package.metadata.deb]`（`dsg` 与 `debian` 两个变体）：
+需要安装包请走下一步。
+
+#### 5. deb 打包（DSG / Debian）
+
+tauri-bundler 的安装路径（`/usr/bin`、`/usr/share/applications` 等）是硬编码的，无法产出纯 DSG
+布局，因此**本项目的打包路径是 cargo-deb**：`tauri build` 只负责产二进制，deb 元数据全部写在
+`src-tauri/Cargo.toml` 的 `[package.metadata.deb]`（`dsg` 与 `debian` 两个变体）。
+
+前置条件：deepin/UOS 仓库没有 `cargo-deb` 包，需先装一次（3.8.0，锁 `--locked` 保证依赖可复现）：
+
+```bash
+cargo install cargo-deb --version 3.8.0 --locked
+```
+
+装好后执行打包脚本：
 
 ```bash
 pnpm deb          # 一次构建两种包（CI 用）：tauri build 一次 + dsg + debian
@@ -166,11 +190,72 @@ pnpm deb:dsg      # UOS/DSG 规范：仅 /opt/apps/top.hotime.heic-converter/ �
 pnpm deb:debian   # 标准 Debian 布局：/usr/bin + 桌面入口 + hicolor 图标
 ```
 
+每个脚本都是 `tauri build`（产二进制）→ `cargo deb`（打包装配）→ `fixup-dsg-deb.sh`（仅 DSG 变体重排
+copyright 与 changelog）。
+
 - DSG 安装布局：`/opt/apps/top.hotime.heic-converter/`（`info` + `entries/applications` + `entries/icons` + `files/bin`），无 postinst 钩子。
 - 两个变体的主程序二进制均命名为 `heic-converter`（DSG 位于 `/opt/apps/{appid}/files/bin/` 内无命名冲突；Debian 变体与包名一致）。
 - DSG 源文件：`src-tauri/info`（appid 为倒置域名，**上架前必须换成已拥有的域名**）。两个变体的桌面入口分别由 `heic-converter-dsg.desktop`（DSG，绝对路径 `Exec`）与 `heic-converter-debian.desktop`（Debian）生成，图标为 scalable SVG（`src/assets/app-icon.svg`），两个 deb 变体直接打包该源文件，无需多档 PNG。
 - 两个变体包名分别为 `top.hotime.heic-converter`（DSG，反转域名）与 `heic-converter`（Debian），产物在 `src-tauri/target/debian/`。
-- cargo-deb 无条件生成 `usr/share/doc/<pkg>/copyright`（Debian 政策要求，debian 变体保留）；DSG 变体由 `src-tauri/scripts/fixup-dsg-deb.sh` 重打包后移到 `entries/doc/<appid>/copyright`，包内无 `/usr` 文件。
+- 运行时依赖由 `dpkg-shlibdeps` 经 cargo-deb `$auto` 自动解析（GTK/WebKit 栈、`libheif1` 等，带正确版本下限），仅手写 `$auto` 扫不到的托盘库 `libayatana-appindicator3-1`。
+- `copyright` 与 `changelog.gz` 都落在 `usr/share/doc/<pkg>/`；DSG 变体由 `src-tauri/scripts/fixup-dsg-deb.sh` 重打包后搬到 `entries/doc/<appid>/`，包内无 `/usr` 残留（脚本会在 `/usr` 有残留时报错退出）。
+- changelog 由 `assets` 声明为 `usr/share/doc/<pkg>/changelog`（**不带 `.gz`**），cargo-deb 的 `compressed_assets()` 会自动 gzip 成 `changelog.gz`（Debian 政策 §12.7 要求压缩格式）。查看：`zcat /opt/apps/top.hotime.heic-converter/entries/doc/*/changelog.gz`。
+  - 不要改用 `[metadata.deb] 的 changelog = ` 字段：那条路径会固定生成 `changelog.Debian.gz`，语义是「Debian 打包侧 changelog」，用于与上游 changelog 并存的双文件场景；**我们自身就是上游，只有一份 changelog，该场景不成立**。
+- 运行时依赖里 `libheif1` 的版本下限交给 `depends` 的 `$auto` 自动解析，**不要手写**：libheif1 不做符号版本化（无 `verdef` 节，符号全挂 `@Base`），`dpkg-shlibdeps` 会改为逐符号查 `libheif1:amd64.symbols` 取引入版本的最大值；实测本二进制用到的 20 个 `heif_*` 符号最高为 `heif_init`/`heif_deinit`（1.13.0 引入），所以 `$auto` 给出的 1.13.0 就是真实下限。`libheif-rs` 的 `v1_18` 只是编译期 FFI gate，不构成运行时依赖 —— 手写 `libheif1 (>= 1.18)` 只会与 `$auto` 产出重复。
+- 已知缺口：包内没有 `md5sums`（§12.7 要求）。cargo-deb 不生成、fixup 脚本也不补 —— 补它得让 DSG 与 Debian 两个变体都走一遍后处理，收益不抵复杂度。deepin 软件商店安装不校验它，先这样。
+- 手写依赖只有 `libayatana-appindicator3-1`：`libappindicator-sys` 是纯 dlopen，不在 ELF 的 `NEEDED` 里，`$auto` 扫不到，漏了装完托盘图标不显示。
+
+##### bump version 时必须同步 changelog
+
+`debian/changelog` 是**发版记录的唯一来源**：CNB Release 正文由 `ci/gen-release-body.sh` 从中提取（取 tag 对应版本块，`  * ` 转 `- `），无需在别处重复写一遍。所以**每次 bump version 都要在 `debian/changelog` 顶部补一个版本块**：
+
+```
+heic-converter (0.4.2) unstable; urgency=medium
+
+  * 一条改动摘要。
+
+ -- hotime <xiaoyqde@126.com>  Wed, 30 Sep 2026 10:00:00 +0800
+```
+
+- 块首行格式固定为 `heic-converter (<版本号>) unstable; urgency=medium`，缩进两格写 `  * ` 条目。
+- 末行**必须**是 ` -- 维护者 <邮箱>  RFC822 日期`，否则 `dpkg-parsechangelog` 解析失败。
+- 改完用下面两条命令自检（缺任一步都会导致 tag 发布时 Release 正文为空）：
+
+```bash
+dpkg-parsechangelog -l debian/changelog          # 格式校验，必须能解析出版本/日期/维护者
+CNB_BRANCH=v0.4.2 sh ci/gen-release-body.sh     # 预览 Release 正文，应命中而非走兜底
+```
+
+> changelog 里**不要写 `#` 注释**，`dpkg-parsechangelog` 不接受；本节这类约定说明放 README。
+
+---
+
+### 🧪 测试与代码检查
+
+以下命令与 CI 门禁（`.cnb.yml`）完全一致，在 amd64 / arm64 上行为相同：
+
+| 命令 | 作用 | CI 阶段 |
+|------|------|----------|
+| `pnpm exec tsc --noEmit` | TypeScript 类型检查（无输出即通过） | PR + push 门禁 |
+| `pnpm lint:rust` | `cargo clippy --all-targets --all-features -- -D warnings`，警告即失败 | PR + push 门禁 |
+| `pnpm test` | Vitest 单元/组件测试（`vitest run`） | PR + push 门禁 |
+| `pnpm test:watch` | Vitest watch 模式，本地开发用 | — |
+| `pnpm test:coverage` | 覆盖率报告（`@vitest/coverage-v8`） | — |
+| `pnpm test:e2e` | Playwright 端到端测试 | — |
+| `pnpm lint` | ESLint + `--fix` 自动修 | 仅本地 |
+| `pnpm format` | Prettier 格式化 `src/` | 仅本地 |
+| `pnpm format:rust:check` | `cargo fmt --check` | 仅本地 |
+| `cargo test --manifest-path src-tauri/Cargo.toml` | Rust 单元测试 | PR + push 门禁 |
+
+Rust 侧改动后建议至少跑一次：
+
+```bash
+pnpm lint:rust
+cargo test --manifest-path src-tauri/Cargo.toml
+```
+
+这些脚本都定义在 `package.json` 的 `scripts` 里，是 CI 的唯一入口 —— 改脚本名时记得同步
+`.cnb.yml`，否则流水线会静默跳过对应检查。
 
 ---
 

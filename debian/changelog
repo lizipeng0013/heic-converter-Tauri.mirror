@@ -1,0 +1,57 @@
+heic-converter (0.4.1) unstable; urgency=medium
+
+  * 打包：桌面入口 Exec / Icon 改用 mainBinaryName 占位符 {{exec}} / {{icon}}，
+    修复 {{exe}} 占位符渲染为空导致桌面项无法启动的问题。
+  * 打包：为 bundle 配置补充短描述与长描述字段。
+  * 打包：deepin 重打包脚本动态解析 Cargo target 目录，不再硬编码路径。
+  * 安全：设置 CSP 内容安全策略，并移除未使用的 shell 插件。
+  * 元信息：更新作者与 appid 标识，切换 GPL-3.0 许可，清理旧的 deepin 打包脚本。
+  * 依赖：纳入 pnpm-workspace.yaml 并同步 pnpm-lock.yaml 的依赖声明。
+
+ -- hotime <xiaoyqde@126.com>  Sun, 16 Aug 2026 22:44:44 +0800
+
+heic-converter (0.4.0) unstable; urgency=medium
+
+  * 桌面集成：新增系统托盘完整支持，右键菜单可控制窗口显示与退出，托盘图标实时
+    展示转换状态。
+  * 桌面集成：转换完成且窗口最小化时发送系统通知；Linux 下点击通知可打开窗口，
+    Windows 下补app_id 以改善应用名称显示。
+  * 桌面集成：关闭保护——转换中关闭窗口弹出确认对话框，有待转换文件时二次提示，
+    托盘退出时检查转换状态。
+  * 性能：JPEG 编码器由 image  crate 替换为 turbojpeg，编码速度提升 30-50%。
+  * 性能：全局改用 mimalloc 内存分配器，原子操作替代 Mutex 减少锁竞争。
+  * 性能：批量转换并行处理，修复虚拟滚动失效并优化文件导入性能。
+  * 界面：新增独立的转换失败文件标签页，便于集中处理异常。
+  * 界面：文件列表支持虚拟滚动（@tanstack/vue-virtual），流畅处理数千文件。
+  * 界面：实现任务队列驱动的优雅停止，停止后转换即时中断，无残留任务。
+  * 界面：无边现代风格重做，SVG 自适应标题栏（高度可配置），ScrollArea 优化滚动。
+  * 打包：适配 Deepin/UOS 打包规范，定制桌面入口模板与deb 运行时依赖。
+  * 重构：窗口与托盘操作迁移至 Tauri 2 前端 API，移除 greet 等示例命令。
+  * 修复：待转换文件存在时关闭确认对话框「取消」失效；对话框宽度统一为 400px。
+
+ -- hotime <xiaoyqde@126.com>  Sat, 23 May 2026 16:07:01 +0800
+
+heic-converter (0.3.0) unstable; urgency=medium
+
+  * 核心：后端改为 Rust 原生实现，移除前端 heic2any 库，引入 libheif-rs 解析 HEIC。
+  * 性能：批量转换并行处理，大幅提升批量转换性能；HEIC 转换速度显著优化。
+  * 界面：文件列表重构为双标签页，按「全部 / 转换中 / 已完成 / 失败」状态分组。
+  * 功能：转换控制，支持停止与继续转换。
+  * 功能：输出格式扩展至WebP、BMP、TIFF、ICO，并新增 JPEG 质量滑块。
+  * 功能：支持拖拽导入文件；支持从文件卡片一键打开并定位输出目录。
+  * 体验：禁用应用默认右键菜单与界面文字选中；输出目录路径过长时截断并提示。
+  * 日志：统一日志系统，修复 debug 日志不输出；区分开发与生产环境日志级别。
+
+ -- hotime <xiaoyqde@126.com>  Thu, 22 Jan 2026 15:22:49 +0800
+
+heic-converter (0.2.0) unstable; urgency=medium
+
+  * 重大重构：TypeScript 迁移、UI 升级与整体架构优化。
+
+ -- hotime <xiaoyqde@126.com>  Sat, 10 Jan 2026 23:02:39 +0800
+
+heic-converter (0.1.0) unstable; urgency=medium
+
+  * 首个版本：基于 Tauri 2 + Vue 3 的 HEIC 图片转换工具。
+
+ -- hotime <xiaoyqde@126.com>  Tue, 06 Jan 2026 16:33:39 +0800
