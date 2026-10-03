@@ -1,9 +1,9 @@
 pub mod commands;
 pub mod converters;
+pub mod memory_pool;
 mod services;
 mod setup;
 pub mod utils;
-pub mod memory_pool;
 
 // 全局线程池
 use once_cell::sync::Lazy;
@@ -17,7 +17,7 @@ pub static CONVERSION_POOL: Lazy<rayon::ThreadPool> = Lazy::new(|| {
     let num_cpus = std::thread::available_parallelism()
         .map(|n| n.get())
         .unwrap_or(4);
-    
+
     ThreadPoolBuilder::new()
         .num_threads((num_cpus * 3 / 4).max(2))
         .thread_name(|i| format!("converter-{}", i))

@@ -8,11 +8,11 @@ fn test_is_heic_format_by_extension() {
     // 测试 HEIC 扩展名
     assert!(is_heic_format("/path/to/image.heic"));
     assert!(is_heic_format("/path/to/image.HEIC"));
-    
+
     // 测试 HEIF 扩展名
     assert!(is_heic_format("/path/to/image.heif"));
     assert!(is_heic_format("/path/to/image.HEIF"));
-    
+
     // 测试其他格式
     assert!(!is_heic_format("/path/to/image.jpg"));
     assert!(!is_heic_format("/path/to/image.png"));
@@ -49,10 +49,10 @@ fn test_is_heic_format_temp_heic_file() {
     // 创建一个假的 HEIC 文件（仅包含扩展名验证）
     let temp_dir = TempDir::new().unwrap();
     let heic_path = temp_dir.path().join("test.heic");
-    
+
     // 创建空文件
     File::create(&heic_path).unwrap();
-    
+
     // 扩展名匹配，返回 true
     // 注意：由于文件是空的，libheif 无法打开，但扩展名检查已经通过
     assert!(is_heic_format(heic_path.to_str().unwrap()));
@@ -62,12 +62,12 @@ fn test_is_heic_format_temp_heic_file() {
 fn test_is_heic_format_jpg_file() {
     let temp_dir = TempDir::new().unwrap();
     let jpg_path = temp_dir.path().join("test.jpg");
-    
+
     // 创建一个简单的 JPEG 文件头
     let mut file = File::create(&jpg_path).unwrap();
     // 写入一个无效但看起来像 JPEG 的数据
     file.write_all(&[0xFF, 0xD8, 0xFF, 0xE0]).unwrap();
-    
+
     // 应该返回 false（扩展名不是 HEIC）
     assert!(!is_heic_format(jpg_path.to_str().unwrap()));
 }
@@ -89,7 +89,7 @@ fn test_is_heic_format_windows_paths() {
         assert!(is_heic_format("C:\\images\\photo.heic"));
         assert!(!is_heic_format("C:\\images\\photo.jpg"));
     }
-    
+
     // 测试路径中的反斜杠和正斜杠
     assert!(is_heic_format("path/to/image.heic"));
     assert!(!is_heic_format("path/to/image.jpg"));

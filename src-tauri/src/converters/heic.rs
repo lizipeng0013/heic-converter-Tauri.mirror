@@ -45,52 +45,52 @@ pub fn convert_heic_image(
     let width = image.width();
     let height = image.height();
 
-        // 检查是否有交错的 RGB 数据
-        let result = if let Some(ref interleaved) = planes.interleaved {
-            debug!("使用 libheif 内置 RGB 解码（SIMD 优化）");
-            let data = interleaved.data;
-            let stride = interleaved.stride;
+    // 检查是否有交错的 RGB 数据
+    let result = if let Some(ref interleaved) = planes.interleaved {
+        debug!("使用 libheif 内置 RGB 解码（SIMD 优化）");
+        let data = interleaved.data;
+        let stride = interleaved.stride;
 
-            // 直接创建 ImageBuffer，避免逐像素处理
-            // 这比手动 YUV->RGB 转换快 10 倍以上
-            let buffer: RgbImage = if stride == (width * 3) as usize {
-                // 如果 stride 符合预期，直接复制数据（必须复制，因为 ImageBuffer 需要所有权）
-                // 使用 Vec::from 而不是 to_vec()，更高效
-                trace!("stride 匹配，直接复制 RGB 数据");
-                let buffer_data = Vec::from(data);
-                ImageBuffer::from_raw(width, height, buffer_data).ok_or(
-                    ConversionError::UnsupportedInputFormat("无法创建 RGB buffer".to_string()),
-                )?
-            } else {
-                // 如果 stride 不符合预期，需要创建新的 buffer 并逐行复制
-                trace!(
-                    "RGB 数据 stride 不匹配（{}），期望 {}，创建新的 buffer 并逐行复制",
-                    stride,
-                    width * 3
-                );
-                let row_bytes = (width * 3) as usize;
-                let total_bytes = row_bytes * height as usize;
+        // 直接创建 ImageBuffer，避免逐像素处理
+        // 这比手动 YUV->RGB 转换快 10 倍以上
+        let buffer: RgbImage = if stride == (width * 3) as usize {
+            // 如果 stride 符合预期，直接复制数据（必须复制，因为 ImageBuffer 需要所有权）
+            // 使用 Vec::from 而不是 to_vec()，更高效
+            trace!("stride 匹配，直接复制 RGB 数据");
+            let buffer_data = Vec::from(data);
+            ImageBuffer::from_raw(width, height, buffer_data).ok_or(
+                ConversionError::UnsupportedInputFormat("无法创建 RGB buffer".to_string()),
+            )?
+        } else {
+            // 如果 stride 不符合预期，需要创建新的 buffer 并逐行复制
+            trace!(
+                "RGB 数据 stride 不匹配（{}），期望 {}，创建新的 buffer 并逐行复制",
+                stride,
+                width * 3
+            );
+            let row_bytes = (width * 3) as usize;
+            let total_bytes = row_bytes * height as usize;
 
-                // 使用内存池获取缓冲区，减少分配开销
-                let mut buffer_data = acquire_buffer(total_bytes);
+            // 使用内存池获取缓冲区，减少分配开销
+            let mut buffer_data = acquire_buffer(total_bytes);
 
-                // 使用更高效的批量复制
-                for y in 0..height {
-                    let y_usize = y as usize;
-                    let src_start = y_usize * stride;
-                    let src_end = src_start + row_bytes;
+            // 使用更高效的批量复制
+            for y in 0..height {
+                let y_usize = y as usize;
+                let src_start = y_usize * stride;
+                let src_end = src_start + row_bytes;
 
-                    // 边界检查
-                    if src_end <= data.len() {
-                        buffer_data[y_usize * row_bytes..(y_usize + 1) * row_bytes]
-                            .copy_from_slice(&data[src_start..src_end]);
-                    }
+                // 边界检查
+                if src_end <= data.len() {
+                    buffer_data[y_usize * row_bytes..(y_usize + 1) * row_bytes]
+                        .copy_from_slice(&data[src_start..src_end]);
                 }
+            }
 
-                ImageBuffer::from_raw(width, height, buffer_data).ok_or(
-                    ConversionError::UnsupportedInputFormat("无法创建 RGB buffer".to_string()),
-                )?
-            };
+            ImageBuffer::from_raw(width, height, buffer_data).ok_or(
+                ConversionError::UnsupportedInputFormat("无法创建 RGB buffer".to_string()),
+            )?
+        };
 
         save_image_buffer(&buffer, output_path, format)
     } else {
@@ -115,24 +115,24 @@ pub fn convert_heic_image(
             let row_bytes = (width * 3) as usize;
             let total_bytes = row_bytes * height as usize;
             let mut buffer_data = acquire_buffer(total_bytes);
-            
+
             // 按行批量处理，减少内存访问开销
             for y_pos in 0..height_usize {
                 let y_row_start = y_pos * y.stride;
                 let uv_y = y_pos / 2;
                 let uv_row_start = uv_y * cb.stride;
-                
+
                 // 预计算 UV 行的起始位置
                 let uv_row_data_cb = &cb.data[uv_row_start..];
                 let uv_row_data_cr = &cr.data[uv_row_start..];
                 let y_row_data = &y.data[y_row_start..];
-                
+
                 // 按行处理像素
                 let mut dst_offset = y_pos * row_bytes;
                 for x_pos in 0..width_usize {
                     let y_idx = x_pos;
                     let uv_x = x_pos / 2;
-                    
+
                     // 边界检查
                     if y_idx < y_row_data.len()
                         && uv_x < uv_row_data_cb.len()
@@ -141,12 +141,12 @@ pub fn convert_heic_image(
                         let y_val = y_row_data[y_idx] as f32;
                         let cb_val = uv_row_data_cb[uv_x] as f32 - 128.0;
                         let cr_val = uv_row_data_cr[uv_x] as f32 - 128.0;
-                        
+
                         // 使用预计算的系数进行转换
                         let r = y_val + CR_COEFF * cr_val;
                         let g = y_val - CG_COEFF1 * cb_val - CG_COEFF2 * cr_val;
                         let b = y_val + CB_COEFF * cb_val;
-                        
+
                         // 使用位运算代替 clamp，提升性能
                         // 这在大多数情况下是安全的，因为 YUV 到 RGB 的结果通常在 0-255 范围内
                         let r_u8 = if r < 0.0 {
@@ -170,22 +170,22 @@ pub fn convert_heic_image(
                         } else {
                             b as u8
                         };
-                        
+
                         // 直接写入 buffer，避免 put_pixel 的开销
                         buffer_data[dst_offset] = r_u8;
                         buffer_data[dst_offset + 1] = g_u8;
                         buffer_data[dst_offset + 2] = b_u8;
-                        
+
                         dst_offset += 3;
                     }
                 }
             }
-            
+
             // 创建 ImageBuffer
             let buffer = ImageBuffer::from_raw(width, height, buffer_data).ok_or(
                 ConversionError::UnsupportedInputFormat("无法创建 RGB buffer".to_string()),
             )?;
-            
+
             save_image_buffer(&buffer, output_path, format)
         } else {
             error!("无法处理的平面格式");

@@ -77,67 +77,69 @@ fn batch_convert_images(
 
     // 使用全局线程池进行并行处理
     CONVERSION_POOL.install(|| {
-        (0..CONVERSION_POOL.current_num_threads()).into_par_iter().for_each(|_| {
-            loop {
-                // 检查停止标志
-                if should_stop() {
-                    stopped_flag.store(true, Ordering::Release);
-                    break;
+        (0..CONVERSION_POOL.current_num_threads())
+            .into_par_iter()
+            .for_each(|_| {
+                loop {
+                    // 检查停止标志
+                    if should_stop() {
+                        stopped_flag.store(true, Ordering::Release);
+                        break;
+                    }
+
+                    // 使用原子操作获取下一个任务索引
+                    let index = next_index.fetch_add(1, Ordering::Relaxed);
+                    if index >= total {
+                        break; // 所有文件都已处理
+                    }
+
+                    // 再次检查停止标志（在获取索引后）
+                    if should_stop() {
+                        stopped_flag.store(true, Ordering::Release);
+                        // 直接退出，不回退索引（前端会将剩余文件重置为 pending）
+                        break;
+                    }
+
+                    // 直接访问文件列表（只读，不需要锁）
+                    let (input, output) = files_arc[index].clone();
+
+                    let current = index + 1;
+                    trace!("处理文件 {}/{}", current, total);
+
+                    let result = convert_image_auto(&app_arc, &input, &output, format);
+
+                    match result {
+                        Ok(_) => {
+                            // 使用原子操作更新计数器
+                            success_count.fetch_add(1, Ordering::Relaxed);
+                            processed_count.fetch_add(1, Ordering::Relaxed);
+                            debug!("✓ 转换成功 {}/{}", current, total);
+                            let _ = app_arc.emit(
+                                "conversion-update",
+                                json!({
+                                    "path": input,
+                                    "status": "done",
+                                    "output_path": output,
+                                }),
+                            );
+                        },
+                        Err(e) => {
+                            // 使用原子操作更新计数器
+                            error_count.fetch_add(1, Ordering::Relaxed);
+                            processed_count.fetch_add(1, Ordering::Relaxed);
+                            error!("✗ 转换失败 {}/{}", current, total);
+                            let _ = app_arc.emit(
+                                "conversion-update",
+                                json!({
+                                    "path": input,
+                                    "status": "error",
+                                    "errorMessage": e.user_message(),
+                                }),
+                            );
+                        },
+                    }
                 }
-
-                // 使用原子操作获取下一个任务索引
-                let index = next_index.fetch_add(1, Ordering::Relaxed);
-                if index >= total {
-                    break; // 所有文件都已处理
-                }
-
-                // 再次检查停止标志（在获取索引后）
-                if should_stop() {
-                    stopped_flag.store(true, Ordering::Release);
-                    // 直接退出，不回退索引（前端会将剩余文件重置为 pending）
-                    break;
-                }
-
-                // 直接访问文件列表（只读，不需要锁）
-                let (input, output) = files_arc[index].clone();
-
-                let current = index + 1;
-                trace!("处理文件 {}/{}", current, total);
-
-                let result = convert_image_auto(&app_arc, &input, &output, format);
-
-                match result {
-                    Ok(_) => {
-                        // 使用原子操作更新计数器
-                        success_count.fetch_add(1, Ordering::Relaxed);
-                        processed_count.fetch_add(1, Ordering::Relaxed);
-                        debug!("✓ 转换成功 {}/{}", current, total);
-                        let _ = app_arc.emit(
-                            "conversion-update",
-                            json!({
-                                "path": input,
-                                "status": "done",
-                                "output_path": output,
-                            }),
-                        );
-                    },
-                    Err(e) => {
-                        // 使用原子操作更新计数器
-                        error_count.fetch_add(1, Ordering::Relaxed);
-                        processed_count.fetch_add(1, Ordering::Relaxed);
-                        error!("✗ 转换失败 {}/{}", current, total);
-                        let _ = app_arc.emit(
-                            "conversion-update",
-                            json!({
-                                "path": input,
-                                "status": "error",
-                                "errorMessage": e.user_message(),
-                            }),
-                        );
-                    },
-                }
-            }
-        });
+            });
     });
 
     // 获取统计信息

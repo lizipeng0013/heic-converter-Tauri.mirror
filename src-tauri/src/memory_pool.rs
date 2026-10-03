@@ -11,7 +11,7 @@ static BUFFER_POOL: Lazy<Mutex<BufferPool>> = Lazy::new(|| {
 });
 
 /// 缓冲区池
-/// 
+///
 /// 用于复用图像缓冲区，减少内存分配和释放的开销。
 /// 对于大图像处理尤其有效，可以避免频繁的内存分配。
 pub struct BufferPool {
@@ -29,7 +29,7 @@ impl BufferPool {
             min_buffer_size,
         }
     }
-    
+
     /// 获取一个缓冲区
     ///
     /// 如果池中有合适的缓冲区，则复用；否则分配新的缓冲区。
@@ -45,7 +45,7 @@ impl BufferPool {
             vec![0u8; size.max(self.min_buffer_size)]
         }
     }
-    
+
     /// 释放缓冲区回池
     ///
     /// 将缓冲区回收，以便后续复用。
@@ -53,19 +53,20 @@ impl BufferPool {
     pub fn release(&mut self, mut buffer: Vec<u8>) {
         // 清空缓冲区内容
         buffer.clear();
-        
+
         // 只保留合理大小的缓冲区，避免占用过多内存
-        if buffer.capacity() <= 100 * 1024 * 1024 { // 最大 100MB
+        if buffer.capacity() <= 100 * 1024 * 1024 {
+            // 最大 100MB
             self.buffers.push(buffer);
         }
         // 如果缓冲区太大，让它自然释放
     }
-    
+
     /// 获取池中的缓冲区数量
     pub fn buffer_count(&self) -> usize {
         self.buffers.len()
     }
-    
+
     /// 清空池中的所有缓冲区
     pub fn clear(&mut self) {
         self.buffers.clear();
@@ -103,32 +104,32 @@ pub fn buffer_pool_count() -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_buffer_pool() {
         let mut pool = BufferPool::new(1024);
-        
+
         // 获取小缓冲区
-        let buffer = pool.acquire(1024);  // 使用小缓冲区
+        let buffer = pool.acquire(1024); // 使用小缓冲区
         assert_eq!(buffer.len(), 1024);
-        
+
         // 释放缓冲区
         pool.release(buffer);
         assert_eq!(pool.buffer_count(), 1);
-        
+
         // 再次获取应该复用
         let _buffer2 = pool.acquire(1024);
         assert_eq!(pool.buffer_count(), 0);
     }
-    
+
     #[test]
     fn test_buffer_pool_too_small() {
         let mut pool = BufferPool::new(1024);
-        
+
         // 获取小缓冲区
         let buffer = pool.acquire(512); // 小于 min_buffer_size
         assert_eq!(buffer.len(), 1024); // 应该分配 min_buffer_size
-        
+
         pool.release(buffer);
         assert_eq!(pool.buffer_count(), 1);
     }

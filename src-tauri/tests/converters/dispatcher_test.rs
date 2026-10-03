@@ -31,7 +31,7 @@ fn test_output_format_conversion() {
         (OutputFormat::Tiff, "tif"),
         (OutputFormat::Ico, "ico"),
     ];
-    
+
     for (format, expected_ext) in formats {
         assert_eq!(format.extension(), expected_ext);
     }
@@ -47,15 +47,15 @@ fn test_temp_dir_creation() {
 #[test]
 fn test_output_path_building() {
     use std::path::Path;
-    
+
     let source_path = "/path/to/image.heic";
     let output_folder = "/output";
     let target_type = "jpg";
-    
+
     let path = Path::new(source_path);
     let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("image");
     let file_name = format!("{}.{}", stem, target_type);
     let target_path = Path::new(output_folder).join(file_name);
-    
+
     assert_eq!(target_path.to_string_lossy(), "/output/image.jpg");
 }
