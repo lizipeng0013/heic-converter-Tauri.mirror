@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Clock } from "lucide-vue-next";
+import { Clock } from "@lucide/vue";
 import { useConversionStore } from "@/stores/conversionStore";
 
 const store = useConversionStore();

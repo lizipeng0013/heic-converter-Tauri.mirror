@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { FileImage, Trash2, Loader2, AlertCircle, FolderOpen, Clock } from "lucide-vue-next";
+import { FileImage, Trash2, Loader2, AlertCircle, FolderOpen, Clock } from "@lucide/vue";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useConversionStore } from "@/stores/conversionStore";
-import { Settings2, FolderOpen, ChevronDown, Square } from "lucide-vue-next";
+import { Settings2, FolderOpen, ChevronDown, Square } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";

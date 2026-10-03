@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, computed } from "vue";
 import { useConversionStore } from "@/stores/conversionStore";
-import { Upload, CheckCircle2 } from "lucide-vue-next";
+import { Upload, CheckCircle2 } from "@lucide/vue";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -283,7 +283,7 @@ const selectFilesWithDialog = async () => {
             >
               <div
                 v-for="virtualRow in taskVirtualRows"
-                :key="virtualRow.key"
+                :key="String(virtualRow.key)"
                 class="virtual-item"
                 :style="{
                   position: 'absolute',
@@ -330,7 +330,7 @@ const selectFilesWithDialog = async () => {
             >
               <div
                 v-for="virtualRow in errorVirtualRows"
-                :key="virtualRow.key"
+                :key="String(virtualRow.key)"
                 class="virtual-item"
                 :style="{
                   position: 'absolute',
@@ -362,7 +362,7 @@ const selectFilesWithDialog = async () => {
             >
               <div
                 v-for="virtualRow in completedVirtualRows"
-                :key="virtualRow.key"
+                :key="String(virtualRow.key)"
                 class="virtual-item"
                 :style="{
                   position: 'absolute',

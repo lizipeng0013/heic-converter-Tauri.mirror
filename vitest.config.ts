@@ -16,7 +16,7 @@ export default defineConfig({
     include: ['src/__tests__/**/*.test.ts'],
     exclude: ['src/vite-env.d.ts', 'src/**/types/**', 'src/__tests__/e2e/**'],
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': path.resolve(import.meta.dirname, './src'),
     },
     setupFiles: ['./src/__tests__/setup.ts'],
   },

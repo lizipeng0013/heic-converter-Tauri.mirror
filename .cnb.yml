@@ -88,7 +88,7 @@
     pnpm install --frozen-lockfile
     # node 不在 PATH，devEngines 装出来的项目级node 在这里
     echo "== node $(./node_modules/.bin/node --version) (devEngines.runtime，项目级) =="
-    pnpm exec tsc --noEmit
+    pnpm exec vue-tsc --noEmit
     pnpm lint:rust
     pnpm test
     cargo test --manifest-path src-tauri/Cargo.toml

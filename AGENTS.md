@@ -51,6 +51,18 @@
 - 任何会修改文件（代码、文档、git 操作）的行为，都必须在执行前获得用户的明确确认（除非在"更新文档"步骤中已明确豁免）。
 - 本全局规则在项目级规则（项目根目录的 `AGENTS.md`）存在时，项目级规则优先，但本规则作为默认补充。
 
+## vendored 目录：`src/components/ui/`
+
+`src/components/ui/` 是 shadcn-vue CLI 拉进来的**源码副本**（见 `components.json`），
+不是 npm 依赖；真正的上游只有 `reka-ui`（primitive 层）。项目已将该目录排除在
+eslint（`eslint.config.js:15`）与 prettier（`.prettierignore:3`）之外，当 vendored 代码处理。
+
+- **可以修改**（代码归本仓库所有），但改动前先与上游 registry diff：
+  `https://shadcn-vue.com/r/styles/new-york/<name>.json`。副本已与上游漂移。
+- **重新执行 `shadcn-vue add <name>` 会覆盖本地修改**，并会把 `lucide-vue-next`
+  （本项目已迁移到 `@lucide/vue`）与手写窄化类型（如已删除的 RadioGroup）等旧版写法带回。
+- 改动尽量最小化（类型/样式），不重构结构，以控制与上游的 diff 面。
+
 ## 提交说明与变更日志纪律
 
 ### 提交说明

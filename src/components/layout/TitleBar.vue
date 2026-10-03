@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Sun, Moon, Minus, X, Maximize2, Pin, MonitorDown } from "lucide-vue-next";
+import { Sun, Moon, Minus, X, Maximize2, Pin, MonitorDown } from "@lucide/vue";
 import AppIcon from "@/assets/app-icon.svg";
 import { Button } from "@/components/ui/button";
 import {

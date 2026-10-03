@@ -236,9 +236,10 @@ CNB_BRANCH=v0.4.2 sh ci/gen-release-body.sh     # 预览 Release 正文，应命
 
 | 命令 | 作用 | CI 阶段 |
 |------|------|----------|
-| `pnpm exec tsc --noEmit` | TypeScript 类型检查（无输出即通过） | PR + push 门禁 |
+| `pnpm exec vue-tsc --noEmit` | TypeScript 类型检查，含 `.vue`（无输出即通过） | PR + push 门禁 |
 | `pnpm lint:rust` | `cargo clippy --all-targets --all-features -- -D warnings`，警告即失败 | PR + push 门禁 |
 | `pnpm test` | Vitest 单元/组件测试（`vitest run`） | PR + push 门禁 |
+| `pnpm build` | `vue-tsc --noEmit && vite build`，打包前置（`pnpm deb` → `tauri build`） | push / tag 打包 |
 | `pnpm test:watch` | Vitest watch 模式，本地开发用 | — |
 | `pnpm test:coverage` | 覆盖率报告（`@vitest/coverage-v8`） | — |
 | `pnpm test:e2e` | Playwright 端到端测试 | — |
