@@ -1,5 +1,11 @@
 import "@testing-library/jest-dom";
-import { vi } from "vitest";
+import { afterEach, vi } from "vitest";
+import { setTestLocale } from "../i18n";
+
+// 测试间语言隔离：每个用例结束后还原默认语言（各文件 beforeEach 再自行钉住）
+afterEach(() => {
+  setTestLocale("en");
+});
 
 vi.mock("@vueuse/core", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@vueuse/core")>();

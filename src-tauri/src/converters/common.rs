@@ -19,8 +19,8 @@ pub enum ConversionError {
     #[error("无法识别的图片格式")]
     #[allow(dead_code)]
     UnknownFormat,
-    #[error("不支持的输入格式: {0}")]
-    UnsupportedInputFormat(String),
+    #[error("HEIC图像数据处理失败")]
+    HeicProcessingFailed,
     #[error("输出路径冲突")]
     OutputConflict,
     #[error("图像尺寸超出限制")]
@@ -30,26 +30,33 @@ pub enum ConversionError {
 }
 
 impl ConversionError {
-    /// 获取用户友好的错误信息
+    /// 获取用户友好的错误信息（按当前 locale 渲染；运行时路径使用）
     pub fn user_message(&self) -> String {
+        self.user_message_with(crate::utils::locale::current())
+    }
+
+    /// 按指定 locale 渲染用户友好错误信息（纯函数，测试用）
+    pub fn user_message_with(&self, locale: crate::utils::locale::Locale) -> String {
+        use crate::utils::locale::{message, message_fmt};
         match self {
-            ConversionError::HeifError(_) => "HEIC文件解码失败，请确保文件没有损坏".to_string(),
-            ConversionError::ImageError(_) => "图片处理失败，请检查文件格式是否正确".to_string(),
-            ConversionError::IoError(_) => "文件读写失败，请检查文件权限和磁盘空间".to_string(),
-            ConversionError::JpegEncodeError(_) => "JPEG编码失败，请尝试降低图片质量".to_string(),
-            ConversionError::UnsupportedFormat(format) => format!(
-                "不支持的输出格式: {}，请选择 jpg、png、webp、bmp、tiff 或 ico",
-                format
+            ConversionError::HeifError(_) => message("error.heif_decode_failed", locale),
+            ConversionError::ImageError(_) => message("error.image_process_failed", locale),
+            ConversionError::IoError(_) => message("error.io_failed", locale),
+            ConversionError::JpegEncodeError(_) => message("error.jpeg_encode_failed", locale),
+            ConversionError::UnsupportedFormat(format) => message_fmt(
+                "error.unsupported_output_format",
+                locale,
+                &[("format", format)],
             ),
-            ConversionError::UnknownFormat => "无法识别图片格式".to_string(),
-            ConversionError::UnsupportedInputFormat(format) => {
-                format!("不支持的输入格式: {}，仅支持 HEIC/HEIF 格式", format)
+            ConversionError::UnknownFormat => message("error.unknown_format", locale),
+            ConversionError::HeicProcessingFailed => {
+                message("error.heic_processing_failed", locale)
             },
-            ConversionError::OutputConflict => {
-                "输出文件冲突：同名文件过多，请更换输出目录或源文件名".to_string()
+            ConversionError::OutputConflict => message("error.output_conflict", locale),
+            ConversionError::ImageDimensionsTooLarge => {
+                message("error.dimensions_too_large", locale)
             },
-            ConversionError::ImageDimensionsTooLarge => "图片尺寸超出限制，无法处理".to_string(),
-            ConversionError::InputFileTooLarge => "文件过大，超出处理上限".to_string(),
+            ConversionError::InputFileTooLarge => message("error.file_too_large", locale),
         }
     }
 }

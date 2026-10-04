@@ -81,7 +81,8 @@ src-tauri/tests/           # Rust 后端测试
 ├── services/             # 服务层测试
 │   └── conversion_test.rs # 转换服务测试
 ├── utils/                # 工具函数测试
-│   └── path_test.rs      # 路径工具测试
+│   ├── path_test.rs      # 路径工具测试
+│   └── locale_test.rs    # 三语消息目录与 locale 状态测试
 └── mod.rs               # 测试入口
 
 src/__tests__/            # 前端测试
@@ -99,6 +100,10 @@ src/__tests__/            # 前端测试
 │   │   ├── MainView.test.ts
 │   │   ├── SettingsPanel.test.ts
 │   │   └── StatusBar.test.ts
+│   ├── i18n/            # 多语言测试
+│   │   ├── normalize.test.ts   # 系统标签归一化
+│   │   ├── catalog.test.ts     # 目录键集/非空 parity
+│   │   └── locale.test.ts      # 持久化与 Rust 下发
 │   └── utils/          # 工具函数测试
 │       └── index.test.ts
 ├── e2e/                  # E2E 测试
@@ -122,19 +127,24 @@ src/__tests__/            # 前端测试
 | plan_target_paths / reserve_unique_output_path | 输出路径规划、加序号兜底、符号链接占用跳过、批量上限 | ✅ 已测试 |
 | validate_input_paths | 输入校验：普通文件、扩展名白名单、批量数量上限 | ✅ 已测试 |
 | check_dimensions / check_file_size | 解码前尺寸与文件大小限额 | ✅ 已测试 |
-| confirm_output_folder / ensure_output_confirmed | 输出目录确认闸（未确认拒绝转换） | ✅ 已测试 |
+| confirm_output_folder / ensure_output_confirmed | 输出目录确认闸（未确认拒绝转换）、错误文案按 locale 渲染 | ✅ 已测试 |
 | capabilities/default.json | 权限收敛断言（敏感权限已移除、stat scope 精确） | ✅ 已测试 |
+| utils/locale | 三语目录（en/zh-Hans/zh-Hant）键集与非空 parity、message/message_fmt 占位符替换、with_current 锁内往返（串行化并恢复）、通知文案三语 | ✅ 已测试 |
+| ConversionError::user_message | 按 locale 渲染（三语互异、参数替换生效） | ✅ 已测试 |
+| 校验文案渲染 | validate_input_paths / validate_output_folder / validate_convert_request（未选文件 En/ZhHans）/ 命令拒绝在 En 与 ZhHans 下分别渲染对应语言 | ✅ 已测试 |
 
 ### 前端
 
 | 模块 | 测试内容 | 状态 |
 |------|----------|------|
-| conversionStore | 文件添加、状态转换、设置更新、clearErrors、输出目录确认 | ✅ 已测试 |
+| conversionStore | 文件添加、状态转换、设置更新、clearErrors、输出目录确认、转换失败弹窗语言文案（钉 zh-Hans/en） | ✅ 已测试 |
 | Button | 渲染、变体、点击事件 | ✅ 已测试 |
 | TitleBar | 窗口操作、主题切换、事件发射 | ✅ 已测试 |
 | utils | cn 函数、类名合并 | ✅ 已测试 |
 | FileListArea | 清空按钮转换中禁用、清空失败只清失败列表、tab 切换 | ✅ 已测试 |
 | FileCard | 已完成项显示"源文件名 → 生成文件名"（含无输出路径回退） | ✅ 已测试 |
+| i18n | normalizeLocale 系统标签归一化、目录键集/非空 parity、locale 持久化与 Rust 下发（set_locale 命令）、组件文案渲染（钉 zh-Hans，兜底 en） | ✅ 已测试 |
+| SettingsPanel / DropdownMenu | 语言下拉切换、更多格式下拉开合与选择（共享 DropdownMenu 组件）、点击外部关闭 | ✅ 已测试 |
 
 ## 覆盖率目标
 

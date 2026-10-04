@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use tauri_plugin_log::log::{debug, error};
 
 use crate::converters::common::ConversionError;
+use crate::utils::locale::Locale;
 
 /// 输出路径编号尝试上限（同名冲突自动加序号的最大次数）
 const MAX_UNIQUE_ATTEMPTS: usize = 10_000;
@@ -17,19 +18,24 @@ const INPUT_EXTENSIONS: [&str; 2] = ["heic", "heif"];
 /// 校验一批输入路径：数量上限、必须是普通文件、扩展名白名单。
 ///
 /// 前端过滤只是 UI 级别，这里才是真实边界；错误信息不包含路径。
-pub fn validate_input_paths(paths: &[String]) -> Result<(), String> {
+/// `locale` 由调用方在入口捕获（错误文案在命令边界渲染）。
+pub fn validate_input_paths(paths: &[String], locale: Locale) -> Result<(), String> {
+    use crate::utils::locale::{message, message_fmt};
     if paths.len() > MAX_BATCH_FILES {
-        return Err(format!("一次最多转换 {} 个文件", MAX_BATCH_FILES));
+        return Err(message_fmt(
+            "validate.max_batch",
+            locale,
+            &[("max", &MAX_BATCH_FILES.to_string())],
+        ));
     }
 
-    const INVALID: &str = "所选文件中包含无效文件：仅支持普通的 HEIC/HEIF 文件";
     for path in paths {
         let p = Path::new(path);
         // metadata 跟随符号链接：指向普通文件的链接可转换，
         // 目录、FIFO、设备文件等一律拒绝（避免转换线程被特殊文件阻塞）
         match std::fs::metadata(p) {
             Ok(meta) if meta.is_file() => {},
-            _ => return Err(INVALID.to_string()),
+            _ => return Err(message("validate.invalid_input", locale)),
         }
 
         let ext = p
@@ -37,7 +43,7 @@ pub fn validate_input_paths(paths: &[String]) -> Result<(), String> {
             .map(|e| e.to_string_lossy().to_lowercase())
             .unwrap_or_default();
         if !INPUT_EXTENSIONS.contains(&ext.as_str()) {
-            return Err("所选文件中包含不支持的格式，仅支持 HEIC/HEIF 文件".to_string());
+            return Err(message("validate.unsupported_format", locale));
         }
     }
     Ok(())
@@ -144,12 +150,13 @@ fn log_label(p: &Path) -> String {
 /// # 返回
 /// - `Ok(())`: 目录有效且有写入权限
 /// - `Err(String)`: 用户友好的错误信息
-pub fn validate_output_folder(folder: &str) -> Result<(), String> {
+pub fn validate_output_folder(folder: &str, locale: Locale) -> Result<(), String> {
+    use crate::utils::locale::message;
     let p = Path::new(folder);
 
     // 检查路径是否为空
     if folder.is_empty() {
-        return Err("输出目录不能为空".to_string());
+        return Err(message("validate.empty_output", locale));
     }
 
     // 检查目录是否存在，不存在则创建
@@ -157,13 +164,13 @@ pub fn validate_output_folder(folder: &str) -> Result<(), String> {
         debug!("输出目录不存在，尝试创建: {}", log_label(p));
         if let Err(e) = std::fs::create_dir_all(p) {
             error!("创建输出目录失败: {} - 错误详情: {}", log_label(p), e);
-            return Err("无法创建输出目录，请检查路径是否有效".to_string());
+            return Err(message("validate.create_dir_failed", locale));
         }
     }
 
     // 检查是否是目录
     if !p.is_dir() {
-        return Err("所选输出位置不是有效的目录".to_string());
+        return Err(message("validate.not_a_directory", locale));
     }
 
     // 检查是否有写入权限（以"创建即失败"方式探测，不覆盖、不跟随任何已有条目）
@@ -192,7 +199,10 @@ pub fn validate_output_folder(folder: &str) -> Result<(), String> {
                 log_label(p),
                 e
             );
-            Err("输出目录无写入权限，请选择其他目录或修改文件夹权限".to_string())
+            Err(crate::utils::locale::message(
+                "validate.no_write_permission",
+                locale,
+            ))
         },
     }
 }

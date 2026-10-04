@@ -30,7 +30,10 @@ static CONFIRMED_OUTPUT_FOLDER: Mutex<Option<String>> = Mutex::new(None);
 #[tauri::command]
 pub fn confirm_output_folder(path: String) -> Result<(), String> {
     if path.trim().is_empty() {
-        return Err("输出目录不能为空".to_string());
+        return Err(crate::utils::locale::message(
+            "validate.empty_output",
+            crate::utils::locale::current(),
+        ));
     }
     *CONFIRMED_OUTPUT_FOLDER.lock().unwrap() = Some(path);
     Ok(())
@@ -39,12 +42,67 @@ pub fn confirm_output_folder(path: String) -> Result<(), String> {
 /// 校验转换请求使用的输出目录是否已被确认。
 ///
 /// 未确认的任意路径不能驱动目录创建与写入；错误信息不包含路径。
-pub fn ensure_output_confirmed(output_folder: &str) -> Result<(), String> {
+pub fn ensure_output_confirmed(
+    output_folder: &str,
+    locale: crate::utils::locale::Locale,
+) -> Result<(), String> {
     let confirmed = CONFIRMED_OUTPUT_FOLDER.lock().unwrap();
     match &*confirmed {
         Some(c) if c == output_folder => Ok(()),
-        _ => Err("输出目录未经确认，请在设置中重新选择输出目录".to_string()),
+        _ => Err(crate::utils::locale::message(
+            "validate.unconfirmed",
+            locale,
+        )),
     }
+}
+
+/// 转换请求的同步参数校验（纯逻辑 + 已确认目录静态，独立成函数便于测试）。
+///
+/// 约定：校验错误在命令边界捕获 locale 后渲染（一次性、可并行测试）；
+/// 事件/通知类文案在发送时读取 current()（保证"前端总是赢"）。
+pub fn validate_convert_request(
+    paths: &[String],
+    target_type: &str,
+    output_folder: &str,
+    quality: u8,
+    locale: crate::utils::locale::Locale,
+) -> Result<(), String> {
+    // 验证输入参数
+    if paths.is_empty() {
+        return Err(crate::utils::locale::message("convert.no_files", locale));
+    }
+
+    // 输入校验在 Rust 侧强制执行（前端过滤可被绕过）
+    crate::utils::path::validate_input_paths(paths, locale)?;
+
+    // 输出目录必须是事先确认过的（对话框选定或系统下载目录）
+    ensure_output_confirmed(output_folder, locale)?;
+
+    // 验证输出目录权限
+    crate::utils::validate_output_folder(output_folder, locale)?;
+
+    // 验证格式
+    let valid_formats = ["jpeg", "jpg", "png", "webp", "bmp", "tiff", "ico"];
+    if !valid_formats.contains(&target_type.to_lowercase().as_str()) {
+        return Err(crate::utils::locale::message_fmt(
+            "convert.unsupported_output",
+            locale,
+            &[
+                ("format", target_type),
+                ("supported", &valid_formats.join(", ")),
+            ],
+        ));
+    }
+
+    // 验证质量参数
+    if quality == 0 || quality > 100 {
+        return Err(crate::utils::locale::message_fmt(
+            "convert.quality_range",
+            locale,
+            &[("quality", &quality.to_string())],
+        ));
+    }
+    Ok(())
 }
 
 /// 批量转换图片命令
@@ -68,34 +126,9 @@ pub async fn convert_images(
     output_folder: String,
     quality: u8,
 ) -> Result<(), String> {
-    // 验证输入参数
-    if paths.is_empty() {
-        return Err("没有选择任何文件".to_string());
-    }
-
-    // 输入校验在 Rust 侧强制执行（前端过滤可被绕过）
-    crate::utils::path::validate_input_paths(&paths)?;
-
-    // 输出目录必须是事先确认过的（对话框选定或系统下载目录）
-    ensure_output_confirmed(&output_folder)?;
-
-    // 验证输出目录权限
-    crate::utils::validate_output_folder(&output_folder)?;
-
-    // 验证格式
-    let valid_formats = ["jpeg", "jpg", "png", "webp", "bmp", "tiff", "ico"];
-    if !valid_formats.contains(&target_type.to_lowercase().as_str()) {
-        return Err(format!(
-            "不支持的输出格式: {}. 支持的格式: {}",
-            target_type,
-            valid_formats.join(", ")
-        ));
-    }
-
-    // 验证质量参数
-    if quality == 0 || quality > 100 {
-        return Err(format!("质量参数必须在 1-100 之间，当前值: {}", quality));
-    }
+    // 校验文案按进入时的 locale 渲染（错误在返回给用户的那一刻即命令边界）
+    let locale = crate::utils::locale::current();
+    validate_convert_request(&paths, &target_type, &output_folder, quality, locale)?;
 
     let app_clone = app.clone();
     let format_clone = target_type.clone();
@@ -108,7 +141,10 @@ pub async fn convert_images(
         .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
         .is_err()
     {
-        return Err("已有转换任务正在进行中，请等待完成或先停止当前任务".to_string());
+        return Err(crate::utils::locale::message(
+            "convert.batch_running",
+            locale,
+        ));
     }
 
     // 重置停止标志（必须在拿到单飞闸之后，避免清掉进行中批次的停止请求）
@@ -129,7 +165,10 @@ pub async fn convert_images(
                 let _ = app_clone.emit(
                     "conversion-failed",
                     serde_json::json!({
-                        "errorMessage": "转换任务执行失败，请检查日志"
+                        "errorMessage": crate::utils::locale::message(
+                            "convert.failed_check_logs",
+                            crate::utils::locale::current()
+                        )
                     }),
                 );
                 return; // 退出任务，不继续处理
@@ -156,8 +195,14 @@ pub async fn convert_images(
                         {
                             let _ = Notification::new()
                                 .app_id("top.hotime.heic-converter")
-                                .summary("转换完成")
-                                .body("图片转换已完成")
+                                .summary(crate::utils::locale::message(
+                                    "notification.conversion_done_summary",
+                                    crate::utils::locale::current(),
+                                ))
+                                .body(crate::utils::locale::message(
+                                    "notification.conversion_done_body",
+                                    crate::utils::locale::current(),
+                                ))
                                 .show();
                         }
 
@@ -168,8 +213,14 @@ pub async fn convert_images(
                             std::thread::spawn(move || {
                                 let window_clone = window.clone();
                                 if let Ok(handle) = Notification::new()
-                                    .summary("转换完成")
-                                    .body("图片转换已完成")
+                                    .summary(&crate::utils::locale::message(
+                                        "notification.conversion_done_summary",
+                                        crate::utils::locale::current(),
+                                    ))
+                                    .body(&crate::utils::locale::message(
+                                        "notification.conversion_done_body",
+                                        crate::utils::locale::current(),
+                                    ))
                                     .action("default", "") // default action 捕获通知本身的点击
                                     .hint(Hint::Resident(true))
                                     .show()

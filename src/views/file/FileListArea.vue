@@ -10,9 +10,11 @@ import FileCard from "@/components/FileCard.vue";
 import { listen, TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
 import { info, error } from "@tauri-apps/plugin-log";
 import { alertSevere } from "@/utils/useError.ts";
+import { useI18n } from "vue-i18n";
 import type { ConversionUpdateEvent, ConversionFailedEvent } from "@/types";
 
 const conversionStore = useConversionStore();
+const { t } = useI18n();
 const isFileDragging = ref(false);
 
 // 按集合分组
@@ -169,7 +171,7 @@ const selectFilesWithDialog = async () => {
       multiple: true,
       filters: [
         {
-          name: "HEIC/HEIF 文件",
+          name: t("filelist.dialogFilterName"),
           extensions: ["heic", "heif"],
         },
       ],
@@ -180,7 +182,7 @@ const selectFilesWithDialog = async () => {
     const filePaths = Array.isArray(selected) ? selected : [selected];
     await conversionStore.addPaths(filePaths);
   } catch (error) {
-    alertSevere("选择文件失败：" + error);
+    alertSevere(t("filelist.selectFailed", { error: String(error) }));
   }
 };
 </script>
@@ -191,13 +193,13 @@ const selectFilesWithDialog = async () => {
       <Tabs v-model="conversionStore.activeTab" class="w-full">
         <TabsList class="h-8">
           <TabsTrigger value="pending" class="text-xs">
-            任务列表 ({{ conversionStore.files.length }})
+            {{ $t("filelist.tabs.pending", { count: conversionStore.files.length }) }}
           </TabsTrigger>
           <TabsTrigger value="completed" class="text-xs">
-            已完成 ({{ conversionStore.completedFiles.length }})
+            {{ $t("filelist.tabs.completed", { count: conversionStore.completedFiles.length }) }}
           </TabsTrigger>
           <TabsTrigger v-if="conversionStore.errorFiles.length > 0" value="error" class="text-xs">
-            转换失败 ({{ conversionStore.errorFiles.length }})
+            {{ $t("filelist.tabs.error", { count: conversionStore.errorFiles.length }) }}
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -208,7 +210,7 @@ const selectFilesWithDialog = async () => {
         class="h-8 text-xs ml-2"
         :disabled="conversionStore.isConverting || conversionStore.isPreparing"
         @click="conversionStore.clearPaths()"
-        >清空列表</Button
+        >{{ $t("filelist.clearList") }}</Button
       >
       <Button
         v-if="conversionStore.activeTab === 'error' && conversionStore.errorFiles.length > 0"
@@ -217,7 +219,7 @@ const selectFilesWithDialog = async () => {
         class="h-8 text-xs ml-2"
         :disabled="conversionStore.isConverting || conversionStore.isPreparing"
         @click="conversionStore.clearErrors()"
-        >清空失败</Button
+        >{{ $t("filelist.clearErrors") }}</Button
       >
       <Button
         v-if="
@@ -228,7 +230,7 @@ const selectFilesWithDialog = async () => {
         class="h-8 text-xs ml-2"
         :disabled="conversionStore.isConverting || conversionStore.isPreparing"
         @click="conversionStore.clearCompletedFiles()"
-        >清空已完成</Button
+        >{{ $t("filelist.clearCompleted") }}</Button
       >
     </div>
 
@@ -251,13 +253,13 @@ const selectFilesWithDialog = async () => {
           <Upload :size="24" />
         </button>
         <p class="font-medium text-muted-foreground" :class="isFileDragging ? 'text-primary' : ''">
-          拖拽 HEIC 文件到此处
+          {{ $t("filelist.dragTitle") }}
         </p>
         <p
           class="text-sm mt-1 opacity-70 text-muted-foreground"
           :class="isFileDragging ? 'font-medium text-primary' : ''"
         >
-          支持 .heic, .heif 格式
+          {{ $t("filelist.dragHint") }}
         </p>
       </div>
 
@@ -273,8 +275,8 @@ const selectFilesWithDialog = async () => {
         >
           <CheckCircle2 />
         </div>
-        <p class="font-medium">暂无已完成的文件</p>
-        <p class="text-sm mt-1 opacity-70">转换完成的文件将显示在这里</p>
+        <p class="font-medium">{{ $t("filelist.emptyCompletedTitle") }}</p>
+        <p class="text-sm mt-1 opacity-70">{{ $t("filelist.emptyCompletedHint") }}</p>
       </div>
 
       <!-- 待转换标签页：显示任务列表 -->
@@ -322,8 +324,8 @@ const selectFilesWithDialog = async () => {
           >
             <CheckCircle2 />
           </div>
-          <p class="font-medium">暂无转换失败的文件</p>
-          <p class="text-sm mt-1 opacity-70">转换失败的文件将显示在这里</p>
+          <p class="font-medium">{{ $t("filelist.emptyErrorTitle") }}</p>
+          <p class="text-sm mt-1 opacity-70">{{ $t("filelist.emptyErrorHint") }}</p>
         </div>
 
         <!-- 错误文件列表 -->
@@ -400,7 +402,7 @@ const selectFilesWithDialog = async () => {
           class="w-full h-10 text-sm"
           @click="selectFilesWithDialog"
         >
-          <Upload :size="16" class="mr-2" /> 选择文件
+          <Upload :size="16" class="mr-2" /> {{ $t("filelist.selectFiles") }}
         </Button>
       </div>
     </div>

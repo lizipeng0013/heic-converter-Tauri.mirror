@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import TitleBar from "@/components/layout/TitleBar.vue";
 import { useDark } from "@vueuse/core";
+import { setTestLocale, i18n } from "@/i18n";
 
 // Tooltip 组件 stub
 const tooltipStubs = {
@@ -54,6 +55,7 @@ vi.mock("@tauri-apps/plugin-log", () => ({
 
 describe("TitleBar", () => {
   beforeEach(() => {
+    setTestLocale("zh-Hans");
     vi.clearAllMocks();
   });
 
@@ -63,6 +65,7 @@ describe("TitleBar", () => {
         appName: "Test App",
       },
       global: {
+        plugins: [i18n],
         stubs: tooltipStubs,
       },
     });
@@ -73,6 +76,7 @@ describe("TitleBar", () => {
   it("renders with default props", () => {
     const wrapper = mount(TitleBar, {
       global: {
+        plugins: [i18n],
         stubs: tooltipStubs,
       },
     });
@@ -87,6 +91,7 @@ describe("TitleBar", () => {
         showLogo: false,
       },
       global: {
+        plugins: [i18n],
         stubs: tooltipStubs,
       },
     });
@@ -100,6 +105,7 @@ describe("TitleBar", () => {
         showTrayButton: true,
       },
       global: {
+        plugins: [i18n],
         stubs: tooltipStubs,
       },
     });
@@ -113,6 +119,7 @@ describe("TitleBar", () => {
         showMinimizeButton: false,
       },
       global: {
+        plugins: [i18n],
         stubs: tooltipStubs,
       },
     });
@@ -126,6 +133,7 @@ describe("TitleBar", () => {
         showMaximizeButton: false,
       },
       global: {
+        plugins: [i18n],
         stubs: tooltipStubs,
       },
     });
@@ -139,6 +147,7 @@ describe("TitleBar", () => {
         showCloseButton: false,
       },
       global: {
+        plugins: [i18n],
         stubs: tooltipStubs,
       },
     });
@@ -149,6 +158,7 @@ describe("TitleBar", () => {
   it("emits close-request event when close button clicked", async () => {
     const wrapper = mount(TitleBar, {
       global: {
+        plugins: [i18n],
         stubs: tooltipStubs,
       },
     });
@@ -165,6 +175,7 @@ describe("TitleBar", () => {
         showTrayButton: true,
       },
       global: {
+        plugins: [i18n],
         stubs: tooltipStubs,
       },
     });
@@ -181,6 +192,7 @@ describe("TitleBar", () => {
         height: "tiny",
       },
       global: {
+        plugins: [i18n],
         stubs: tooltipStubs,
       },
     });
@@ -194,6 +206,7 @@ describe("TitleBar", () => {
         height: "large",
       },
       global: {
+        plugins: [i18n],
         stubs: tooltipStubs,
       },
     });
@@ -204,6 +217,7 @@ describe("TitleBar", () => {
   it("toggles dark mode when theme button clicked", async () => {
     const wrapper = mount(TitleBar, {
       global: {
+        plugins: [i18n],
         stubs: tooltipStubs,
       },
     });
@@ -221,6 +235,7 @@ describe("TitleBar", () => {
         class: "custom-titlebar",
       },
       global: {
+        plugins: [i18n],
         stubs: tooltipStubs,
       },
     });

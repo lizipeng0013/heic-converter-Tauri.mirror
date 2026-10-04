@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from "vue";
+import { ref, computed, onUnmounted, watch } from "vue";
 import { ask } from "@tauri-apps/plugin-dialog";
 import { debug, error } from "@tauri-apps/plugin-log";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -14,6 +14,8 @@ import { useConversionStore } from "@/stores/conversionStore";
 import ConvertingCloseConfirmDialog from "@/components/dialog/ConvertingCloseConfirmDialog.vue";
 import PendingFilesCloseConfirmDialog from "@/components/dialog/PendingFilesCloseConfirmDialog.vue";
 import { CloseAction } from "@/types";
+import { useI18n } from "vue-i18n";
+import { i18n } from "@/i18n";
 import { defaultWindowIcon } from "@tauri-apps/api/app";
 
 const conversionStore = useConversionStore();
@@ -32,6 +34,35 @@ const appWindow = getCurrentWindow();
 // 托盘实例
 let trayInstance: TrayIcon | null = null;
 
+// 构建托盘菜单（语言切换后可重复构建刷新文案）
+const buildTrayMenu = async () => {
+  const menu = await Menu.new();
+
+  // 显示窗口菜单项
+  const showItem = await MenuItem.new({
+    id: "show",
+    text: t("tray.showWindow"),
+    action: async () => {
+      await appWindow.show();
+      await appWindow.unminimize();
+      await appWindow.setFocus();
+    },
+  });
+
+  // 退出菜单项
+  const quitItem = await MenuItem.new({
+    id: "quit",
+    text: t("tray.exit"),
+    action: () => {
+      handleTrayQuitRequest();
+    },
+  });
+
+  await menu.append(showItem);
+  await menu.append(quitItem);
+  return menu;
+};
+
 // 创建托盘
 const createTray = async () => {
   try {
@@ -41,30 +72,7 @@ const createTray = async () => {
     }
 
     // 创建托盘菜单
-    const menu = await Menu.new();
-
-    // 显示窗口菜单项
-    const showItem = await MenuItem.new({
-      id: "show",
-      text: "显示窗口",
-      action: async () => {
-        await appWindow.show();
-        await appWindow.unminimize();
-        await appWindow.setFocus();
-      },
-    });
-
-    // 退出菜单项
-    const quitItem = await MenuItem.new({
-      id: "quit",
-      text: "退出",
-      action: () => {
-        handleTrayQuitRequest();
-      },
-    });
-
-    await menu.append(showItem);
-    await menu.append(quitItem);
+    const menu = await buildTrayMenu();
 
     const appIcon = await defaultWindowIcon();
 
@@ -74,7 +82,7 @@ const createTray = async () => {
       ...(appIcon && { icon: appIcon }),
       menu: menu,
       menuOnLeftClick: false,
-      tooltip: "HEIC 图片格式转换器",
+      tooltip: t("app.name"),
       action: async (event) => {
         switch (event.type) {
           case "Click":
@@ -93,6 +101,20 @@ const createTray = async () => {
     void error(`创建托盘失败: ${e}`);
   }
 };
+
+const { t } = useI18n();
+
+// 语言切换后就地刷新托盘菜单与提示（创建时定格的文案不会自动更新）
+watch(i18n.global.locale, async () => {
+  const tray = trayInstance;
+  if (!tray) return;
+  try {
+    await tray.setTooltip(t("app.name"));
+    await tray.setMenu(await buildTrayMenu());
+  } catch (e) {
+    void error(`刷新托盘语言失败: ${e}`);
+  }
+});
 
 // 处理最小化到托盘
 const handleHideToTray = async () => {
@@ -167,8 +189,8 @@ const handleTrayQuitRequest = async () => {
   try {
     if (conversionStore.isConverting || conversionStore.isPreparing) {
       // 转换进行中，使用原生对话框确认
-      const confirmed = await ask("转换正在进行中，确认要停止转换并退出吗？", {
-        title: "确认退出",
+      const confirmed = await ask(t("confirm.exitBody"), {
+        title: t("confirm.exitTitle"),
         kind: "warning",
       });
       if (confirmed) {
@@ -192,7 +214,7 @@ onUnmounted(() => {
   <TooltipProvider>
     <div class="h-screen w-screen flex flex-col overflow-hidden bg-muted text-foreground relative">
       <TitleBar
-        app-name="HEIC 图片格式转换器"
+        :app-name="$t('app.name')"
         :show-tray-button="true"
         height="medium"
         @close-request="handleCloseRequest"

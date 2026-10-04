@@ -3,6 +3,7 @@ import { mount } from "@vue/test-utils";
 import StatusBar from "@/views/status/StatusBar.vue";
 import { useConversionStore } from "@/stores/conversionStore";
 import { createPinia, setActivePinia } from "pinia";
+import { setTestLocale, i18n } from "@/i18n";
 
 vi.mock("@/stores/conversionStore", () => ({
   useConversionStore: vi.fn(),
@@ -10,6 +11,7 @@ vi.mock("@/stores/conversionStore", () => ({
 
 describe("StatusBar.vue", () => {
   beforeEach(() => {
+    setTestLocale("zh-Hans");
     setActivePinia(createPinia());
     vi.clearAllMocks();
   });
@@ -22,6 +24,7 @@ describe("StatusBar.vue", () => {
 
     const wrapper = mount(StatusBar, {
       global: {
+        plugins: [i18n],
         stubs: {
           Clock: true,
         },
@@ -40,6 +43,7 @@ describe("StatusBar.vue", () => {
 
     const wrapper = mount(StatusBar, {
       global: {
+        plugins: [i18n],
         stubs: {
           Clock: true,
         },
@@ -57,6 +61,7 @@ describe("StatusBar.vue", () => {
 
     const wrapper = mount(StatusBar, {
       global: {
+        plugins: [i18n],
         stubs: {
           Clock: true,
         },

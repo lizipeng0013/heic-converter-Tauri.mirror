@@ -3,6 +3,7 @@ import { mount } from "@vue/test-utils";
 import MainView from "@/views/MainView.vue";
 import { useConversionStore } from "@/stores/conversionStore";
 import { createPinia, setActivePinia } from "pinia";
+import { setTestLocale, i18n } from "@/i18n";
 
 vi.mock("@/stores/conversionStore", () => ({
   useConversionStore: vi.fn(),
@@ -53,6 +54,7 @@ vi.mock("@tauri-apps/plugin-log", () => ({
 
 describe("MainView.vue", () => {
   beforeEach(() => {
+    setTestLocale("zh-Hans");
     setActivePinia(createPinia());
     vi.clearAllMocks();
   });
@@ -67,6 +69,7 @@ describe("MainView.vue", () => {
 
     const wrapper = mount(MainView, {
       global: {
+        plugins: [i18n],
         stubs: {
           TitleBar: {
             template: '<div class="titlebar"><slot /></div>',
@@ -113,6 +116,7 @@ describe("MainView.vue", () => {
 
     const wrapper = mount(MainView, {
       global: {
+        plugins: [i18n],
         stubs: {
           TitleBar: {
             template: '<div class="titlebar"><slot /></div>',
@@ -158,6 +162,7 @@ describe("MainView.vue", () => {
 
     const wrapper = mount(MainView, {
       global: {
+        plugins: [i18n],
         stubs: {
           TitleBar: {
             template: '<div class="titlebar"><slot /></div>',

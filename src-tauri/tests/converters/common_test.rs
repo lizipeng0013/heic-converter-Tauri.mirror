@@ -1,4 +1,5 @@
 use heic_converter_lib::converters::common::{save_image_buffer, ConversionError, OutputFormat};
+use heic_converter_lib::utils::locale::Locale;
 use image::{ImageBuffer, RgbImage};
 use tempfile::TempDir;
 
@@ -174,24 +175,59 @@ fn test_conversion_error_user_message() {
         message: "test error".to_string(),
     };
     let conversion_error = ConversionError::HeifError(heif_error);
-    assert!(conversion_error.user_message().contains("HEIC"));
+    assert!(conversion_error
+        .user_message_with(Locale::ZhHans)
+        .contains("HEIC"));
 
     let image_error = ConversionError::ImageError(image::ImageError::IoError(std::io::Error::new(
         std::io::ErrorKind::NotFound,
         "not found",
     )));
-    assert!(image_error.user_message().contains("图片处理失败"));
+    assert!(image_error
+        .user_message_with(Locale::ZhHans)
+        .contains("图片处理失败"));
 
     let io_error = ConversionError::IoError(std::io::Error::new(
         std::io::ErrorKind::PermissionDenied,
         "permission denied",
     ));
-    assert!(io_error.user_message().contains("文件读写失败"));
+    assert!(io_error
+        .user_message_with(Locale::ZhHans)
+        .contains("文件读写失败"));
 
     let unsupported_format = ConversionError::UnsupportedFormat("xyz".to_string());
     assert!(unsupported_format
-        .user_message()
+        .user_message_with(Locale::ZhHans)
         .contains("不支持的输出格式"));
+}
+
+#[test]
+fn test_heic_processing_failed_renders_per_locale() {
+    let err = ConversionError::HeicProcessingFailed;
+    let en = err.user_message_with(Locale::En);
+    let hans = err.user_message_with(Locale::ZhHans);
+    let hant = err.user_message_with(Locale::ZhHant);
+    assert!(en.contains("Failed to process the HEIC image data"));
+    assert!(hans.contains("HEIC 图像数据处理失败"));
+    assert!(hant.contains("HEIC 影像資料處理失敗"));
+    assert_ne!(en, hans);
+    assert_ne!(hans, hant);
+}
+
+#[test]
+fn test_user_message_renders_per_locale() {
+    let err = ConversionError::UnsupportedFormat("xyz".to_string());
+    let en = err.user_message_with(Locale::En);
+    let hans = err.user_message_with(Locale::ZhHans);
+    let hant = err.user_message_with(Locale::ZhHant);
+    // 参数替换生效
+    assert!(en.contains("xyz"));
+    assert!(hans.contains("xyz"));
+    // 三语互不相同，且都非空
+    assert_ne!(en, hans);
+    assert_ne!(hans, hant);
+    assert!(en.starts_with("Unsupported output format"));
+    assert!(hant.contains("不支援"));
 }
 
 #[test]

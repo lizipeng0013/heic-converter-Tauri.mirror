@@ -3,6 +3,7 @@ import { mount } from "@vue/test-utils";
 import FileListArea from "@/views/file/FileListArea.vue";
 import { useConversionStore } from "@/stores/conversionStore";
 import { createPinia, setActivePinia } from "pinia";
+import { setTestLocale, i18n } from "@/i18n";
 
 vi.mock("@/stores/conversionStore", () => ({
   useConversionStore: vi.fn(),
@@ -31,6 +32,7 @@ describe("FileListArea.vue", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.clearAllMocks();
+    setTestLocale("zh-Hans");
   });
 
   it("renders file list area", () => {
@@ -56,6 +58,7 @@ describe("FileListArea.vue", () => {
 
     const wrapper = mount(FileListArea, {
       global: {
+        plugins: [i18n],
         stubs: {
           Upload: true,
           CheckCircle2: true,
@@ -107,6 +110,7 @@ describe("FileListArea.vue", () => {
 
     const wrapper = mount(FileListArea, {
       global: {
+        plugins: [i18n],
         stubs: {
           Upload: true,
           Button: {
@@ -155,6 +159,7 @@ describe("FileListArea.vue", () => {
 
     const wrapper = mount(FileListArea, {
       global: {
+        plugins: [i18n],
         stubs: {
           Upload: true,
           Button: {
@@ -205,6 +210,7 @@ describe("FileListArea.vue", () => {
 
     const wrapper = mount(FileListArea, {
       global: {
+        plugins: [i18n],
         stubs: {
           Upload: true,
           Button: {
@@ -263,6 +269,7 @@ describe("FileListArea.vue", () => {
     );
     return mount(FileListArea, {
       global: {
+        plugins: [i18n],
         stubs: {
           Upload: true,
           CheckCircle2: true,
@@ -347,5 +354,46 @@ describe("FileListArea.vue", () => {
     const btn = findButton(wrapper, "清空失败");
     expect(btn).toBeDefined();
     expect(btn!.attributes("disabled")).toBeDefined();
+  });
+
+  it("renders English copy when locale is pinned to en", () => {
+    setTestLocale("en");
+    const mockStore = {
+      files: [],
+      errorFiles: [],
+      completedFiles: [],
+      taskFiles: [],
+      errorFilesList: [],
+      stats: { total: 0, waiting: 0, processing: 0, completed: 0, failed: 0 },
+      isConverting: false,
+      isReadyForConversion: false,
+      activeTab: "pending",
+      addPaths: vi.fn(),
+      removePath: vi.fn(),
+      clearPaths: vi.fn(),
+      setActiveTab: vi.fn(),
+      toggleGroupExpansion: vi.fn(),
+      taskExpanded: true,
+      errorExpanded: false,
+    };
+    vi.mocked(useConversionStore).mockReturnValue(
+      mockStore as unknown as ReturnType<typeof useConversionStore>
+    );
+    const wrapper = mount(FileListArea, {
+      global: {
+        plugins: [i18n],
+        stubs: {
+          Upload: true,
+          CheckCircle2: true,
+          Button: { template: "<button><slot /></button>" },
+          Tabs: { template: "<div><slot /></div>" },
+          TabsList: { template: "<div><slot /></div>" },
+          TabsTrigger: { template: "<div><slot /></div>" },
+          FileCard: true,
+        },
+      },
+    });
+    expect(wrapper.text()).toContain("Tasks");
+    expect(wrapper.text()).toContain("Drop HEIC files here");
   });
 });

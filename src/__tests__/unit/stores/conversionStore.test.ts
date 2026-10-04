@@ -2,10 +2,17 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useConversionStore } from "@/stores/conversionStore";
 import { createPinia, setActivePinia } from "pinia";
 import { invoke } from "@tauri-apps/api/core";
+import { message } from "@tauri-apps/plugin-dialog";
+import { setTestLocale } from "@/i18n";
 
 // Mock Tauri invoke
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@tauri-apps/plugin-dialog", () => ({
+  ask: vi.fn(),
+  message: vi.fn(),
 }));
 
 vi.mock("@tauri-apps/plugin-fs", () => ({
@@ -260,5 +267,29 @@ describe("conversionStore", () => {
       expect(store.errorExpanded).toBe(true);
       expect(store.taskExpanded).toBe(false);
     });
+  });
+
+  it("触发错误弹窗显示当前语言文案（钉 zh-Hans / en）", async () => {
+    const store = useConversionStore();
+    await store.addPaths(["/path/to/test.heic"]);
+
+    setTestLocale("zh-Hans");
+    vi.mocked(invoke).mockRejectedValueOnce(new Error("boom"));
+    await store.startConversion();
+    expect(vi.mocked(message)).toHaveBeenLastCalledWith(
+      expect.stringContaining("转换任务执行失败"),
+      expect.objectContaining({
+        title: expect.stringContaining("发生错误"),
+        kind: "error",
+      })
+    );
+
+    setTestLocale("en");
+    vi.mocked(invoke).mockRejectedValueOnce(new Error("boom"));
+    await store.startConversion();
+    expect(vi.mocked(message)).toHaveBeenLastCalledWith(
+      expect.stringContaining("Failed to start the conversion"),
+      expect.objectContaining({ title: "Error", kind: "error" })
+    );
   });
 });

@@ -70,7 +70,7 @@ const handleOpenFileDir = async () => {
           </div>
 
           <div class="text-xs text-muted-foreground">
-            {{ file.size === 0 ? "加载中..." : formatSize(file.size) }}
+            {{ file.size === 0 ? $t("card.loading") : formatSize(file.size) }}
           </div>
         </div>
       </div>
@@ -83,7 +83,7 @@ const handleOpenFileDir = async () => {
           class="h-5 px-1.5 text-[10px] flex-shrink-0 w-20 justify-center"
         >
           <Loader2 :size="10" class="animate-spin" />
-          处理中
+          {{ $t("card.badgeProcessing") }}
         </Badge>
 
         <!-- 等待徽章（任务文件，且未开始转换） -->
@@ -93,7 +93,7 @@ const handleOpenFileDir = async () => {
           class="h-5 px-1.5 text-[10px] flex-shrink-0 w-16 justify-center"
         >
           <Clock :size="10" />
-          等待
+          {{ $t("card.badgeWaiting") }}
         </Badge>
 
         <!-- 错误徽章（错误文件） -->
@@ -103,7 +103,7 @@ const handleOpenFileDir = async () => {
               variant="destructive"
               class="h-5 px-1.5 text-[10px] flex-shrink-0 w-20 justify-center cursor-help"
             >
-              <AlertCircle :size="10" /> 失败
+              <AlertCircle :size="10" /> {{ $t("card.badgeFailed") }}
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
@@ -124,7 +124,7 @@ const handleOpenFileDir = async () => {
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>打开转换成功的文件所在目录</p>
+            <p>{{ $t("card.openDir") }}</p>
           </TooltipContent>
         </Tooltip>
 
@@ -150,10 +150,10 @@ const handleOpenFileDir = async () => {
             <p>
               {{
                 isCompletedFile
-                  ? "从已完成列表中移除"
+                  ? $t("card.removeCompleted")
                   : isErrorFile
-                    ? "从失败列表中移除"
-                    : "从任务列表中移除"
+                    ? $t("card.removeError")
+                    : $t("card.removeTask")
               }}
             </p>
           </TooltipContent>

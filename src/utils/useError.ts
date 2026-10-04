@@ -1,5 +1,6 @@
 import { message } from "@tauri-apps/plugin-dialog";
 import { error } from "@tauri-apps/plugin-log";
+import { i18n } from "@/i18n";
 
 export const showErrorDialog = async (title: string, content: string) => {
   try {
@@ -18,5 +19,5 @@ export const showErrorDialog = async (title: string, content: string) => {
 // 简化的严重错误提示
 export const alertSevere = (content: string) => {
   void error(`[前端严重错误] ${content}`);
-  void showErrorDialog("发生错误", content);
+  void showErrorDialog(i18n.global.t("error.dialogTitle"), content);
 };

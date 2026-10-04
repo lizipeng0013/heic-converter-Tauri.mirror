@@ -4,6 +4,7 @@ import FileCard from "@/components/FileCard.vue";
 import { useConversionStore } from "@/stores/conversionStore";
 import { createPinia, setActivePinia } from "pinia";
 import type { FileItem } from "@/types";
+import { i18n } from "@/i18n";
 
 vi.mock("@/stores/conversionStore", () => ({
   useConversionStore: vi.fn(),
@@ -34,7 +35,7 @@ function makeStore() {
 function mountCard(file: FileItem, flags: Record<string, boolean> = {}) {
   return mount(FileCard, {
     props: { file, ...flags },
-    global: { stubs: baseStubs },
+    global: { plugins: [i18n], stubs: baseStubs },
   });
 }
 

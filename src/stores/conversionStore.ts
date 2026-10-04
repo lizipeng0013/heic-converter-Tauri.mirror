@@ -5,8 +5,11 @@ import { debug, warn, error } from "@tauri-apps/plugin-log";
 import { invoke } from "@tauri-apps/api/core";
 import { stat } from "@tauri-apps/plugin-fs";
 import { alertSevere } from "@/utils/useError";
+import { i18n } from "@/i18n";
 
 export const useConversionStore = defineStore("conversion", () => {
+  const { t } = i18n.global;
+
   // --- State ---
   // 使用 shallowRef + 普通数组，完全绕过 Vue 响应式系统
   // Vue 只会追踪数组引用的变化，不会为数组中的对象创建代理
@@ -310,7 +313,7 @@ export const useConversionStore = defineStore("conversion", () => {
       });
       void debug(`已发起转换任务`);
     } catch (error) {
-      alertSevere("转换任务执行失败！" + error);
+      alertSevere(t("store.convertFailed", { error: String(error) }));
       // 重置所有状态，包括准备状态
       isConverting.value = false;
       isStopping.value = false;
@@ -355,7 +358,7 @@ export const useConversionStore = defineStore("conversion", () => {
       await invoke("stop_conversion");
       void debug(`已发送停止转换请求，等待后端正在转换的线程完成`);
     } catch (error) {
-      alertSevere("停止转换任务失败！" + error);
+      alertSevere(t("store.stopFailed", { error: String(error) }));
       isStopping.value = false;
     }
   };

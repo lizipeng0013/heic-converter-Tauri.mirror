@@ -31,6 +31,7 @@ use mimalloc::MiMalloc;
 static GLOBAL: MiMalloc = MiMalloc;
 
 use commands::conversion::{confirm_output_folder, convert_images, stop_conversion};
+use commands::locale::set_locale;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -39,7 +40,8 @@ pub fn run() {
             // 业务逻辑类
             convert_images,
             stop_conversion,
-            confirm_output_folder
+            confirm_output_folder,
+            set_locale
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

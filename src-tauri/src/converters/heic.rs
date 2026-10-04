@@ -88,9 +88,8 @@ pub fn convert_heic_image(
             // 使用 Vec::from 而不是 to_vec()，更高效
             trace!("stride 匹配，直接复制 RGB 数据");
             let buffer_data = Vec::from(data);
-            ImageBuffer::from_raw(width, height, buffer_data).ok_or(
-                ConversionError::UnsupportedInputFormat("无法创建 RGB buffer".to_string()),
-            )?
+            ImageBuffer::from_raw(width, height, buffer_data)
+                .ok_or(ConversionError::HeicProcessingFailed)?
         } else {
             // 如果 stride 不符合预期，需要创建新的 buffer 并逐行复制
             trace!(
@@ -117,9 +116,8 @@ pub fn convert_heic_image(
                 }
             }
 
-            ImageBuffer::from_raw(width, height, buffer_data).ok_or(
-                ConversionError::UnsupportedInputFormat("无法创建 RGB buffer".to_string()),
-            )?
+            ImageBuffer::from_raw(width, height, buffer_data)
+                .ok_or(ConversionError::HeicProcessingFailed)?
         };
 
         save_image_buffer(&buffer, output_path, format)
@@ -212,16 +210,13 @@ pub fn convert_heic_image(
             }
 
             // 创建 ImageBuffer
-            let buffer = ImageBuffer::from_raw(width, height, buffer_data).ok_or(
-                ConversionError::UnsupportedInputFormat("无法创建 RGB buffer".to_string()),
-            )?;
+            let buffer = ImageBuffer::from_raw(width, height, buffer_data)
+                .ok_or(ConversionError::HeicProcessingFailed)?;
 
             save_image_buffer(&buffer, output_path, format)
         } else {
             error!("无法处理的平面格式");
-            Err(ConversionError::UnsupportedInputFormat(
-                "无法解码的HEIC格式".to_string(),
-            ))
+            Err(ConversionError::HeicProcessingFailed)
         }
     };
 

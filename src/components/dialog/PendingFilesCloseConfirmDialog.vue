@@ -40,12 +40,14 @@ const handleCancel = () => {
   <Dialog :open="open" @update:open="(value) => emit('update:open', value)">
     <DialogContent class="sm:max-w-[400px]">
       <DialogHeader>
-        <DialogTitle>确认关闭</DialogTitle>
-        <DialogDescription> 任务队列中仍有文件未处理，确认要关闭窗口吗？ </DialogDescription>
+        <DialogTitle>{{ $t("dialog.closeTitle") }}</DialogTitle>
+        <DialogDescription> {{ $t("dialog.pendingCloseBody") }} </DialogDescription>
       </DialogHeader>
       <DialogFooter>
-        <Button variant="outline" :disabled="isClosing" @click="handleCancel">取消</Button>
-        <Button :disabled="isClosing" @click="handleConfirm">关闭</Button>
+        <Button variant="outline" :disabled="isClosing" @click="handleCancel">{{
+          $t("dialog.cancel")
+        }}</Button>
+        <Button :disabled="isClosing" @click="handleConfirm">{{ $t("dialog.close") }}</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>

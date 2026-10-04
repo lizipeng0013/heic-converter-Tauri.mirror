@@ -1,18 +1,45 @@
 <script setup lang="ts">
 import { useConversionStore } from "@/stores/conversionStore";
-import { Settings2, FolderOpen, ChevronDown, Square } from "@lucide/vue";
+import { Settings2, FolderOpen, Square } from "@lucide/vue";
+import DropdownMenu from "@/components/DropdownMenu.vue";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { downloadDir } from "@tauri-apps/api/path";
-import { onMounted, onUnmounted, computed, ref } from "vue";
+import { onMounted, computed, ref } from "vue";
 import type { FormatInfo, OutputFormat } from "@/types";
 import { error } from "@tauri-apps/plugin-log";
+import { readStoredLocale, setStoredLocale, type StoredLocale } from "@/i18n";
+import { useI18n } from "vue-i18n";
+
+const { t } = useI18n();
 
 const store = useConversionStore();
-const showFormatDropdown = ref(false);
-const dropdownRef = ref<HTMLElement | null>(null);
+const storedLocale = ref<StoredLocale>(readStoredLocale());
+
+const localeOptions = computed<{ value: StoredLocale; label: string }[]>(() => [
+  { value: "system", label: t("settings.followSystem") },
+  { value: "en", label: "English" },
+  { value: "zh-Hans", label: "简体中文" },
+  { value: "zh-Hant", label: "繁體中文（港澳台）" },
+]);
+
+const selectLocale = (value: string) => {
+  storedLocale.value = value as StoredLocale;
+  setStoredLocale(storedLocale.value);
+};
+
+const onFormatPick = (value: string) => {
+  selectFormat(value as OutputFormat);
+};
+
+const formatTriggerClass = computed(() => [
+  "w-full inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+  !isQuickFormat(store.settings.format)
+    ? "bg-background text-foreground shadow-sm"
+    : "text-muted-foreground hover:text-foreground hover:bg-background/50",
+]);
 
 onMounted(async () => {
   try {
@@ -20,29 +47,14 @@ onMounted(async () => {
   } catch (e) {
     void error(`获取默认下载目录失败: ${e}`);
   }
-
-  // 添加点击外部关闭下拉框的事件监听
-  document.addEventListener("click", handleClickOutside);
 });
-
-onUnmounted(() => {
-  // 移除事件监听器
-  document.removeEventListener("click", handleClickOutside);
-});
-
-// 点击外部关闭下拉框
-const handleClickOutside = (event: MouseEvent) => {
-  if (dropdownRef.value && !dropdownRef.value.contains(event.target as Node)) {
-    showFormatDropdown.value = false;
-  }
-};
 
 const selectOutputFolder = async () => {
   try {
     const result = await openDialog({
       directory: true,
       multiple: false,
-      title: "选择输出目录",
+      title: t("settings.selectOutputFolder"),
     });
     if (result) store.setOutputFolder(result);
   } catch (e) {
@@ -93,7 +105,6 @@ const currentFormat = computed(() => {
 // 选择格式
 const selectFormat = (format: OutputFormat) => {
   store.updateSettings({ format });
-  showFormatDropdown.value = false;
 };
 
 // 检查是否为常用格式
@@ -106,9 +117,9 @@ const qualityDescription = computed(() => {
   const format = currentFormat.value;
   if (!format) return "";
   if (format.value === "jpeg" || format.value === "webp") {
-    return "更高的质量将导致文件体积变大。此选项仅对 JPEG 和 WebP 格式有效。";
+    return t("settings.qualityTooltipHigh");
   } else {
-    return "当前格式不支持质量调整。";
+    return t("settings.qualityTooltipUnsupported");
   }
 });
 
@@ -121,9 +132,9 @@ const isQualityEnabled = computed(() => {
 // 下拉菜单显示的文字
 const dropdownLabel = computed(() => {
   if (isQuickFormat(store.settings.format)) {
-    return "更多";
+    return t("settings.more");
   }
-  return currentFormat.value?.label || "更多";
+  return currentFormat.value?.label || t("settings.more");
 });
 
 // 是否显示质量控制区域
@@ -135,17 +146,17 @@ const showQualityControl = computed(() => {
 const buttonText = computed(() => {
   // 优先级1：正在停止（禁用）
   if (store.isStopping) {
-    return "正在停止...";
+    return t("settings.stopping");
   }
 
   // 优先级2：正在准备（禁用）
   if (store.isPreparing) {
-    return "正在准备...";
+    return t("settings.preparing");
   }
 
   // 优先级3：正在转换（可点击停止）
   if (store.isConverting) {
-    return "停止转换";
+    return t("settings.stopConverting");
   }
 
   // 优先级4：非转换状态
@@ -156,11 +167,13 @@ const buttonText = computed(() => {
   if (hasPendingFiles) {
     // 从未开始过转换 → 显示"开始批量转换"
     // 曾经开始过转换 → 显示"继续转换"
-    return store.hasStartedConversion ? `继续转换 (${pendingCount} 待处理)` : "开始批量转换";
+    return store.hasStartedConversion
+      ? t("settings.continueBatch", { count: pendingCount })
+      : t("settings.startBatch");
   }
 
   // 没有待转换文件 → 显示"开始批量转换"（会被禁用）
-  return "开始批量转换";
+  return t("settings.startBatch");
 });
 
 // 按钮变体
@@ -178,11 +191,24 @@ const buttonIcon = computed(() => {
   <aside class="w-80 bg-card flex flex-col shrink-0 h-full rounded-lg">
     <div class="p-6 flex-1 overflow-y-auto">
       <h2 class="text-lg font-semibold tracking-tight mb-6 flex items-center gap-2">
-        <Settings2 :size="18" class="text-muted-foreground" /> 转换设置
+        <Settings2 :size="18" class="text-muted-foreground" /> {{ $t("settings.title") }}
       </h2>
       <div class="space-y-6">
         <div class="space-y-3">
-          <label class="text-sm font-medium leading-none">目标格式</label>
+          <label for="language-select" class="text-sm font-medium leading-none">{{
+            $t("settings.language")
+          }}</label>
+          <DropdownMenu
+            id="language-select"
+            :items="localeOptions"
+            :model-value="storedLocale"
+            button-class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            menu-class="left-0 w-full"
+            @update:model-value="selectLocale"
+          />
+        </div>
+        <div class="space-y-3">
+          <label class="text-sm font-medium leading-none">{{ $t("settings.targetFormat") }}</label>
           <div class="grid grid-cols-3 gap-2 bg-muted p-1 rounded-md">
             <!-- 常用格式按钮 -->
             <button
@@ -199,45 +225,23 @@ const buttonIcon = computed(() => {
               {{ fmt.label }}
             </button>
             <!-- 更多格式下拉按钮 -->
-            <div ref="dropdownRef" class="relative">
-              <button
-                class="w-full inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                :class="
-                  !isQuickFormat(store.settings.format)
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-                "
-                @click="showFormatDropdown = !showFormatDropdown"
-              >
-                <span class="flex-1">{{ dropdownLabel }}</span>
-                <ChevronDown :size="14" />
-              </button>
-              <!-- 下拉菜单 -->
-              <div
-                v-if="showFormatDropdown"
-                class="absolute right-0 top-full mt-1 w-32 bg-popover text-popover-foreground rounded-md border shadow-md z-50"
-              >
-                <div class="p-1">
-                  <button
-                    v-for="fmt in otherFormats"
-                    :key="fmt.value"
-                    class="w-full text-left px-3 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-                    :class="{
-                      'bg-accent text-accent-foreground': store.settings.format === fmt.value,
-                    }"
-                    @click="selectFormat(fmt.value)"
-                  >
-                    {{ fmt.label }}
-                  </button>
-                </div>
-              </div>
-            </div>
+            <DropdownMenu
+              :items="otherFormats"
+              :model-value="store.settings.format"
+              :button-class="formatTriggerClass"
+              menu-class="right-0 w-32"
+              @update:model-value="onFormatPick"
+            >
+              <template #label>{{ dropdownLabel }}</template>
+            </DropdownMenu>
           </div>
-          <p class="text-xs text-muted-foreground mt-1">当前选择：{{ currentFormat?.label }}</p>
+          <p class="text-xs text-muted-foreground mt-1">
+            {{ $t("settings.currentFormat", { label: currentFormat?.label ?? "" }) }}
+          </p>
         </div>
         <div v-if="showQualityControl" class="space-y-4">
           <div class="flex justify-between items-center">
-            <label class="text-sm font-medium leading-none">图片质量</label>
+            <label class="text-sm font-medium leading-none">{{ $t("settings.quality") }}</label>
             <span class="text-sm font-mono text-muted-foreground"
               >{{ store.settings.quality[0] }}%</span
             >
@@ -255,9 +259,9 @@ const buttonIcon = computed(() => {
           </p>
         </div>
         <div class="space-y-3">
-          <label class="text-sm font-medium leading-none flex items-center justify-between"
-            >输出目录</label
-          >
+          <label class="text-sm font-medium leading-none flex items-center justify-between">{{
+            $t("settings.outputFolder")
+          }}</label>
           <Tooltip>
             <TooltipTrigger as-child>
               <Button
@@ -268,7 +272,7 @@ const buttonIcon = computed(() => {
               >
                 <FolderOpen :size="16" />
                 <span class="truncate">{{
-                  store.outputFolder ? truncatedOutputFolder : "选择输出目录"
+                  store.outputFolder ? truncatedOutputFolder : $t("settings.selectOutputFolder")
                 }}</span>
               </Button>
             </TooltipTrigger>
@@ -276,7 +280,7 @@ const buttonIcon = computed(() => {
               <p>{{ store.outputFolder }}</p>
             </TooltipContent>
           </Tooltip>
-          <p class="text-xs text-muted-foreground mt-1">未选择时，将保存到系统的"下载"文件夹。</p>
+          <p class="text-xs text-muted-foreground mt-1">{{ $t("settings.outputFolderHint") }}</p>
         </div>
       </div>
     </div>

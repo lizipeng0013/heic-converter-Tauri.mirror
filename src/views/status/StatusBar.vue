@@ -10,7 +10,7 @@ const store = useConversionStore();
     <div class="flex items-center gap-4">
       <Clock :size="12" />
       <span
-        >总耗时:
+        >{{ $t("status.totalTime") }}
         <span v-if="store.spendTime !== null" class="font-medium"
           >{{ store.spendTime.toFixed(1) }}s</span
         ><span v-else>...</span></span

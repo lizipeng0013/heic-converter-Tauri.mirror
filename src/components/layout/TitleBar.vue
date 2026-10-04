@@ -233,13 +233,13 @@ const onDoubleClick = async () => {
           </ContextMenuTrigger>
           <ContextMenuContent class="w-48">
             <ContextMenuItem v-if="showMaximizeButton" @click="handleMaximize()">
-              <Maximize2 class="mr-2 h-4 w-4" /> 最大化/还原
+              <Maximize2 class="mr-2 h-4 w-4" /> {{ $t("titlebar.maximize") }}
             </ContextMenuItem>
             <ContextMenuItem v-if="showMinimizeButton" @click="handleMinimize()">
-              <Minus class="mr-2 h-4 w-4" /> 最小化
+              <Minus class="mr-2 h-4 w-4" /> {{ $t("titlebar.minimize") }}
             </ContextMenuItem>
             <ContextMenuItem @click="handleToggleTop()">
-              <Pin class="mr-2 h-4 w-4" /> 置顶窗口
+              <Pin class="mr-2 h-4 w-4" /> {{ $t("titlebar.pin") }}
             </ContextMenuItem>
             <ContextMenuSeparator v-if="showCloseButton" />
             <ContextMenuItem
@@ -247,7 +247,7 @@ const onDoubleClick = async () => {
               class="text-destructive"
               @click="emit('close-request')"
             >
-              <X class="mr-2 h-4 w-4" /> 关闭
+              <X class="mr-2 h-4 w-4" /> {{ $t("titlebar.close") }}
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>
@@ -272,11 +272,11 @@ const onDoubleClick = async () => {
           >
             <Sun v-if="isDark" class="h-[1.2rem] w-[1.2rem]" />
             <Moon v-else class="h-[1.2rem] w-[1.2rem]" />
-            <span class="sr-only">切换主题</span>
+            <span class="sr-only">{{ $t("titlebar.toggleTheme") }}</span>
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>切换主题</p>
+          <p>{{ $t("titlebar.toggleTheme") }}</p>
         </TooltipContent>
       </Tooltip>
 
@@ -297,7 +297,7 @@ const onDoubleClick = async () => {
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>最小化到托盘</p>
+          <p>{{ $t("titlebar.minimizeToTray") }}</p>
         </TooltipContent>
       </Tooltip>
 

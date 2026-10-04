@@ -1,8 +1,31 @@
+use heic_converter_lib::utils::locale::Locale;
 use heic_converter_lib::utils::path::{
-    build_target_path, plan_target_paths, reserve_unique_output_path, validate_input_paths,
-    validate_output_folder, MAX_BATCH_FILES,
+    build_target_path, plan_target_paths, reserve_unique_output_path, MAX_BATCH_FILES,
 };
 use tempfile::TempDir;
+
+// 显式钉 zh-Hans：中文断言与宿主机系统语言无关（_zh 后缀表明已钉）
+fn zh_validate_output_folder(folder: &str) -> Result<(), String> {
+    heic_converter_lib::utils::path::validate_output_folder(folder, Locale::ZhHans)
+}
+
+fn zh_validate_input_paths(paths: &[String]) -> Result<(), String> {
+    heic_converter_lib::utils::path::validate_input_paths(paths, Locale::ZhHans)
+}
+
+#[test]
+fn test_validate_messages_render_in_english() {
+    let err = heic_converter_lib::utils::path::validate_output_folder("", Locale::En).unwrap_err();
+    assert!(err.contains("Output folder cannot be empty"));
+
+    let err = heic_converter_lib::utils::path::validate_input_paths(
+        &["/nonexistent/photo.heic".to_string()],
+        Locale::En,
+    )
+    .unwrap_err();
+    assert!(err.contains("invalid ones"));
+    assert!(!err.contains("nonexistent"));
+}
 
 #[test]
 fn test_build_target_path() {
@@ -70,7 +93,7 @@ fn test_validate_output_folder_exists() {
     let temp_dir = TempDir::new().unwrap();
     let path = temp_dir.path().to_string_lossy();
 
-    let result = validate_output_folder(&path);
+    let result = zh_validate_output_folder(&path);
     assert!(result.is_ok());
 }
 
@@ -79,14 +102,14 @@ fn test_validate_output_folder_not_exists() {
     let temp_dir = TempDir::new().unwrap();
     let new_path = temp_dir.path().join("subdir");
 
-    let result = validate_output_folder(new_path.to_string_lossy().as_ref());
+    let result = zh_validate_output_folder(new_path.to_string_lossy().as_ref());
     assert!(result.is_ok());
     assert!(new_path.exists());
 }
 
 #[test]
 fn test_validate_output_folder_empty() {
-    let result = validate_output_folder("");
+    let result = zh_validate_output_folder("");
     assert!(result.is_err());
     let error_msg = result.unwrap_err();
     assert!(error_msg.contains("不能为空"));
@@ -98,7 +121,7 @@ fn test_validate_output_folder_file_not_dir() {
     let file_path = temp_dir.path().join("file.txt");
     std::fs::write(&file_path, "test").unwrap();
 
-    let result = validate_output_folder(file_path.to_string_lossy().as_ref());
+    let result = zh_validate_output_folder(file_path.to_string_lossy().as_ref());
     assert!(result.is_err());
     let error_msg = result.unwrap_err();
     assert!(error_msg.contains("不是有效的目录"));
@@ -109,7 +132,7 @@ fn test_validate_output_folder_with_spaces() {
     let temp_dir = TempDir::new().unwrap();
     let path_with_space = temp_dir.path().join("my folder");
 
-    let result = validate_output_folder(path_with_space.to_string_lossy().as_ref());
+    let result = zh_validate_output_folder(path_with_space.to_string_lossy().as_ref());
     assert!(result.is_ok());
     assert!(path_with_space.exists());
 }
@@ -143,7 +166,7 @@ fn test_validate_output_folder_unicode() {
     let temp_dir = TempDir::new().unwrap();
     let unicode_path = temp_dir.path().join("测试文件夹");
 
-    let result = validate_output_folder(unicode_path.to_string_lossy().as_ref());
+    let result = zh_validate_output_folder(unicode_path.to_string_lossy().as_ref());
     assert!(result.is_ok());
 }
 
@@ -254,7 +277,7 @@ fn test_validate_output_folder_probe_conflict_left_alone() {
     let probe = temp_dir.path().join(".heic_converter_write_test");
     std::fs::write(&probe, "userdata").unwrap();
 
-    let result = validate_output_folder(temp_dir.path().to_str().unwrap());
+    let result = zh_validate_output_folder(temp_dir.path().to_str().unwrap());
     assert!(result.is_ok());
     // 探针冲突时不得覆盖或删除已有内容
     assert_eq!(std::fs::read_to_string(&probe).unwrap(), "userdata");
@@ -269,7 +292,7 @@ fn test_validate_output_folder_probe_symlink_not_followed() {
     std::os::unix::fs::symlink(&victim, temp_dir.path().join(".heic_converter_write_test"))
         .unwrap();
 
-    let result = validate_output_folder(temp_dir.path().to_str().unwrap());
+    let result = zh_validate_output_folder(temp_dir.path().to_str().unwrap());
     assert!(result.is_ok());
     // 被链接的文件不得被改写
     assert_eq!(std::fs::read_to_string(&victim).unwrap(), "precious");
@@ -282,13 +305,13 @@ fn test_validate_input_paths_accepts_regular_heic() {
     std::fs::write(&file, "x").unwrap();
 
     let paths = vec![file.to_string_lossy().into_owned()];
-    assert!(validate_input_paths(&paths).is_ok());
+    assert!(zh_validate_input_paths(&paths).is_ok());
 }
 
 #[test]
 fn test_validate_input_paths_rejects_missing_file() {
     let paths = vec!["/nonexistent/photo.heic".to_string()];
-    let err = validate_input_paths(&paths).unwrap_err();
+    let err = zh_validate_input_paths(&paths).unwrap_err();
     assert!(err.contains("无效"));
     // 错误信息不泄露输入路径
     assert!(!err.contains("nonexistent"));
@@ -298,7 +321,7 @@ fn test_validate_input_paths_rejects_missing_file() {
 fn test_validate_input_paths_rejects_directory() {
     let temp_dir = TempDir::new().unwrap();
     let paths = vec![temp_dir.path().to_string_lossy().into_owned()];
-    assert!(validate_input_paths(&paths).is_err());
+    assert!(zh_validate_input_paths(&paths).is_err());
 }
 
 #[test]
@@ -308,7 +331,7 @@ fn test_validate_input_paths_rejects_wrong_extension() {
     std::fs::write(&file, "x").unwrap();
 
     let paths = vec![file.to_string_lossy().into_owned()];
-    let err = validate_input_paths(&paths).unwrap_err();
+    let err = zh_validate_input_paths(&paths).unwrap_err();
     assert!(err.contains("不支持"));
 }
 
@@ -318,7 +341,7 @@ fn test_validate_input_paths_rejects_too_many() {
     let paths: Vec<String> = (0..MAX_BATCH_FILES + 1)
         .map(|i| format!("/x/{}.heic", i))
         .collect();
-    let err = validate_input_paths(&paths).unwrap_err();
+    let err = zh_validate_input_paths(&paths).unwrap_err();
     assert!(err.contains("最多"));
 }
 
@@ -334,6 +357,6 @@ fn test_validate_input_paths_rejects_fifo() {
     assert!(status.success());
 
     let paths = vec![fifo.to_string_lossy().into_owned()];
-    let err = validate_input_paths(&paths).unwrap_err();
+    let err = zh_validate_input_paths(&paths).unwrap_err();
     assert!(err.contains("无效"));
 }

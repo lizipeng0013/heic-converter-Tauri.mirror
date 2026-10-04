@@ -43,8 +43,8 @@ const handleCancel = () => {
   <Dialog :open="open" @update:open="(value) => emit('update:open', value)">
     <DialogContent class="sm:max-w-[400px]">
       <DialogHeader>
-        <DialogTitle>请选择您的操作</DialogTitle>
-        <DialogDescription> 转换正在进行中，您希望如何处理？ </DialogDescription>
+        <DialogTitle>{{ $t("dialog.chooseActionTitle") }}</DialogTitle>
+        <DialogDescription> {{ $t("dialog.convertingBody") }} </DialogDescription>
       </DialogHeader>
       <div class="py-4">
         <div class="flex flex-col gap-3">
@@ -57,7 +57,7 @@ const handleCancel = () => {
               class="h-4 w-4 cursor-pointer"
             />
             <span class="text-sm font-medium" :class="{ 'opacity-50': isClosing }">
-              最小化到系统托盘
+              {{ $t("dialog.hideToTray") }}
             </span>
           </label>
           <label class="flex items-center gap-3 cursor-pointer">
@@ -68,13 +68,17 @@ const handleCancel = () => {
               :disabled="isClosing"
               class="h-4 w-4 cursor-pointer"
             />
-            <span class="text-sm font-medium" :class="{ 'opacity-50': isClosing }"> 退出 </span>
+            <span class="text-sm font-medium" :class="{ 'opacity-50': isClosing }">
+              {{ $t("dialog.quit") }}
+            </span>
           </label>
         </div>
       </div>
       <DialogFooter>
-        <Button variant="outline" :disabled="isClosing" @click="handleCancel">取消</Button>
-        <Button :disabled="isClosing" @click="handleConfirm">确定</Button>
+        <Button variant="outline" :disabled="isClosing" @click="handleCancel">{{
+          $t("dialog.cancel")
+        }}</Button>
+        <Button :disabled="isClosing" @click="handleConfirm">{{ $t("dialog.confirm") }}</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>
