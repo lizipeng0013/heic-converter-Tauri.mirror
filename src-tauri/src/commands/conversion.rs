@@ -3,12 +3,49 @@ use crate::services::conversion::batch_convert;
 use notify_rust::Hint;
 use notify_rust::Notification;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_log::log::{debug, error, info};
 use tracing::instrument;
 
 // 全局停止标志
 static SHOULD_STOP: AtomicBool = AtomicBool::new(false);
+
+// 单飞闸：同一时间只允许一个转换批次
+static BATCH_RUNNING: AtomicBool = AtomicBool::new(false);
+
+/// 批次执行守卫：无论正常结束、出错还是提前返回，都释放单飞闸
+struct BatchGuard;
+
+impl Drop for BatchGuard {
+    fn drop(&mut self) {
+        BATCH_RUNNING.store(false, Ordering::SeqCst);
+    }
+}
+
+// 已确认的输出目录（由设置页对话框/下载目录查询经 confirm_output_folder 写入）
+static CONFIRMED_OUTPUT_FOLDER: Mutex<Option<String>> = Mutex::new(None);
+
+/// 确认输出目录：前端在用户选定目录或加载默认下载目录时调用。
+#[tauri::command]
+pub fn confirm_output_folder(path: String) -> Result<(), String> {
+    if path.trim().is_empty() {
+        return Err("输出目录不能为空".to_string());
+    }
+    *CONFIRMED_OUTPUT_FOLDER.lock().unwrap() = Some(path);
+    Ok(())
+}
+
+/// 校验转换请求使用的输出目录是否已被确认。
+///
+/// 未确认的任意路径不能驱动目录创建与写入；错误信息不包含路径。
+pub fn ensure_output_confirmed(output_folder: &str) -> Result<(), String> {
+    let confirmed = CONFIRMED_OUTPUT_FOLDER.lock().unwrap();
+    match &*confirmed {
+        Some(c) if c == output_folder => Ok(()),
+        _ => Err("输出目录未经确认，请在设置中重新选择输出目录".to_string()),
+    }
+}
 
 /// 批量转换图片命令
 ///
@@ -36,6 +73,12 @@ pub async fn convert_images(
         return Err("没有选择任何文件".to_string());
     }
 
+    // 输入校验在 Rust 侧强制执行（前端过滤可被绕过）
+    crate::utils::path::validate_input_paths(&paths)?;
+
+    // 输出目录必须是事先确认过的（对话框选定或系统下载目录）
+    ensure_output_confirmed(&output_folder)?;
+
     // 验证输出目录权限
     crate::utils::validate_output_folder(&output_folder)?;
 
@@ -55,25 +98,30 @@ pub async fn convert_images(
     }
 
     let app_clone = app.clone();
-    let paths_clone = paths.clone();
     let format_clone = target_type.clone();
 
-    // 重置停止标志
+    // 规划互不冲突的输出路径（已存在/同批次同名自动加序号）
+    let file_pairs = crate::utils::path::plan_target_paths(&paths, &format_clone, &output_folder);
+
+    // 单飞闸：已有批次在跑时明确拒绝，避免并发叠加 CPU/内存
+    if BATCH_RUNNING
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
+        return Err("已有转换任务正在进行中，请等待完成或先停止当前任务".to_string());
+    }
+
+    // 重置停止标志（必须在拿到单飞闸之后，避免清掉进行中批次的停止请求）
     SHOULD_STOP.store(false, Ordering::SeqCst);
 
-    // 开启后台任务，不阻塞主响应
-    tauri::async_runtime::spawn(async move {
+    // 批次整体跑在阻塞线程上，不占用 async 运行时 worker；
+    // BatchGuard 在批次退出时释放单飞闸
+    tauri::async_runtime::spawn_blocking(move || {
+        let _guard = BatchGuard;
         info!("开始后台转换任务");
 
-        let mut file_pairs: Vec<(String, String)> = Vec::new();
-        for path in paths_clone {
-            debug!("构建输出路径: {}", path);
-            let target_path = crate::utils::build_target_path(&path, &format_clone, &output_folder);
-            file_pairs.push((path, target_path));
-        }
-
         // 处理批量转换结果
-        let was_stopped = match batch_convert(&app_clone, file_pairs, format_clone, quality).await {
+        let was_stopped = match batch_convert(&app_clone, file_pairs, format_clone, quality) {
             Ok(result) => result,
             Err(e) => {
                 error!("批量转换失败: {}", e);
@@ -115,24 +163,27 @@ pub async fn convert_images(
 
                         #[cfg(all(unix, not(target_os = "macos")))]
                         {
-                            // Linux 平台支持交互式通知：点击通知本身即可打开窗口
-                            let window_clone = window.clone();
-                            if let Ok(handle) = Notification::new()
-                                .summary("转换完成")
-                                .body("图片转换已完成")
-                                .action("default", "")  // default action 捕获通知本身的点击
-                                .hint(Hint::Resident(true))
-                                .show()
-                            {
-                                handle.wait_for_action(move |action| {
-                                    if action == "default" {
-                                        debug!("用户点击通知，打开窗口");
-                                        let _ = window_clone.show();
-                                        let _ = window_clone.unminimize();
-                                        let _ = window_clone.set_focus();
-                                    }
-                                });
-                            }
+                            // Linux 平台支持交互式通知：点击通知本身即可打开窗口。
+                            // 等待通知点击放在独立线程：不占批次闸门，也不占运行时线程。
+                            std::thread::spawn(move || {
+                                let window_clone = window.clone();
+                                if let Ok(handle) = Notification::new()
+                                    .summary("转换完成")
+                                    .body("图片转换已完成")
+                                    .action("default", "") // default action 捕获通知本身的点击
+                                    .hint(Hint::Resident(true))
+                                    .show()
+                                {
+                                    handle.wait_for_action(move |action| {
+                                        if action == "default" {
+                                            debug!("用户点击通知，打开窗口");
+                                            let _ = window_clone.show();
+                                            let _ = window_clone.unminimize();
+                                            let _ = window_clone.set_focus();
+                                        }
+                                    });
+                                }
+                            });
                         }
                     }
                 }
@@ -154,10 +205,4 @@ pub fn stop_conversion() -> Result<(), String> {
 /// 检查是否应该停止
 pub fn should_stop() -> bool {
     SHOULD_STOP.load(Ordering::SeqCst)
-}
-
-/// 强制退出应用
-#[tauri::command]
-pub fn force_exit(app: AppHandle) {
-    app.exit(0);
 }

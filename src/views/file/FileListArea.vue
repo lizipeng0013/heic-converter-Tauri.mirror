@@ -8,7 +8,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useVirtualizer } from "@tanstack/vue-virtual";
 import FileCard from "@/components/FileCard.vue";
 import { listen, TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
-import { info } from "@tauri-apps/plugin-log";
+import { info, error } from "@tauri-apps/plugin-log";
 import { alertSevere } from "@/utils/useError.ts";
 import type { ConversionUpdateEvent, ConversionFailedEvent } from "@/types";
 
@@ -73,77 +73,82 @@ let unlistenConversionStopped: UnlistenFn | null = null;
 let unlistenConversionFailed: UnlistenFn | null = null;
 
 onMounted(async () => {
-  // 监听：文件悬停在窗口任意位置
-  unlistenDragEnter = await listen(TauriEvent.DRAG_ENTER, () => {
-    isFileDragging.value = true;
-  });
+  try {
+    // 监听：文件悬停在窗口任意位置
+    unlistenDragEnter = await listen(TauriEvent.DRAG_ENTER, () => {
+      isFileDragging.value = true;
+    });
 
-  // 监听：放下文件
-  unlistenDragDrop = await listen(TauriEvent.DRAG_DROP, (event) => {
-    // 1. 先结束动画状态
-    isFileDragging.value = false;
-    // 2. 直接处理，不做区域判断
-    const payload = event.payload as { paths: string[] };
-    const paths = payload.paths as string[];
-    conversionStore.addPaths(paths);
-  });
+    // 监听：放下文件
+    unlistenDragDrop = await listen(TauriEvent.DRAG_DROP, (event) => {
+      // 1. 先结束动画状态
+      isFileDragging.value = false;
+      // 2. 直接处理，不做区域判断
+      const payload = event.payload as { paths: string[] };
+      const paths = payload.paths as string[];
+      conversionStore.addPaths(paths);
+    });
 
-  // 监听：取消 (离开窗口或拖到别处去了)
-  unlistenDragLeave = await listen(TauriEvent.DRAG_LEAVE, () => {
-    isFileDragging.value = false;
-  });
+    // 监听：取消 (离开窗口或拖到别处去了)
+    unlistenDragLeave = await listen(TauriEvent.DRAG_LEAVE, () => {
+      isFileDragging.value = false;
+    });
 
-  unlistenConversion = await listen<ConversionUpdateEvent>("conversion-update", (event) => {
-    const payload = event.payload;
+    unlistenConversion = await listen<ConversionUpdateEvent>("conversion-update", (event) => {
+      const payload = event.payload;
 
-    // 如果正在停止转换，只处理 done 状态的更新（让正在转换的文件可以完成）
-    if (conversionStore.isStopping) {
+      // 如果正在停止转换，只处理 done 状态的更新（让正在转换的文件可以完成）
+      if (conversionStore.isStopping) {
+        if (payload.status === "done") {
+          conversionStore.updateFileSuccess(payload.path, payload.output_path);
+        } else {
+          conversionStore.updateFileError(payload.path, payload.errorMessage);
+        }
+        return;
+      }
+
+      // 正常转换状态下处理所有更新
       if (payload.status === "done") {
         conversionStore.updateFileSuccess(payload.path, payload.output_path);
       } else {
         conversionStore.updateFileError(payload.path, payload.errorMessage);
       }
-      return;
-    }
+    });
 
-    // 正常转换状态下处理所有更新
-    if (payload.status === "done") {
-      conversionStore.updateFileSuccess(payload.path, payload.output_path);
-    } else {
-      conversionStore.updateFileError(payload.path, payload.errorMessage);
-    }
-  });
+    unlistenBatchFinished = await listen("conversion-batch-finished", (_event) => {
+      void info(`转换任务完成`);
+      conversionStore.handleBatchFinished();
+    });
 
-  unlistenBatchFinished = await listen("conversion-batch-finished", (_event) => {
-    void info(`转换任务完成`);
-    conversionStore.handleBatchFinished();
-  });
+    unlistenConversionStarted = await listen("conversion-started", (_event) => {
+      void info(`收到转换开始事件`);
+      conversionStore.handleStarted();
+    });
 
-  unlistenConversionStarted = await listen("conversion-started", (_event) => {
-    void info(`收到转换开始事件`);
-    conversionStore.handleStarted();
-  });
+    unlistenConversionStopped = await listen("conversion-stopped", (_event) => {
+      void info(`收到停止完成事件`);
+      conversionStore.handleStopped();
+    });
 
-  unlistenConversionStopped = await listen("conversion-stopped", (_event) => {
-    void info(`收到停止完成事件`);
-    conversionStore.handleStopped();
-  });
+    unlistenConversionFailed = await listen<ConversionFailedEvent>("conversion-failed", (event) => {
+      const payload = event.payload;
 
-  unlistenConversionFailed = await listen<ConversionFailedEvent>("conversion-failed", (event) => {
-    const payload = event.payload;
+      void info(`收到转换失败事件: ${payload.errorMessage}`);
 
-    void info(`收到转换失败事件: ${payload.errorMessage}`);
+      alertSevere(payload.errorMessage);
 
-    alertSevere(payload.errorMessage);
+      // 重置转换状态
 
-    // 重置转换状态
+      conversionStore.isConverting = false;
 
-    conversionStore.isConverting = false;
+      conversionStore.isStopping = false;
 
-    conversionStore.isStopping = false;
-
-    conversionStore.isPreparing = false;
-  });
+      conversionStore.isPreparing = false;
+    });
+  } catch (e) {
+    // 监听注册失败时记录日志，避免产生未捕获的 rejection
+    void error(`注册事件监听失败: ${e}`);
+  }
 });
 
 onUnmounted(() => {
@@ -201,6 +206,7 @@ const selectFilesWithDialog = async () => {
         variant="ghost"
         size="sm"
         class="h-8 text-xs ml-2"
+        :disabled="conversionStore.isConverting || conversionStore.isPreparing"
         @click="conversionStore.clearPaths()"
         >清空列表</Button
       >
@@ -209,7 +215,8 @@ const selectFilesWithDialog = async () => {
         variant="ghost"
         size="sm"
         class="h-8 text-xs ml-2"
-        @click="conversionStore.clearPaths()"
+        :disabled="conversionStore.isConverting || conversionStore.isPreparing"
+        @click="conversionStore.clearErrors()"
         >清空失败</Button
       >
       <Button
@@ -219,6 +226,7 @@ const selectFilesWithDialog = async () => {
         variant="ghost"
         size="sm"
         class="h-8 text-xs ml-2"
+        :disabled="conversionStore.isConverting || conversionStore.isPreparing"
         @click="conversionStore.clearCompletedFiles()"
         >清空已完成</Button
       >

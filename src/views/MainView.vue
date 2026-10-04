@@ -121,7 +121,11 @@ const handleCloseRequest = async () => {
     showPendingCloseDialog.value = true;
   } else {
     // 直接关闭 - 使用 Tauri 2 前端 API
-    await appWindow.close();
+    try {
+      await appWindow.close();
+    } catch (e) {
+      void error(`关闭窗口失败: ${e}`);
+    }
   }
 };
 
@@ -160,18 +164,22 @@ const handlePendingCloseConfirm = async () => {
 
 // 处理托盘退出请求
 const handleTrayQuitRequest = async () => {
-  if (conversionStore.isConverting || conversionStore.isPreparing) {
-    // 转换进行中，使用原生对话框确认
-    const confirmed = await ask("转换正在进行中，确认要停止转换并退出吗？", {
-      title: "确认退出",
-      kind: "warning",
-    });
-    if (confirmed) {
+  try {
+    if (conversionStore.isConverting || conversionStore.isPreparing) {
+      // 转换进行中，使用原生对话框确认
+      const confirmed = await ask("转换正在进行中，确认要停止转换并退出吗？", {
+        title: "确认退出",
+        kind: "warning",
+      });
+      if (confirmed) {
+        await appWindow.close();
+      }
+    } else {
+      // 直接退出
       await appWindow.close();
     }
-  } else {
-    // 直接退出
-    await appWindow.close();
+  } catch (e) {
+    void error(`处理退出请求失败: ${e}`);
   }
 };
 

@@ -222,3 +222,41 @@ fn test_jpeg_quality_range() {
     let high_size = std::fs::metadata(output_path_high).unwrap().len();
     assert!(high_size > low_size);
 }
+
+#[test]
+fn test_save_image_buffer_does_not_overwrite_existing() {
+    let temp_dir = TempDir::new().unwrap();
+    let target = temp_dir.path().join("photo.jpg");
+    std::fs::write(&target, "keep").unwrap();
+
+    let buffer: RgbImage = ImageBuffer::new(10, 10);
+    let result = save_image_buffer(&buffer, target.to_str().unwrap(), OutputFormat::Jpeg(90));
+    assert!(result.is_ok());
+
+    // 原文件保持不变
+    assert_eq!(std::fs::read_to_string(&target).unwrap(), "keep");
+    // 新文件写到了加序号的路径
+    let numbered = temp_dir.path().join("photo (1).jpg");
+    assert!(numbered.exists());
+    assert!(std::fs::metadata(&numbered).unwrap().len() > 0);
+}
+
+#[cfg(unix)]
+#[test]
+fn test_save_image_buffer_does_not_follow_symlink() {
+    let temp_dir = TempDir::new().unwrap();
+    let victim = temp_dir.path().join("victim.txt");
+    std::fs::write(&victim, "precious").unwrap();
+    let target = temp_dir.path().join("photo.jpg");
+    std::os::unix::fs::symlink(&victim, &target).unwrap();
+
+    let buffer: RgbImage = ImageBuffer::new(10, 10);
+    let result = save_image_buffer(&buffer, target.to_str().unwrap(), OutputFormat::Jpeg(90));
+    assert!(result.is_ok());
+
+    // 被链接的文件不被改写
+    assert_eq!(std::fs::read_to_string(&victim).unwrap(), "precious");
+    assert_eq!(std::fs::read_link(&target).unwrap(), victim.as_path());
+    // 实际输出写到了加序号的路径
+    assert!(temp_dir.path().join("photo (1).jpg").exists());
+}

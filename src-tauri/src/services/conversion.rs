@@ -22,7 +22,9 @@ use tauri_plugin_log::log::{debug, error, info, trace};
 /// # 返回
 /// 成功返回 Ok(was_stopped)，其中 was_stopped 表示是否被停止中断
 /// 失败返回错误信息
-pub async fn batch_convert(
+///
+/// 同步执行（内部为 CPU 密集型 rayon 批处理），调用方应放在阻塞线程上运行。
+pub fn batch_convert(
     app: &AppHandle,
     files: Vec<(String, String)>,
     format: String,

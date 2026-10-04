@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatSize } from "@/utils";
 import { useConversionStore } from "@/stores/conversionStore";
+import { error } from "@tauri-apps/plugin-log";
 import type { FileItem } from "@/types";
 import { computed } from "vue";
 
@@ -29,10 +30,25 @@ const isProcessing = computed(
   () => props.isTaskFile && (conversionStore.isConverting || conversionStore.isStopping)
 );
 
+// 已完成项显示"源文件名 → 生成文件名"（生成名取事件回报的实际输出路径）
+// ponytail: 仅展示规划路径的 basename，与磁盘极端竞争下的最终名可能有毫秒级偏差
+const displayName = computed(() => {
+  if (props.isCompletedFile && props.file.convertedFilePath) {
+    const outputName =
+      props.file.convertedFilePath.split(/[\\/]/).pop() ?? props.file.convertedFilePath;
+    return `${props.file.name} → ${outputName}`;
+  }
+  return props.file.name;
+});
+
 const handleOpenFileDir = async () => {
   if (props.file.convertedFilePath) {
-    const { revealItemInDir } = await import("@tauri-apps/plugin-opener");
-    await revealItemInDir(props.file.convertedFilePath);
+    try {
+      const { revealItemInDir } = await import("@tauri-apps/plugin-opener");
+      await revealItemInDir(props.file.convertedFilePath);
+    } catch (e) {
+      void error(`打开文件所在目录失败: ${e}`);
+    }
   }
 };
 </script>
@@ -48,7 +64,9 @@ const handleOpenFileDir = async () => {
         </div>
         <div class="flex flex-col justify-center gap-0.5 overflow-hidden min-w-0 flex-1">
           <div class="flex items-center gap-2">
-            <p class="text-sm font-medium truncate flex-1 min-w-0">{{ file.name }}</p>
+            <p class="text-sm font-medium truncate flex-1 min-w-0" :title="displayName">
+              {{ displayName }}
+            </p>
           </div>
 
           <div class="text-xs text-muted-foreground">

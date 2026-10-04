@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/context-menu";
 
 import { useDark, useToggle } from "@vueuse/core";
+import { debug, error } from "@tauri-apps/plugin-log";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip/";
 
 // ============================================================
@@ -123,41 +124,32 @@ const dragWindow = () => appWindow.startDragging();
 
 // 窗口操作函数 - 直接调用 Tauri 2 前端 API
 const handleMinimize = async () => {
-  console.log("[TitleBar] minimize called");
   try {
     await appWindow.minimize();
-    console.log("[TitleBar] minimize success");
+    void debug("[TitleBar] minimize success");
   } catch (e) {
-    console.error("[TitleBar] minimize error:", e);
+    void error(`[TitleBar] minimize error: ${e}`);
   }
 };
 
 const handleMaximize = async () => {
-  console.log("[TitleBar] toggleMaximize called");
   try {
     await appWindow.toggleMaximize();
-    console.log("[TitleBar] toggleMaximize success");
+    void debug("[TitleBar] toggleMaximize success");
   } catch (e) {
-    console.error("[TitleBar] toggleMaximize error:", e);
+    void error(`[TitleBar] toggleMaximize error: ${e}`);
   }
 };
 
 const handleToggleTop = async () => {
-  console.log("[TitleBar] toggleAlwaysOnTop called");
   try {
     // 使用本地状态来切换，而不是依赖 isAlwaysOnTop() 的返回值
     const newState = !isAlwaysOnTopLocal.value;
-    console.log(
-      "[TitleBar] local state before:",
-      isAlwaysOnTopLocal.value,
-      ", setting to:",
-      newState
-    );
+    void debug(`[TitleBar] setAlwaysOnTop: ${isAlwaysOnTopLocal.value} -> ${newState}`);
     await appWindow.setAlwaysOnTop(newState);
     isAlwaysOnTopLocal.value = newState;
-    console.log("[TitleBar] setAlwaysOnTop to:", newState, "success");
   } catch (e) {
-    console.error("[TitleBar] toggleAlwaysOnTop error:", e);
+    void error(`[TitleBar] toggleAlwaysOnTop error: ${e}`);
   }
 };
 

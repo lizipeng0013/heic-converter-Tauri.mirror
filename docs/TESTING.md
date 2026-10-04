@@ -72,6 +72,8 @@ pnpm exec playwright test --headed
 
 ```
 src-tauri/tests/           # Rust 后端测试
+├── capabilities_test.rs  # 能力（capability）配置断言测试
+├── commands_test.rs      # 命令层（输入校验/输出目录确认）测试
 ├── converters/           # 转换器测试
 │   ├── common_test.rs    # 通用格式转换测试
 │   ├── heic_test.rs      # HEIC 专用转换器测试
@@ -87,10 +89,16 @@ src/__tests__/            # 前端测试
 │   ├── stores/          # Pinia Store 测试
 │   │   └── conversionStore.test.ts
 │   ├── components/      # 组件测试
+│   │   ├── FileCard.test.ts
 │   │   ├── ui/         # UI 组件测试
 │   │   │   └── Button.test.ts
 │   │   └── layout/     # 布局组件测试
 │   │       └── TitleBar.test.ts
+│   ├── views/          # 视图测试
+│   │   ├── FileListArea.test.ts
+│   │   ├── MainView.test.ts
+│   │   ├── SettingsPanel.test.ts
+│   │   └── StatusBar.test.ts
 │   └── utils/          # 工具函数测试
 │       └── index.test.ts
 ├── e2e/                  # E2E 测试
@@ -110,16 +118,23 @@ src/__tests__/            # 前端测试
 | ConversionError | 错误类型、用户友好消息 | ✅ 已测试 |
 | is_heic_format | HEIC 检测、扩展名验证 | ✅ 已测试 |
 | build_target_path | 路径构建、文件名处理 | ✅ 已测试 |
-| validate_output_folder | 目录验证、权限检查 | ✅ 已测试 |
+| validate_output_folder | 目录验证、权限检查（创建即失败探针） | ✅ 已测试 |
+| plan_target_paths / reserve_unique_output_path | 输出路径规划、加序号兜底、符号链接占用跳过、批量上限 | ✅ 已测试 |
+| validate_input_paths | 输入校验：普通文件、扩展名白名单、批量数量上限 | ✅ 已测试 |
+| check_dimensions / check_file_size | 解码前尺寸与文件大小限额 | ✅ 已测试 |
+| confirm_output_folder / ensure_output_confirmed | 输出目录确认闸（未确认拒绝转换） | ✅ 已测试 |
+| capabilities/default.json | 权限收敛断言（敏感权限已移除、stat scope 精确） | ✅ 已测试 |
 
 ### 前端
 
 | 模块 | 测试内容 | 状态 |
 |------|----------|------|
-| conversionStore | 文件添加、状态转换、设置更新 | ✅ 已测试 |
+| conversionStore | 文件添加、状态转换、设置更新、clearErrors、输出目录确认 | ✅ 已测试 |
 | Button | 渲染、变体、点击事件 | ✅ 已测试 |
 | TitleBar | 窗口操作、主题切换、事件发射 | ✅ 已测试 |
 | utils | cn 函数、类名合并 | ✅ 已测试 |
+| FileListArea | 清空按钮转换中禁用、清空失败只清失败列表、tab 切换 | ✅ 已测试 |
+| FileCard | 已完成项显示"源文件名 → 生成文件名"（含无输出路径回退） | ✅ 已测试 |
 
 ## 覆盖率目标
 

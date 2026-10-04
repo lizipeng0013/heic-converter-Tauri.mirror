@@ -45,6 +45,13 @@ vi.mock("@tauri-apps/api/window", () => ({
   })),
 }));
 
+vi.mock("@tauri-apps/plugin-log", () => ({
+  debug: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+}));
+
 describe("TitleBar", () => {
   beforeEach(() => {
     vi.clearAllMocks();

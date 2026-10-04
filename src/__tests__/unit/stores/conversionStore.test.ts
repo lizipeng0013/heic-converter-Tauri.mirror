@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useConversionStore } from "@/stores/conversionStore";
 import { createPinia, setActivePinia } from "pinia";
+import { invoke } from "@tauri-apps/api/core";
 
 // Mock Tauri invoke
 vi.mock("@tauri-apps/api/core", () => ({
@@ -122,6 +123,25 @@ describe("conversionStore", () => {
     });
   });
 
+  describe("clearErrors", () => {
+    it("should clear only errorFiles, keeping pending queue and conversion state", async () => {
+      const store = useConversionStore();
+
+      await store.addPaths(["/path/to/ok.heic", "/path/to/bad.heic"]);
+      store.updateFileError("/path/to/bad.heic", "转换失败");
+      expect(store.errorFiles).toHaveLength(1);
+      expect(store.files).toHaveLength(1);
+
+      store.isConverting = true;
+      store.clearErrors();
+
+      expect(store.errorFiles).toHaveLength(0);
+      // 待转换队列与转换状态不受影响
+      expect(store.files).toHaveLength(1);
+      expect(store.isConverting).toBe(true);
+    });
+  });
+
   describe("updateFileSuccess", () => {
     it("should move file to completed list", async () => {
       const store = useConversionStore();
@@ -186,6 +206,19 @@ describe("conversionStore", () => {
       store.setOutputFolder(null);
 
       expect(store.outputFolder).toBeNull();
+    });
+
+    it("should confirm output folder with the backend", async () => {
+      const store = useConversionStore();
+      vi.mocked(invoke).mockClear();
+
+      store.setOutputFolder("/custom/output");
+
+      await vi.waitFor(() => {
+        expect(invoke).toHaveBeenCalledWith("confirm_output_folder", {
+          path: "/custom/output",
+        });
+      });
     });
   });
 

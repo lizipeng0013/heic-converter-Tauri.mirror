@@ -176,7 +176,9 @@ export const useConversionStore = defineStore("conversion", () => {
   };
 
   const updateFileError = (path: string, errorMessage: string) => {
-    void error(`文件转换失败: ${path}, 错误: ${errorMessage}`);
+    // 日志只记文件名，避免完整路径进入日志
+    const name = path.split(/[\\/]/).pop() ?? path;
+    void error(`文件转换失败: ${name}, 错误: ${errorMessage}`);
 
     const fileIndex = files.value.findIndex((f) => f.path === path);
     if (fileIndex !== -1) {
@@ -225,6 +227,11 @@ export const useConversionStore = defineStore("conversion", () => {
     hasStartedConversion.value = false;
   };
 
+  // 只清空失败列表：不影响待转换队列与转换状态
+  const clearErrors = () => {
+    errorFiles.value = [];
+  };
+
   const clearCompletedFiles = () => {
     // 只清空已完成文件
     completedFiles.value = [];
@@ -251,7 +258,7 @@ export const useConversionStore = defineStore("conversion", () => {
     }
   };
 
-  const setActiveTab = (tab: "pending" | "completed") => {
+  const setActiveTab = (tab: "pending" | "completed" | "error") => {
     activeTab.value = tab;
   };
 
@@ -261,6 +268,12 @@ export const useConversionStore = defineStore("conversion", () => {
 
   const setOutputFolder = (path: string | null) => {
     outputFolder.value = path;
+    if (path) {
+      // 通知后端确认该输出目录（后端只写入已确认的目录）
+      void invoke("confirm_output_folder", { path }).catch((e) => {
+        void warn(`确认输出目录失败: ${e}`);
+      });
+    }
   };
 
   // --- 开始转换逻辑：调用批量方法 ---
@@ -446,6 +459,7 @@ export const useConversionStore = defineStore("conversion", () => {
     removePath,
     removeCompletedFile,
     clearPaths,
+    clearErrors,
     clearCompletedFiles,
     setActiveTab,
     updateSettings,

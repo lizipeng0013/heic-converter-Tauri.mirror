@@ -21,6 +21,12 @@ pub enum ConversionError {
     UnknownFormat,
     #[error("不支持的输入格式: {0}")]
     UnsupportedInputFormat(String),
+    #[error("输出路径冲突")]
+    OutputConflict,
+    #[error("图像尺寸超出限制")]
+    ImageDimensionsTooLarge,
+    #[error("输入文件过大")]
+    InputFileTooLarge,
 }
 
 impl ConversionError {
@@ -39,6 +45,11 @@ impl ConversionError {
             ConversionError::UnsupportedInputFormat(format) => {
                 format!("不支持的输入格式: {}，仅支持 HEIC/HEIF 格式", format)
             },
+            ConversionError::OutputConflict => {
+                "输出文件冲突：同名文件过多，请更换输出目录或源文件名".to_string()
+            },
+            ConversionError::ImageDimensionsTooLarge => "图片尺寸超出限制，无法处理".to_string(),
+            ConversionError::InputFileTooLarge => "文件过大，超出处理上限".to_string(),
         }
     }
 }
@@ -117,7 +128,25 @@ impl OutputFormat {
 }
 
 /// 保存图片的公共函数（优化版本）
+///
+/// 先以"创建即失败"方式预留空闲目标路径（已存在/符号链接一律加序号跳过），
+/// 绝不覆盖或跟随任何已有文件；写入失败时清理预留的空文件。
 pub fn save_image_buffer(
+    buffer: &RgbImage,
+    output_path: &str,
+    format: OutputFormat,
+) -> Result<(), ConversionError> {
+    let final_path = crate::utils::path::reserve_unique_output_path(output_path)?;
+    let result = write_image_buffer(buffer, &final_path, format);
+    if result.is_err() {
+        // 写入失败，清理预留出的空文件（不碰其他条目）
+        let _ = std::fs::remove_file(&final_path);
+    }
+    result
+}
+
+/// 实际编码并写入已预留的路径（内部使用）
+fn write_image_buffer(
     buffer: &RgbImage,
     output_path: &str,
     format: OutputFormat,

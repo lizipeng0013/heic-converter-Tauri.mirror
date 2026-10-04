@@ -15,7 +15,11 @@ const showFormatDropdown = ref(false);
 const dropdownRef = ref<HTMLElement | null>(null);
 
 onMounted(async () => {
-  store.outputFolder = await downloadDir();
+  try {
+    store.setOutputFolder(await downloadDir());
+  } catch (e) {
+    void error(`获取默认下载目录失败: ${e}`);
+  }
 
   // 添加点击外部关闭下拉框的事件监听
   document.addEventListener("click", handleClickOutside);

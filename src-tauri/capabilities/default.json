@@ -6,7 +6,6 @@
   "permissions": [
     "core:default",
     "opener:default",
-    "opener:allow-open-path",
     "core:window:default",
     "core:window:allow-start-dragging",
     "core:window:allow-minimize",
@@ -23,13 +22,16 @@
     "core:app:allow-default-window-icon",
     "dialog:default",
     "fs:default",
-    { "identifier": "fs:allow-stat" },
-    "log:default",
     {
-      "identifier": "fs:allow-write-file",
-      "allow": [{ "path": "$HOME/**" }, { "path": "/media/$USER/**" }, { "path": "/mnt/**" }]
+      "identifier": "fs:allow-stat",
+      "allow": [
+        { "path": "$PICTURE/**" },
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$DESKTOP/**" },
+        { "path": "$DOCUMENT/**" }
+      ]
     },
-    "notification:default",
+    "log:default",
     "core:tray:default",
     "core:tray:allow-new",
     "core:tray:allow-set-icon",

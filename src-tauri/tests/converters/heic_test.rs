@@ -1,4 +1,6 @@
-use heic_converter_lib::converters::heic::is_heic_format;
+use heic_converter_lib::converters::heic::{
+    check_dimensions, check_file_size, is_heic_format, MAX_IMAGE_DIMENSION,
+};
 use std::fs::File;
 use std::io::Write;
 use tempfile::TempDir;
@@ -93,4 +95,38 @@ fn test_is_heic_format_windows_paths() {
     // 测试路径中的反斜杠和正斜杠
     assert!(is_heic_format("path/to/image.heic"));
     assert!(!is_heic_format("path/to/image.jpg"));
+}
+
+#[test]
+fn test_check_dimensions_within_limit() {
+    assert!(check_dimensions(16, 16).is_ok());
+    assert!(check_dimensions(MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION).is_ok());
+    assert!(check_dimensions(MAX_IMAGE_DIMENSION - 1, 1).is_ok());
+}
+
+#[test]
+fn test_check_dimensions_over_limit_rejected() {
+    let err = check_dimensions(MAX_IMAGE_DIMENSION + 1, 10).unwrap_err();
+    // 用户文案不含路径
+    assert!(err.user_message().contains("尺寸"));
+    assert!(!err.user_message().contains('/'));
+
+    assert!(check_dimensions(10, MAX_IMAGE_DIMENSION + 1).is_err());
+    // 图片炸弹典型形态：极小文件声明极大尺寸
+    assert!(check_dimensions(1_000_000, 1_000_000).is_err());
+}
+
+#[test]
+fn test_check_file_size_within_limit() {
+    let max = heic_converter_lib::converters::heic::MAX_INPUT_FILE_SIZE;
+    assert!(check_file_size(0).is_ok());
+    assert!(check_file_size(max - 1).is_ok());
+}
+
+#[test]
+fn test_check_file_size_over_limit_rejected() {
+    let max = heic_converter_lib::converters::heic::MAX_INPUT_FILE_SIZE;
+    let err = check_file_size(max + 1).unwrap_err();
+    assert!(err.user_message().contains("过大"));
+    assert!(!err.user_message().contains('/'));
 }

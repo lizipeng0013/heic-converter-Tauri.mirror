@@ -27,7 +27,6 @@ pub fn init_plugins(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri
             .targets([
                 Target::new(TargetKind::Stdout),
                 Target::new(TargetKind::LogDir { file_name: None }),
-                Target::new(TargetKind::Webview),
             ])
             .format(move | out, message, record| {
                 let now = Local::now();

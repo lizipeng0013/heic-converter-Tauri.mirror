@@ -1,9 +1,30 @@
 use super::common::{save_image_buffer, ConversionError, OutputFormat};
-use crate::memory_pool::acquire_buffer;
 use image::{ImageBuffer, RgbImage};
 use libheif_rs::{ColorSpace, HeifContext, LibHeif, RgbChroma};
 use tauri::AppHandle;
 use tauri_plugin_log::log::{debug, error, trace, warn};
+
+/// 解码允许的最大图像边长（防止图片炸弹按文件头声明分配巨额内存）
+pub const MAX_IMAGE_DIMENSION: u32 = 16384;
+
+/// 输入文件大小上限（HEIC 照片为 MB 级，256 MiB 已远超正常范围）
+pub const MAX_INPUT_FILE_SIZE: u64 = 256 * 1024 * 1024;
+
+/// 校验图像声明尺寸是否在可解码范围内（解码前调用）
+pub fn check_dimensions(width: u32, height: u32) -> Result<(), ConversionError> {
+    if width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION {
+        return Err(ConversionError::ImageDimensionsTooLarge);
+    }
+    Ok(())
+}
+
+/// 校验输入文件大小是否在可接受范围内（解码前调用）
+pub fn check_file_size(size: u64) -> Result<(), ConversionError> {
+    if size > MAX_INPUT_FILE_SIZE {
+        return Err(ConversionError::InputFileTooLarge);
+    }
+    Ok(())
+}
 
 /// 检测是否为 HEIC/HEIF 文件
 pub fn is_heic_format(input_path: &str) -> bool {
@@ -32,11 +53,20 @@ pub fn convert_heic_image(
 ) -> Result<(), ConversionError> {
     debug!("转换HEIC图片: {} -> {}", input_path, output_path);
 
+    // 解码前限额校验：文件大小
+    let file_size = std::fs::metadata(input_path)
+        .map_err(ConversionError::IoError)?
+        .len();
+    check_file_size(file_size)?;
+
     let libheif = LibHeif::new();
     let ctx = HeifContext::read_from_file(input_path)?;
     let handle = ctx.primary_image_handle()?;
 
     debug!("HEIC图像信息: {}x{}", handle.width(), handle.height());
+
+    // 解码前限额校验：文件头声明的尺寸（在 libheif.decode 分配缓冲区之前）
+    check_dimensions(handle.width(), handle.height())?;
 
     // 优先使用 libheif 的内置 RGB 解码，避免手动 YUV->RGB 转换
     // 这样可以利用 libheif 内部的 SIMD 优化
@@ -72,7 +102,7 @@ pub fn convert_heic_image(
             let total_bytes = row_bytes * height as usize;
 
             // 使用内存池获取缓冲区，减少分配开销
-            let mut buffer_data = acquire_buffer(total_bytes);
+            let mut buffer_data = vec![0u8; total_bytes];
 
             // 使用更高效的批量复制
             for y in 0..height {
@@ -114,7 +144,7 @@ pub fn convert_heic_image(
             // 获取 buffer 的原始数据指针，避免使用 put_pixel 的开销
             let row_bytes = (width * 3) as usize;
             let total_bytes = row_bytes * height as usize;
-            let mut buffer_data = acquire_buffer(total_bytes);
+            let mut buffer_data = vec![0u8; total_bytes];
 
             // 按行批量处理，减少内存访问开销
             for y_pos in 0..height_usize {

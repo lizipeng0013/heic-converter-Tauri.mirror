@@ -1,6 +1,5 @@
 pub mod commands;
 pub mod converters;
-pub mod memory_pool;
 mod services;
 mod setup;
 pub mod utils;
@@ -31,7 +30,7 @@ use mimalloc::MiMalloc;
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
-use commands::conversion::{convert_images, force_exit, stop_conversion};
+use commands::conversion::{confirm_output_folder, convert_images, stop_conversion};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -40,7 +39,7 @@ pub fn run() {
             // 业务逻辑类
             convert_images,
             stop_conversion,
-            force_exit
+            confirm_output_folder
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
