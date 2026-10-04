@@ -1,7 +1,7 @@
 {
   "appid": "top.hotime.heic-converter",
   "name": "HEIC 图片格式转换器",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "arch": [
     "amd64",
     "arm64"
