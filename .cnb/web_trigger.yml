@@ -1,13 +1,10 @@
-# 按需手动触发：在 CNB 仓库的 main 分支详情页显示「同步 atomgit 上游」按钮
-
+# 按需手动触发：在 CNB 仓库的 main 分支详情页显示「更新仓库」按钮
 # 点击后触发 .cnb.yml 中 main 下 web_trigger_sync_atomgit 流水线
-
-# （替代原先每5 分钟的 crontab 定时轮询：无更新时不再空跑，有更新时随点随同步）
 
 branch:
   - reg: ^main$
     buttons:
-      - name: 同步 atomgit 上游
-        description: 从 atomgit 权威源强制 fetch + reset 覆盖同步到 CNB（改历史/force push 也不冲突）
+      - name: 更新仓库
+        description: 从 AtomGit 更新
         event: web_trigger_sync_atomgit
         groupName: 手动同步
