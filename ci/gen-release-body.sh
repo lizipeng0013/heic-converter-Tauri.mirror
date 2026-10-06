@@ -34,53 +34,50 @@ echo "== tag=${TAG} -> version=${VER} =="
 # ---- 1) 在 debian/changelog 中查找并提取版本块 ----
 # changelog 每个版本块以 "pkgname (ver) dist; urgency=medium" 行开头、
 # 以 " -- Maintainer <email>  date" 行结束。
-# awk 状态机：匹配到目标版本行后进入块内，提取 "  * xxx" 变更行，遇下一个
-# 版本行或 maintainer 行即停止。
-if [ ! -f "$CHANGELOG" ]; then
-  echo "warn: changelog 文件不存在：$CHANGELOG" >&2
-  changes=""
-else
+# awk 状态机：匹配到目标版本行后进入块内，提取变更行——顶层 "  * " 转 "- "，
+# 嵌套 "    - " 转 "  - "（markdown 嵌套列表），手动换行续行折进上一条
+# bullet（4+ 空格缩进在 markdown 里会变代码块，必须折叠）；遇下一个版本行
+# 或 maintainer 行即停止。
 changes=$(awk -v ver="$VER" '
-  # 版本块起始行：pkgname (ver) dist; urgency=medium
+  function emit_pending() {
+    if (pending != "") { print pending; pending = "" }
+  }
   /^[^ ]+ \(/ && /; urgency=/ {
+    # 提取括号内版本号
     if (match($0, /\([0-9][^)]*\)/)) {
       v = substr($0, RSTART+1, RLENGTH-2)
       base = v
       sub(/-.*$/, "", base)
       if (base == ver) { in_block=1; next }
-      if (in_block) exit
+      if (in_block) { emit_pending(); exit }
     }
     next
   }
-  # 维护者签名行（" -- name <email> date"）即版本块结束
-  in_block && /^ -- / { exit }
-  # 新变更项：以 "  * " 开头。先 flush 上一条（含其续行），再开新缓冲。
+  in_block && /^ -- / { emit_pending(); exit }   # maintainer 行 = 块结束
   in_block && /^  \* / {
-    if (buf != "") { sub(/^  \* /, "- ", buf); print buf }
-    buf = $0
+    emit_pending()
+    pending = "- " substr($0, 5)
     next
   }
-  # 续行（块内、非空、非新条目）：去掉前导缩进后并入当前条目缓冲，
-  # 修复多行 * 条目被截断只保留首行的问题。
-  # 拼接规则：仅当换行点两侧都是 CJK 时不插空格，其余一律插。
-  # changelog 里的换行只为控制 80 列宽度，不是语义边界，中文断行处插空格
-  # 纯属噪声（"本项目自身即" + "上游" 不该变成 "即 上游"）。
-  # 判据用字节区间：CJK 是多字节 UTF-8（首字节 >= 0xE0 即属 CJK 区），
-  # 因此「两侧首/末字节都 >= 0xE0」等价于两侧都是中文。
-  in_block && NF>0 && !/^  \* / {
-    c = $0
-    sub(/^ +/, "", c)
-    if (buf ~ /[^ -~]$/ && c ~ /^[^ -~]/) {
-      buf = buf c
-    } else {
-      buf = buf " " c
-    }
+  in_block && /^    - / {
+    emit_pending()
+    pending = "  - " substr($0, 7)
     next
   }
-  { next }
-  END { if (buf != "") { sub(/^  \* /, "- ", buf); print buf } }
+  in_block && /^  / {
+    # 续行：折进上一条 bullet
+    text = $0
+    sub(/^ +/, "", text)
+    sub(/ +$/, "", text)
+    if (pending != "") pending = pending " " text
+    next
+  }
+  in_block && /^$/ {
+    emit_pending()   # 块内空行：冲刷挂起 bullet，不输出（保持紧凑列表）
+    next
+  }
+  END { emit_pending() }
 ' "$CHANGELOG")
-fi
 
 # ---- 2) 生成正文 ----
 if [ -n "$changes" ]; then
