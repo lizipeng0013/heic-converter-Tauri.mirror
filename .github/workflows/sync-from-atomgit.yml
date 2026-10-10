@@ -1,0 +1,48 @@
+name: Sync from AtomGit to GitHub
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up git
+        run: |
+          git config --global user.name "lizipeng0013"
+          git config --global user.email "lizipeng0013@163.com"
+
+      - name: Checkout GitHub repo
+        uses: actions/checkout@v3
+        with:
+          repository: lizipeng0013/heic-converter-Tauri.mirror
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: repo
+
+      - name: Sync from AtomGit (force) + keep GitHub-specific files
+        run: |
+          cd repo
+
+          # 1. 备份整个 .github 目录（如果存在）
+          if [ -d .github ]; then
+            mkdir -p /tmp/github-backup
+            cp -r .github /tmp/github-backup/
+          fi
+
+          # 2. 强制同步到 AtomGit 最新状态
+          git remote add upstream https://atomgit.com/hotime/heic-converter.git
+          git fetch upstream
+          git reset --hard upstream/main   # 若 AtomGit 默认分支是 master，请改为 master
+
+          # 3. 恢复备份的 .github 目录（覆盖 AtomGit 的版本）
+          if [ -d /tmp/github-backup/.github ]; then
+            rm -rf .github
+            cp -r /tmp/github-backup/.github .
+            git add .github
+            git commit -m "Restore GitHub workflows and configs after sync [skip ci]"
+          fi
+
+          # 4. 强制推送回 GitHub
+          git push --force-with-lease origin main   # 若 GitHub 默认分支是 master，请改为 master
