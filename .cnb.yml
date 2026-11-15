@@ -169,17 +169,20 @@ main:
       env:
         <<: *projenviron
       stages:
-        - name: force sync main from atomgit
+        - name: force sync all branches from atomgit
           image: docker:25-git
           script: |
             set -e
-            echo "== force sync main: atomgit(authoritative) -> CNB(origin) =="
+            echo "== force sync ALL branches: atomgit(authoritative) -> CNB(origin) =="
             git remote remove atomgit 2>/dev/null || true
             git remote add atomgit "https://atomgit.com/${ATOMGIT_OWNER}/${ATOMGIT_REPO}.git"
             git remote set-url origin "https://${CNB_TOKEN_USER_NAME:-cnb}:${CNB_TOKEN}@cnb.cool/${ATOMGIT_OWNER}/${ATOMGIT_REPO}.git"
-            git fetch atomgit main --force --tags
-            git reset --hard atomgit/main
-            git push --force origin main
+            # 拉取 atomgit 所有分支与标签（不再限定 main）
+            git fetch atomgit --force --tags
+            # 将 atomgit 的每个分支镜像推送到 CNB origin（不删除 CNB 独有分支）
+            for b in $(git for-each-ref --format='%(refname:lstrip=3)' refs/remotes/atomgit/ | grep -v '^HEAD$'); do
+              git push --force origin "atomgit/$b:refs/heads/$b"
+            done
             git push --force origin --tags
             echo "== sync completed =="
 
